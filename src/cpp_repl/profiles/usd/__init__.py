@@ -1,0 +1,123 @@
+"""OpenUSD: the usd libraries loaded, `using namespace pxr`, and how stages,
+layers, prims and properties print.
+
+The install is found from the CMakeCache.txt next to the compile_commands.json
+in use (its USD_ROOT), then $USD_ROOT, then the usual places. An install is a
+directory holding include/pxr/pxr.h.
+"""
+
+import os
+import re
+import sysconfig
+from pathlib import Path
+
+from ...config import ConfigError, Profile
+
+HERE = Path(__file__).resolve().parent
+
+# Loaded into every backend before the first input. Each library pulls in its
+# own dependencies (sdf, tf, vt, gf, ...) through its RUNPATH.
+LIBS = ['usd', 'usdGeom', 'usdShade', 'usdLux', 'usdSkel', 'usdPhysics', 'usdVol', 'usdMedia',
+        'usdRender', 'usdUtils', 'usdUI', 'usdProc', 'usdSemantics', 'kind']
+
+CANDIDATES = ['~/USD', '~/OpenUSD', '~/OpenUSDBuild', '/usr/local/USD', '/opt/USD', '/opt/OpenUSD']
+
+# Header directories whose class and method names Tab offers.
+COMPLETION = ['usd/usd', 'usd/usdGeom', 'usd/usdLux', 'usd/usdShade', 'usd/sdf', 'usd/kind',
+              'base/gf', 'base/vt', 'base/tf']
+
+HELP = """\
+  tree(stage)     the prim hierarchy of a stage or prim
+  A stage prints its usda, a prim its type, properties and children, an
+  attribute its value and time samples.
+"""
+
+# USD's own errors and warnings, coloured by severity.
+DIAGNOSTICS = [(re.compile(r'(Coding Error|Runtime Error|Fatal Error|FATAL ERROR|Error|Warning|Status):'),
+                {'Warning': '33', 'Status': '36'})]
+
+
+def _is_root(path):
+    return path is not None and (Path(path) / 'include' / 'pxr' / 'pxr.h').is_file()
+
+
+def find_root(ctx):
+    """The OpenUSD install for this session."""
+    if ctx.compile_commands:
+        cache = Path(ctx.compile_commands).parent / 'CMakeCache.txt'
+        if cache.is_file():
+            m = re.search(r'^USD_ROOT:PATH=(.*)$', cache.read_text(errors='replace'), re.M)
+            if m and _is_root(m.group(1).strip()):
+                return Path(m.group(1).strip())
+    for name in ('USD_ROOT', 'PXR_ROOT'):
+        value = ctx.env.get(name)
+        if value:
+            if not _is_root(value):
+                raise ConfigError(f'${name} is {value}, which holds no include/pxr/pxr.h')
+            return Path(value)
+    for candidate in CANDIDATES:
+        path = Path(candidate).expanduser()
+        if _is_root(path):
+            return path
+    raise ConfigError('the usd profile needs an OpenUSD install: set USD_ROOT to the directory '
+                      'holding include/pxr and lib')
+
+
+def version(root):
+    text = (root / 'include' / 'pxr' / 'pxr.h').read_text(errors='replace')
+    parts = re.findall(r'#define PXR_(?:MAJOR|MINOR|PATCH)_VERSION (\d+)', text)
+    return '.'.join(parts) or '?'
+
+
+def python_include(root):
+    """The Python headers the install was built against, which its headers
+    include when Python support is on; None when it is off."""
+    pxr_h = (root / 'include' / 'pxr' / 'pxr.h').read_text(errors='replace')
+    if not re.search(r'^#define PXR_PYTHON_SUPPORT_ENABLED', pxr_h, re.M):
+        return None
+    config = root / 'pxrConfig.cmake'
+    if config.is_file():
+        m = re.search(r'set\(Python3_INCLUDE_DIR \[\[(.*?)\]\]\)', config.read_text(errors='replace'))
+        if m and (Path(m.group(1)) / 'Python.h').is_file():
+            return Path(m.group(1))
+    include = sysconfig.get_paths().get('include')
+    if include and (Path(include) / 'Python.h').is_file():
+        return Path(include)
+    raise ConfigError(f'OpenUSD at {root} was built with Python support, and no Python.h was found: '
+                      'install python3-dev')
+
+
+def defines(root):
+    """The compile definitions the install's CMake targets export."""
+    targets = root / 'cmake' / 'pxrTargets.cmake'
+    found = []
+    if targets.is_file():
+        for value in re.findall(r'INTERFACE_COMPILE_DEFINITIONS "([^"]*)"', targets.read_text(errors='replace')):
+            found += [d for d in value.split(';') if d and '$<' not in d]
+    return list(dict.fromkeys(found + ['TBB_SUPPRESS_DEPRECATED_MESSAGES=1']))
+
+
+def libraries(root):
+    lib = root / 'lib'
+    monolithic = lib / 'libusd_ms.so'
+    if monolithic.is_file():
+        return [monolithic]
+    for pattern in ('libusd_{}.so', 'lib{}.so'):
+        found = [lib / pattern.format(name) for name in LIBS if (lib / pattern.format(name)).is_file()]
+        if found:
+            return found
+    raise ConfigError(f'no OpenUSD libraries in {lib}')
+
+
+def configure(ctx):
+    root = find_root(ctx)
+    flags = ['-isystem', str(root / 'include')]
+    python = python_include(root)
+    if python:
+        flags += ['-isystem', str(python)]
+    flags += ['-D' + d for d in defines(root)] + ['-Wno-deprecated']
+    include = root / 'include' / 'pxr'
+    return Profile(name='usd', flags=flags, libs=libraries(root), prelude=[HERE / 'cpp_repl_usd.h'],
+                   prompt='usd> ', blocks=[(re.compile(r'#usda '), 'usd')], diagnostics=DIAGNOSTICS,
+                   completion=[include / d for d in COMPLETION], help=HELP,
+                   banner=f'OpenUSD {version(root)}', mounts=[root])

@@ -1,0 +1,12 @@
+__pycache__/
+*.egg-info/
+.pytest_cache/
+/build/
+/dist/
+.venv/
+bench/build/
+bench/results/logs/
+tests/compat/results/raw/
+
+# vim swap files
+.*.sw?

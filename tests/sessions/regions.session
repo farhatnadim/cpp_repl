@@ -1,0 +1,31 @@
+# A golden session. cpp-repl --batch runs the inputs (the prompt lines) and must
+# print this transcript. <any> matches one line, <any lines> any number of them;
+# addresses and input_line numbers are normalised.
+c++> #ifdef CPP_REPL
+...> const char *where = "in the REPL";
+...> #else
+...> const char *where = "compiled";
+...> #endif
+c++> where
+"in the REPL"
+c++> #if 0
+...> this is not C++ at all
+...> #endif
+c++> #define TWICE(x) ((x) * 2)
+c++> TWICE(21)
+42
+c++> int hits = 0;
+c++> for (int i = 0; i < 4; ++i) {
+...> #ifdef CPP_REPL
+...>   hits += i;
+...> #endif
+...> }
+c++> hits
+6
+c++> #pragma GCC diagnostic push
+c++> int unused_here = 0;
+c++> #pragma GCC diagnostic pop
+c++> #pragma omp parallel for
+...> for (int i = 0; i < 2; ++i) std::cout << "";
+c++> std::cout << "done\n";
+done

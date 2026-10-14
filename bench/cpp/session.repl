@@ -1,0 +1,25 @@
+// session.repl: a warm session, run by cpp-repl after matmul.cpp.
+//
+// bench/run.py appends this file to a REPL arm's latency run. matmul.cpp has
+// already defined and compiled bench_kernel and run one size. Each stamp is a
+// cell, so the gap between two stamps is one cell's compile and run plus a
+// front-end round trip; the cells report their own run time, and the harness
+// subtracts it.
+
+double bench_s0 = bench_stamp("warm");
+
+// Calling the compiled kernel again: nothing new to compile.
+bench::time_cell("rerun", bench_kernel, bench::session_n());
+
+double bench_s1 = bench_stamp("rerun");
+
+// A product the session has not used yet: this cell instantiates and
+// compiles Eigen's GEMM for a transposed left operand.
+{
+  bench::Scratch s(bench::session_n());
+  const double t = bench_now();
+  s.c().noalias() = s.a().transpose() * s.b();
+  s.report("new-instantiation", bench_now() - t);
+}
+
+double bench_s2 = bench_stamp("new-instantiation");

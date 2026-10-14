@@ -1,0 +1,9641 @@
+{
+ "meta": {
+  "version": 1,
+  "started": "2026-10-14T01:03:07+00:00",
+  "finished": "2026-10-14T01:05:31+00:00",
+  "argv": [
+   "bench/run.py",
+   "--python",
+   "/opt/bench-venv/bin/python3",
+   "--gxx",
+   "/usr/bin/g++-13",
+   "--quick"
+  ],
+  "args": {
+   "arms": "all",
+   "threads": null,
+   "sizes": [
+    256,
+    1024
+   ],
+   "rounds": 1,
+   "latency_rounds": 1,
+   "min_time": 0.3,
+   "max_call": 10.0,
+   "session_n": 512,
+   "cpu": 6,
+   "mt_cpus": "0-15",
+   "harness_cpu": null,
+   "pin": true,
+   "cooldown": true,
+   "cooldown_margin": 5.0,
+   "cooldown_max": 10.0,
+   "timeout": 1800.0,
+   "malloc_tuning": true,
+   "quick": true,
+   "latency_only": false,
+   "latency": true,
+   "python": "/opt/bench-venv/bin/python3",
+   "cxx": null,
+   "gxx": "/usr/bin/g++-13",
+   "cpp_repl": null,
+   "clang_repl": null,
+   "eigen": null,
+   "libomp": null,
+   "seed": 0,
+   "tag": null,
+   "dry_run": false
+  },
+  "seed": 0,
+  "tag": null,
+  "llvm": 23,
+  "mt_threads": 16,
+  "arms": [
+   {
+    "name": "numpy",
+    "group": "core",
+    "kind": "numpy",
+    "description": "np.matmul with OpenBLAS, one thread",
+    "threads": 1,
+    "compiler": "clang",
+    "flags": "full",
+    "kernel": "eigen",
+    "openmp": false,
+    "max_n": 0,
+    "rounds": 0,
+    "baseline": "eigen-native",
+    "latency": true,
+    "aot_lib": null
+   },
+   {
+    "name": "eigen-native",
+    "group": "core",
+    "kind": "native",
+    "description": "clang++ -O3 -march=native",
+    "threads": 1,
+    "compiler": "clang",
+    "flags": "full",
+    "kernel": "eigen",
+    "openmp": false,
+    "max_n": 0,
+    "rounds": 0,
+    "baseline": "",
+    "latency": true,
+    "aot_lib": null
+   },
+   {
+    "name": "eigen-repl",
+    "group": "core",
+    "kind": "repl",
+    "description": "cpp-repl -O3 -march=native",
+    "threads": 1,
+    "compiler": "clang",
+    "flags": "full",
+    "kernel": "eigen",
+    "openmp": false,
+    "max_n": 0,
+    "rounds": 0,
+    "baseline": "eigen-native",
+    "latency": true,
+    "aot_lib": null
+   },
+   {
+    "name": "eigen-repl-aot",
+    "group": "core",
+    "kind": "repl",
+    "description": "cpp-repl with default flags, calling a kernel compiled -O3 -march=native",
+    "threads": 1,
+    "compiler": "clang",
+    "flags": "default",
+    "kernel": "aot",
+    "openmp": false,
+    "max_n": 0,
+    "rounds": 0,
+    "baseline": "eigen-native",
+    "latency": true,
+    "aot_lib": "libbench_kernel.so"
+   },
+   {
+    "name": "eigen-repl-default",
+    "group": "core",
+    "kind": "repl",
+    "description": "cpp-repl with no flags (-O0)",
+    "threads": 1,
+    "compiler": "clang",
+    "flags": "default",
+    "kernel": "eigen",
+    "openmp": false,
+    "max_n": 1024,
+    "rounds": 1,
+    "baseline": "eigen-native",
+    "latency": true,
+    "aot_lib": null
+   },
+   {
+    "name": "numpy@16",
+    "group": "mt",
+    "kind": "numpy",
+    "description": "np.matmul with OpenBLAS, 16 threads",
+    "threads": 16,
+    "compiler": "clang",
+    "flags": "full",
+    "kernel": "eigen",
+    "openmp": false,
+    "max_n": 0,
+    "rounds": 0,
+    "baseline": "eigen-native-omp",
+    "latency": false,
+    "aot_lib": null
+   },
+   {
+    "name": "eigen-native-omp",
+    "group": "mt",
+    "kind": "native",
+    "description": "clang++ -O3 -march=native -fopenmp, 16 threads",
+    "threads": 16,
+    "compiler": "clang",
+    "flags": "full",
+    "kernel": "eigen",
+    "openmp": true,
+    "max_n": 0,
+    "rounds": 0,
+    "baseline": "",
+    "latency": false,
+    "aot_lib": null
+   },
+   {
+    "name": "eigen-repl-omp",
+    "group": "mt",
+    "kind": "repl",
+    "description": "cpp-repl -O3 -march=native -fopenmp, 16 threads",
+    "threads": 16,
+    "compiler": "clang",
+    "flags": "full",
+    "kernel": "eigen",
+    "openmp": true,
+    "max_n": 0,
+    "rounds": 0,
+    "baseline": "eigen-native-omp",
+    "latency": false,
+    "aot_lib": null
+   },
+   {
+    "name": "eigen-repl-aot-omp",
+    "group": "mt",
+    "kind": "repl",
+    "description": "cpp-repl with default flags, calling a kernel compiled with OpenMP, 16 threads",
+    "threads": 16,
+    "compiler": "clang",
+    "flags": "default",
+    "kernel": "aot",
+    "openmp": true,
+    "max_n": 0,
+    "rounds": 0,
+    "baseline": "eigen-native-omp",
+    "latency": false,
+    "aot_lib": "libbench_kernel_omp.so"
+   },
+   {
+    "name": "naive-native",
+    "group": "diag",
+    "kind": "native",
+    "description": "plain loops, clang++ -O3 -march=native",
+    "threads": 1,
+    "compiler": "clang",
+    "flags": "full",
+    "kernel": "naive",
+    "openmp": false,
+    "max_n": 1024,
+    "rounds": 0,
+    "baseline": "",
+    "latency": false,
+    "aot_lib": null
+   },
+   {
+    "name": "naive-repl",
+    "group": "diag",
+    "kind": "repl",
+    "description": "plain loops, cpp-repl -O3 -march=native",
+    "threads": 1,
+    "compiler": "clang",
+    "flags": "full",
+    "kernel": "naive",
+    "openmp": false,
+    "max_n": 1024,
+    "rounds": 0,
+    "baseline": "naive-native",
+    "latency": false,
+    "aot_lib": null
+   },
+   {
+    "name": "eigen-repl-generic",
+    "group": "diag",
+    "kind": "repl",
+    "description": "cpp-repl -O3 without -march=native",
+    "threads": 1,
+    "compiler": "clang",
+    "flags": "generic",
+    "kernel": "eigen",
+    "openmp": false,
+    "max_n": 0,
+    "rounds": 0,
+    "baseline": "eigen-repl",
+    "latency": false,
+    "aot_lib": null
+   },
+   {
+    "name": "eigen-native-gcc",
+    "group": "diag",
+    "kind": "native",
+    "description": "g++ -O3 -march=native",
+    "threads": 1,
+    "compiler": "gcc",
+    "flags": "full",
+    "kernel": "eigen",
+    "openmp": false,
+    "max_n": 0,
+    "rounds": 0,
+    "baseline": "eigen-native",
+    "latency": false,
+    "aot_lib": null
+   }
+  ],
+  "unavailable": {},
+  "idle_temperature": 66.125
+ },
+ "tools": {
+  "python": "/opt/bench-venv/bin/python3",
+  "cxx": "clang++-23",
+  "gxx": "/usr/bin/g++-13",
+  "cpp_repl": "/media/nadim/Data/Source/cpp_repl/bin/cpp-repl",
+  "clang_repl": "/usr/bin/clang-repl-23",
+  "eigen": "/usr/include/eigen3",
+  "libomp": "/lib/x86_64-linux-gnu/libomp.so",
+  "llvm": 23
+ },
+ "system": {
+  "host": "nadim-Alienware-Aurora-Ryzen-Edition",
+  "kernel": "7.0.0-38-generic",
+  "in_docker": true,
+  "docker_image": "sha256:1ee41fb6500cb013ce20e94565378066ae32d1f8eb1419a22a366b377db72140",
+  "cpu": {
+   "model": "AMD Ryzen 9 5950X 16-Core Processor",
+   "logical": 32,
+   "physical": 16,
+   "physical_cores": "0-15",
+   "flags": [
+    "avx",
+    "avx2",
+    "fma"
+   ],
+   "flops_per_cycle": 16,
+   "max_mhz": 5086.181,
+   "microcode": "0xa20102e",
+   "preferred_cores": {
+    "0": 206,
+    "1": 231,
+    "2": 236,
+    "3": 221,
+    "4": 211,
+    "5": 216,
+    "6": 226,
+    "7": 236,
+    "8": 196,
+    "9": 171,
+    "10": 166,
+    "11": 186,
+    "12": 181,
+    "13": 191,
+    "14": 201,
+    "15": 176,
+    "16": 206,
+    "17": 231,
+    "18": 236,
+    "19": 221,
+    "20": 211,
+    "21": 216,
+    "22": 226,
+    "23": 236,
+    "24": 196,
+    "25": 171,
+    "26": 166,
+    "27": 186,
+    "28": 181,
+    "29": 191,
+    "30": 201,
+    "31": 176
+   }
+  },
+  "cpufreq": {
+   "boost": "1",
+   "per_cpu": {
+    "0": {
+     "driver": "amd-pstate-epp",
+     "governor": "performance",
+     "epp": "performance",
+     "max_khz": 5086181
+    },
+    "1": {
+     "driver": "amd-pstate-epp",
+     "governor": "performance",
+     "epp": "performance",
+     "max_khz": 5086181
+    },
+    "2": {
+     "driver": "amd-pstate-epp",
+     "governor": "performance",
+     "epp": "performance",
+     "max_khz": 5086181
+    },
+    "3": {
+     "driver": "amd-pstate-epp",
+     "governor": "performance",
+     "epp": "performance",
+     "max_khz": 5086181
+    },
+    "4": {
+     "driver": "amd-pstate-epp",
+     "governor": "performance",
+     "epp": "performance",
+     "max_khz": 5086181
+    },
+    "5": {
+     "driver": "amd-pstate-epp",
+     "governor": "performance",
+     "epp": "performance",
+     "max_khz": 5086181
+    },
+    "6": {
+     "driver": "amd-pstate-epp",
+     "governor": "performance",
+     "epp": "performance",
+     "max_khz": 5086181
+    },
+    "7": {
+     "driver": "amd-pstate-epp",
+     "governor": "performance",
+     "epp": "performance",
+     "max_khz": 5086181
+    },
+    "8": {
+     "driver": "amd-pstate-epp",
+     "governor": "performance",
+     "epp": "performance",
+     "max_khz": 5086181
+    },
+    "9": {
+     "driver": "amd-pstate-epp",
+     "governor": "performance",
+     "epp": "performance",
+     "max_khz": 5086181
+    },
+    "10": {
+     "driver": "amd-pstate-epp",
+     "governor": "performance",
+     "epp": "performance",
+     "max_khz": 5086181
+    },
+    "11": {
+     "driver": "amd-pstate-epp",
+     "governor": "performance",
+     "epp": "performance",
+     "max_khz": 5086181
+    },
+    "12": {
+     "driver": "amd-pstate-epp",
+     "governor": "performance",
+     "epp": "performance",
+     "max_khz": 5086181
+    },
+    "13": {
+     "driver": "amd-pstate-epp",
+     "governor": "performance",
+     "epp": "performance",
+     "max_khz": 5086181
+    },
+    "14": {
+     "driver": "amd-pstate-epp",
+     "governor": "performance",
+     "epp": "performance",
+     "max_khz": 5086181
+    },
+    "15": {
+     "driver": "amd-pstate-epp",
+     "governor": "performance",
+     "epp": "performance",
+     "max_khz": 5086181
+    }
+   }
+  },
+  "thp": {
+   "enabled": "madvise",
+   "defrag": "madvise"
+  },
+  "loadavg": [
+   0.80029296875,
+   0.71826171875,
+   0.64990234375
+  ],
+  "eigen": {
+   "path": "/usr/include/eigen3",
+   "version": "3.4.0"
+  },
+  "temperature_sensor": "/sys/class/hwmon/hwmon1/temp1_input",
+  "tools": {
+   "cxx": "Ubuntu clang version 23.1.2 (++20260919103626+4b1925210476-1~exp1~20260919223755.77)",
+   "gxx": "g++-13 (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+   "clang_repl": "Ubuntu LLVM version 23.1.2"
+  },
+  "python": {
+   "python": "3.12.3",
+   "executable": "/opt/bench-venv/bin/python3",
+   "numpy": "2.5.4",
+   "threadpools": [
+    {
+     "user_api": "blas",
+     "internal_api": "openblas",
+     "num_threads": 1,
+     "prefix": "libscipy_openblas",
+     "filepath": "/opt/bench-venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+     "version": "0.3.34.106.0",
+     "threading_layer": "pthreads",
+     "architecture": "Haswell"
+    }
+   ]
+  },
+  "lscpu": {
+   "lscpu": [
+    {
+     "field": "Architecture:",
+     "data": "x86_64"
+    },
+    {
+     "field": "CPU op-mode(s):",
+     "data": "32-bit, 64-bit"
+    },
+    {
+     "field": "Address sizes:",
+     "data": "48 bits physical, 48 bits virtual"
+    },
+    {
+     "field": "Byte Order:",
+     "data": "Little Endian"
+    },
+    {
+     "field": "CPU(s):",
+     "data": "32"
+    },
+    {
+     "field": "On-line CPU(s) list:",
+     "data": "0-31"
+    },
+    {
+     "field": "Vendor ID:",
+     "data": "AuthenticAMD"
+    },
+    {
+     "field": "Model name:",
+     "data": "AMD Ryzen 9 5950X 16-Core Processor"
+    },
+    {
+     "field": "CPU family:",
+     "data": "25"
+    },
+    {
+     "field": "Model:",
+     "data": "33"
+    },
+    {
+     "field": "Thread(s) per core:",
+     "data": "2"
+    },
+    {
+     "field": "Core(s) per socket:",
+     "data": "16"
+    },
+    {
+     "field": "Socket(s):",
+     "data": "1"
+    },
+    {
+     "field": "Stepping:",
+     "data": "0"
+    },
+    {
+     "field": "Frequency boost:",
+     "data": "enabled"
+    },
+    {
+     "field": "CPU(s) scaling MHz:",
+     "data": "47%"
+    },
+    {
+     "field": "CPU max MHz:",
+     "data": "5086.1812"
+    },
+    {
+     "field": "CPU min MHz:",
+     "data": "582.1540"
+    },
+    {
+     "field": "BogoMIPS:",
+     "data": "6787.89"
+    },
+    {
+     "field": "Flags:",
+     "data": "fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl xtopology nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibrs ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 erms invpcid cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local user_shstk clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip pku ospke vaes vpclmulqdq rdpid overflow_recov succor smca fsrm debug_swap"
+    },
+    {
+     "field": "Virtualization:",
+     "data": "AMD-V"
+    },
+    {
+     "field": "L1d cache:",
+     "data": "512 KiB (16 instances)"
+    },
+    {
+     "field": "L1i cache:",
+     "data": "512 KiB (16 instances)"
+    },
+    {
+     "field": "L2 cache:",
+     "data": "8 MiB (16 instances)"
+    },
+    {
+     "field": "L3 cache:",
+     "data": "64 MiB (2 instances)"
+    },
+    {
+     "field": "NUMA node(s):",
+     "data": "1"
+    },
+    {
+     "field": "NUMA node0 CPU(s):",
+     "data": "0-31"
+    },
+    {
+     "field": "Vulnerability Gather data sampling:",
+     "data": "Not affected"
+    },
+    {
+     "field": "Vulnerability Ghostwrite:",
+     "data": "Not affected"
+    },
+    {
+     "field": "Vulnerability Indirect target selection:",
+     "data": "Not affected"
+    },
+    {
+     "field": "Vulnerability Itlb multihit:",
+     "data": "Not affected"
+    },
+    {
+     "field": "Vulnerability L1tf:",
+     "data": "Not affected"
+    },
+    {
+     "field": "Vulnerability Mds:",
+     "data": "Not affected"
+    },
+    {
+     "field": "Vulnerability Meltdown:",
+     "data": "Not affected"
+    },
+    {
+     "field": "Vulnerability Mmio stale data:",
+     "data": "Not affected"
+    },
+    {
+     "field": "Vulnerability Old microcode:",
+     "data": "Not affected"
+    },
+    {
+     "field": "Vulnerability Reg file data sampling:",
+     "data": "Not affected"
+    },
+    {
+     "field": "Vulnerability Retbleed:",
+     "data": "Not affected"
+    },
+    {
+     "field": "Vulnerability Spec rstack overflow:",
+     "data": "Mitigation; Safe RET"
+    },
+    {
+     "field": "Vulnerability Spec store bypass:",
+     "data": "Mitigation; Speculative Store Bypass disabled via prctl"
+    },
+    {
+     "field": "Vulnerability Spectre v1:",
+     "data": "Mitigation; usercopy/swapgs barriers and __user pointer sanitization"
+    },
+    {
+     "field": "Vulnerability Spectre v2:",
+     "data": "Mitigation; Retpolines; IBPB conditional; IBRS_FW; STIBP always-on; RSB filling; PBRSB-eIBRS Not affected; BHI Not affected"
+    },
+    {
+     "field": "Vulnerability Srbds:",
+     "data": "Not affected"
+    },
+    {
+     "field": "Vulnerability Tsa:",
+     "data": "Mitigation; Clear CPU buffers"
+    },
+    {
+     "field": "Vulnerability Tsx async abort:",
+     "data": "Not affected"
+    },
+    {
+     "field": "Vulnerability Vmscape:",
+     "data": "Mitigation; IBPB before exit to userspace"
+    }
+   ]
+  }
+ },
+ "builds": [
+  {
+   "name": "matmul-eigen-native",
+   "argv": [
+    "clang++-23",
+    "-std=c++20",
+    "-O3",
+    "-march=native",
+    "-DNDEBUG",
+    "-I/media/nadim/Data/Source/cpp_repl/bench/cpp",
+    "-I/usr/include/eigen3",
+    "/media/nadim/Data/Source/cpp_repl/bench/cpp/matmul.cpp",
+    "-o",
+    "/media/nadim/Data/Source/cpp_repl/bench/build/matmul-eigen-native"
+   ],
+   "ok": true,
+   "seconds": 2.506231213999854,
+   "output": ""
+  },
+  {
+   "name": "matmul-eigen-native-omp",
+   "argv": [
+    "clang++-23",
+    "-std=c++20",
+    "-O3",
+    "-march=native",
+    "-DNDEBUG",
+    "-I/media/nadim/Data/Source/cpp_repl/bench/cpp",
+    "-I/usr/include/eigen3",
+    "-fopenmp",
+    "-Wl,-rpath,/usr/lib/x86_64-linux-gnu",
+    "/media/nadim/Data/Source/cpp_repl/bench/cpp/matmul.cpp",
+    "-o",
+    "/media/nadim/Data/Source/cpp_repl/bench/build/matmul-eigen-native-omp"
+   ],
+   "ok": true,
+   "seconds": 2.565326782001648,
+   "output": ""
+  },
+  {
+   "name": "matmul-naive-native",
+   "argv": [
+    "clang++-23",
+    "-std=c++20",
+    "-O3",
+    "-march=native",
+    "-DNDEBUG",
+    "-I/media/nadim/Data/Source/cpp_repl/bench/cpp",
+    "-I/usr/include/eigen3",
+    "-DBENCH_NAIVE=1",
+    "/media/nadim/Data/Source/cpp_repl/bench/cpp/matmul.cpp",
+    "-o",
+    "/media/nadim/Data/Source/cpp_repl/bench/build/matmul-naive-native"
+   ],
+   "ok": true,
+   "seconds": 1.9545308300002944,
+   "output": ""
+  },
+  {
+   "name": "matmul-eigen-native-gcc",
+   "argv": [
+    "/usr/bin/g++-13",
+    "-std=c++20",
+    "-O3",
+    "-march=native",
+    "-DNDEBUG",
+    "-I/media/nadim/Data/Source/cpp_repl/bench/cpp",
+    "-I/usr/include/eigen3",
+    "/media/nadim/Data/Source/cpp_repl/bench/cpp/matmul.cpp",
+    "-o",
+    "/media/nadim/Data/Source/cpp_repl/bench/build/matmul-eigen-native-gcc"
+   ],
+   "ok": true,
+   "seconds": 2.724292612001591,
+   "output": ""
+  },
+  {
+   "name": "libbench_kernel.so",
+   "argv": [
+    "clang++-23",
+    "-std=c++20",
+    "-O3",
+    "-march=native",
+    "-DNDEBUG",
+    "-I/media/nadim/Data/Source/cpp_repl/bench/cpp",
+    "-I/usr/include/eigen3",
+    "-shared",
+    "-fPIC",
+    "-fvisibility=hidden",
+    "-fvisibility-inlines-hidden",
+    "/media/nadim/Data/Source/cpp_repl/bench/cpp/kernel_aot.cpp",
+    "-o",
+    "/media/nadim/Data/Source/cpp_repl/bench/build/libbench_kernel.so"
+   ],
+   "ok": true,
+   "seconds": 2.2459050899997237,
+   "output": ""
+  },
+  {
+   "name": "libbench_kernel_omp.so",
+   "argv": [
+    "clang++-23",
+    "-std=c++20",
+    "-O3",
+    "-march=native",
+    "-DNDEBUG",
+    "-I/media/nadim/Data/Source/cpp_repl/bench/cpp",
+    "-I/usr/include/eigen3",
+    "-shared",
+    "-fPIC",
+    "-fvisibility=hidden",
+    "-fvisibility-inlines-hidden",
+    "-fopenmp",
+    "-Wl,-rpath,/usr/lib/x86_64-linux-gnu",
+    "/media/nadim/Data/Source/cpp_repl/bench/cpp/kernel_aot.cpp",
+    "-o",
+    "/media/nadim/Data/Source/cpp_repl/bench/build/libbench_kernel_omp.so"
+   ],
+   "ok": true,
+   "seconds": 2.3145509970054263,
+   "output": ""
+  }
+ ],
+ "runs": [
+  {
+   "arm": "eigen-repl",
+   "group": "core",
+   "kind": "repl",
+   "threads": 1,
+   "round": 1,
+   "phase": "latency",
+   "cpus": "6",
+   "env": {
+    "BENCH_ARM": "eigen-repl",
+    "BENCH_SIZES": "256",
+    "BENCH_THREADS": "1",
+    "BENCH_MIN_TIME": "0.2",
+    "BENCH_MAX_CALL": "10.0",
+    "BENCH_SESSION_N": "512",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "GLIBC_TUNABLES": "glibc.malloc.mmap_threshold=33554432:glibc.malloc.trim_threshold=67108864"
+   },
+   "cooldown_s": 0.5,
+   "temp_start": 70.0,
+   "compile_s": null,
+   "outcome": "ok",
+   "error": null,
+   "log": "results/logs/nadim-Alienware-Aurora-Ryzen-Edition-llvm23-20261014-0103Z/latency-r1-eigen-repl.log",
+   "sampler": [
+    [
+     60951.411,
+     4866,
+     69.875
+    ],
+    [
+     60951.511,
+     4822,
+     69.75
+    ],
+    [
+     60951.611,
+     4841,
+     69.625
+    ],
+    [
+     60951.711,
+     4816,
+     69.625
+    ],
+    [
+     60951.811,
+     4838,
+     69.5
+    ],
+    [
+     60951.912,
+     4841,
+     69.5
+    ],
+    [
+     60952.012,
+     4816,
+     69.375
+    ],
+    [
+     60952.112,
+     4841,
+     69.25
+    ],
+    [
+     60952.213,
+     4841,
+     69.25
+    ],
+    [
+     60952.313,
+     4841,
+     69.125
+    ],
+    [
+     60952.413,
+     4816,
+     69.125
+    ],
+    [
+     60952.513,
+     4831,
+     69.0
+    ],
+    [
+     60952.613,
+     4841,
+     69.0
+    ],
+    [
+     60952.714,
+     4841,
+     68.875
+    ],
+    [
+     60952.814,
+     4841,
+     68.75
+    ],
+    [
+     60952.914,
+     4811,
+     68.75
+    ],
+    [
+     60953.014,
+     4816,
+     68.625
+    ],
+    [
+     60953.114,
+     4816,
+     68.625
+    ],
+    [
+     60953.214,
+     4816,
+     68.5
+    ],
+    [
+     60953.315,
+     4841,
+     68.5
+    ],
+    [
+     60953.415,
+     4816,
+     68.375
+    ],
+    [
+     60953.515,
+     4816,
+     68.375
+    ],
+    [
+     60953.615,
+     4816,
+     68.375
+    ],
+    [
+     60953.715,
+     4834,
+     68.25
+    ],
+    [
+     60953.816,
+     4816,
+     68.25
+    ],
+    [
+     60953.916,
+     4792,
+     68.25
+    ],
+    [
+     60954.016,
+     4773,
+     68.25
+    ],
+    [
+     60954.116,
+     4816,
+     68.375
+    ],
+    [
+     60954.217,
+     4816,
+     68.375
+    ],
+    [
+     60954.317,
+     4791,
+     68.25
+    ],
+    [
+     60954.417,
+     4717,
+     68.375
+    ],
+    [
+     60954.517,
+     4737,
+     70.375
+    ],
+    [
+     60954.618,
+     4667,
+     72.25
+    ],
+    [
+     60954.718,
+     4667,
+     73.875
+    ],
+    [
+     60954.818,
+     4673,
+     75.5
+    ],
+    [
+     60954.918,
+     4816,
+     76.25
+    ],
+    [
+     60955.018,
+     4816,
+     76.25
+    ],
+    [
+     60955.119,
+     4816,
+     76.125
+    ],
+    [
+     60955.219,
+     4766,
+     76.0
+    ],
+    [
+     60955.319,
+     4816,
+     75.875
+    ],
+    [
+     60955.419,
+     4816,
+     75.75
+    ],
+    [
+     60955.519,
+     4790,
+     75.625
+    ],
+    [
+     60955.62,
+     4783,
+     75.625
+    ],
+    [
+     60955.72,
+     3596,
+     75.5
+    ]
+   ],
+   "argv": [
+    "taskset",
+    "-c",
+    "6",
+    "/media/nadim/Data/Source/cpp_repl/bin/cpp-repl",
+    "--batch",
+    "--no-color",
+    "--clang-repl",
+    "/usr/bin/clang-repl-23",
+    "-std=c++20",
+    "-O3",
+    "-march=native",
+    "-DNDEBUG",
+    "-I/media/nadim/Data/Source/cpp_repl/bench/cpp",
+    "-I/usr/include/eigen3",
+    "/media/nadim/Data/Source/cpp_repl/bench/cpp/matmul.cpp",
+    "/media/nadim/Data/Source/cpp_repl/bench/cpp/session.repl"
+   ],
+   "launch": 60951.31031293,
+   "end": 60955.78321182,
+   "exit": 0,
+   "timed_out": false,
+   "records": [
+    {
+     "type": "stamp",
+     "name": "start",
+     "t": 60952.614055,
+     "_arrived": 60952.614110498
+    },
+    {
+     "type": "stamp",
+     "name": "headers",
+     "t": 60953.597626,
+     "_arrived": 60953.597696631
+    },
+    {
+     "type": "stamp",
+     "name": "control",
+     "t": 60953.600506,
+     "_arrived": 60953.600560622
+    },
+    {
+     "type": "stamp",
+     "name": "kernel",
+     "t": 60954.107529,
+     "kernel": "0x7d6130ce8000",
+     "_arrived": 60954.107594246
+    },
+    {
+     "type": "env",
+     "arm": "eigen-repl",
+     "kernel": "bench::eigen_gemm",
+     "threads": 1,
+     "repl": true,
+     "eigen": "3.4.0",
+     "simd": "AVX SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2",
+     "vectorize": "SSE4.2 AVX AVX2 FMA",
+     "isa": "SSE4.2 AVX AVX2 FMA",
+     "ndebug": true,
+     "optimize": true,
+     "openmp": 0,
+     "eigen_threads": 1,
+     "compiler": "Ubuntu Clang 23.1.2 (++20260919103626+4b1925210476-1~exp1~20260919223755.77)",
+     "cplusplus": 202002,
+     "_arrived": 60954.40875073
+    },
+    {
+     "type": "result",
+     "arm": "eigen-repl",
+     "n": 256,
+     "threads": 1,
+     "first_call": 0.000566297997,
+     "warmup_calls": 492,
+     "k": 40,
+     "samples": [
+      0.0005110974,
+      0.0005107984,
+      0.0005080356,
+      0.0005115919,
+      0.0005088757,
+      0.0005088003,
+      0.0005079034,
+      0.0005076129,
+      0.000509263,
+      0.0005096159
+     ],
+     "median": 0.000509069338,
+     "gflops": 65.9132843,
+     "checksum": 4104360.13,
+     "freivalds": 5.62950404e-16,
+     "too_long": false,
+     "t_start": 60954.408828,
+     "t_first_done": 60954.409395,
+     "t_end": 60954.86267,
+     "_arrived": 60954.862880052
+    },
+    {
+     "type": "done",
+     "arm": "eigen-repl",
+     "_arrived": 60954.862885442
+    },
+    {
+     "type": "stamp",
+     "name": "warm",
+     "t": 60954.867134,
+     "_arrived": 60954.867191674
+    },
+    {
+     "type": "cell",
+     "name": "rerun",
+     "n": 512,
+     "run": 0.004552396,
+     "_arrived": 60954.946328643
+    },
+    {
+     "type": "stamp",
+     "name": "rerun",
+     "t": 60954.949566,
+     "_arrived": 60954.949623066
+    },
+    {
+     "type": "cell",
+     "name": "new-instantiation",
+     "n": 512,
+     "run": 0.004238814,
+     "_arrived": 60955.658197369
+    },
+    {
+     "type": "stamp",
+     "name": "new-instantiation",
+     "t": 60955.661722,
+     "_arrived": 60955.661780256
+    }
+   ]
+  },
+  {
+   "arm": "eigen-native",
+   "group": "core",
+   "kind": "native",
+   "threads": 1,
+   "round": 1,
+   "phase": "latency",
+   "cpus": "6",
+   "env": {
+    "BENCH_ARM": "eigen-native",
+    "BENCH_SIZES": "256",
+    "BENCH_THREADS": "1",
+    "BENCH_MIN_TIME": "0.2",
+    "BENCH_MAX_CALL": "10.0",
+    "BENCH_SESSION_N": "512",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "GLIBC_TUNABLES": "glibc.malloc.mmap_threshold=33554432:glibc.malloc.trim_threshold=67108864"
+   },
+   "cooldown_s": 1.0,
+   "temp_start": 69.5,
+   "compile_s": 2.4184791970037622,
+   "outcome": "ok",
+   "error": null,
+   "log": "results/logs/nadim-Alienware-Aurora-Ryzen-Edition-llvm23-20261014-0103Z/latency-r1-eigen-native.log",
+   "sampler": [
+    [
+     60959.304,
+     4699,
+     70.875
+    ],
+    [
+     60959.404,
+     4692,
+     72.75
+    ],
+    [
+     60959.504,
+     4692,
+     74.375
+    ],
+    [
+     60959.604,
+     4711,
+     75.875
+    ]
+   ],
+   "argv": [
+    "taskset",
+    "-c",
+    "6",
+    "/media/nadim/Data/Source/cpp_repl/bench/build/matmul-eigen-native"
+   ],
+   "launch": 60959.203480945,
+   "end": 60959.668480861,
+   "exit": 0,
+   "timed_out": false,
+   "records": [
+    {
+     "type": "stamp",
+     "name": "start",
+     "t": 60959.205608,
+     "_arrived": 60959.205660366
+    },
+    {
+     "type": "stamp",
+     "name": "headers",
+     "t": 60959.205629,
+     "_arrived": 60959.205664914
+    },
+    {
+     "type": "stamp",
+     "name": "control",
+     "t": 60959.20563,
+     "_arrived": 60959.205667549
+    },
+    {
+     "type": "stamp",
+     "name": "kernel",
+     "t": 60959.205631,
+     "kernel": "0x55f1a31c44a0",
+     "_arrived": 60959.205670314
+    },
+    {
+     "type": "env",
+     "arm": "eigen-native",
+     "kernel": "bench::eigen_gemm",
+     "threads": 1,
+     "repl": false,
+     "eigen": "3.4.0",
+     "simd": "AVX SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2",
+     "vectorize": "SSE4.2 AVX AVX2 FMA",
+     "isa": "SSE4.2 AVX AVX2 FMA",
+     "ndebug": true,
+     "optimize": true,
+     "openmp": 0,
+     "eigen_threads": 1,
+     "compiler": "Ubuntu Clang 23.1.2 (++20260919103626+4b1925210476-1~exp1~20260919223755.77)",
+     "cplusplus": 202002,
+     "_arrived": 60959.205678931
+    },
+    {
+     "type": "result",
+     "arm": "eigen-native",
+     "n": 256,
+     "threads": 1,
+     "first_call": 0.000778057998,
+     "warmup_calls": 492,
+     "k": 40,
+     "samples": [
+      0.0005096737,
+      0.0005089909,
+      0.0005087154,
+      0.0005102029,
+      0.0005102568,
+      0.0005092945,
+      0.0005110496,
+      0.0005117774,
+      0.0005096902,
+      0.0005099452
+     ],
+     "median": 0.000509817725,
+     "gflops": 65.8165269,
+     "checksum": 4104360.13,
+     "freivalds": 5.62950404e-16,
+     "too_long": false,
+     "t_start": 60959.206308,
+     "t_first_done": 60959.207086,
+     "t_end": 60959.660326,
+     "_arrived": 60959.660472548
+    },
+    {
+     "type": "done",
+     "arm": "eigen-native",
+     "_arrived": 60959.660477988
+    }
+   ]
+  },
+  {
+   "arm": "numpy",
+   "group": "core",
+   "kind": "numpy",
+   "threads": 1,
+   "round": 1,
+   "phase": "latency",
+   "cpus": "6",
+   "env": {
+    "BENCH_ARM": "numpy",
+    "BENCH_SIZES": "256",
+    "BENCH_THREADS": "1",
+    "BENCH_MIN_TIME": "0.2",
+    "BENCH_MAX_CALL": "10.0",
+    "BENCH_SESSION_N": "512",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "GLIBC_TUNABLES": "glibc.malloc.mmap_threshold=33554432:glibc.malloc.trim_threshold=67108864"
+   },
+   "cooldown_s": 2.5,
+   "temp_start": 71.125,
+   "compile_s": null,
+   "outcome": "ok",
+   "error": null,
+   "log": "results/logs/nadim-Alienware-Aurora-Ryzen-Edition-llvm23-20261014-0103Z/latency-r1-numpy.log",
+   "sampler": [
+    [
+     60962.271,
+     4667,
+     71.625
+    ],
+    [
+     60962.372,
+     4617,
+     73.375
+    ],
+    [
+     60962.472,
+     4648,
+     74.875
+    ],
+    [
+     60962.572,
+     4642,
+     76.375
+    ],
+    [
+     60962.673,
+     4567,
+     77.625
+    ]
+   ],
+   "argv": [
+    "taskset",
+    "-c",
+    "6",
+    "/opt/bench-venv/bin/python3",
+    "/media/nadim/Data/Source/cpp_repl/bench/py/numpy_matmul.py"
+   ],
+   "launch": 60962.171087635,
+   "end": 60962.737184706,
+   "exit": 0,
+   "timed_out": false,
+   "records": [
+    {
+     "type": "env",
+     "arm": "numpy",
+     "threads": 1,
+     "numpy": "2.5.4",
+     "python": "3.12.3",
+     "executable": "/opt/bench-venv/bin/python3",
+     "blas": {
+      "user_api": "blas",
+      "internal_api": "openblas",
+      "num_threads": 1,
+      "prefix": "libscipy_openblas",
+      "filepath": "/opt/bench-venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+      "version": "0.3.34.106.0",
+      "threading_layer": "pthreads",
+      "architecture": "Haswell"
+     },
+     "_arrived": 60962.225185286
+    },
+    {
+     "type": "result",
+     "arm": "numpy",
+     "n": 256,
+     "threads": 1,
+     "first_call": 0.000780672999098897,
+     "warmup_calls": 469,
+     "k": 38,
+     "samples": [
+      0.0005274826578802037,
+      0.0005272886052185449,
+      0.000525449605208307,
+      0.0005263407631565841,
+      0.0005310135263578942,
+      0.000531100526323395,
+      0.0005253987368824279,
+      0.0005250530789214137,
+      0.0005482357367949781,
+      0.0005363591316333776
+     ],
+     "median": 0.0005273856315493742,
+     "gflops": 63.62409211153985,
+     "checksum": 4104360.129850574,
+     "freivalds": 1.8012621481511398e-16,
+     "too_long": false,
+     "t_start": 60962.225740452,
+     "t_first_done": 60962.226521125,
+     "t_end": 60962.677612822,
+     "_arrived": 60962.68249558
+    },
+    {
+     "type": "done",
+     "arm": "numpy",
+     "_arrived": 60962.682504968
+    }
+   ]
+  },
+  {
+   "arm": "eigen-repl-default",
+   "group": "core",
+   "kind": "repl",
+   "threads": 1,
+   "round": 1,
+   "phase": "latency",
+   "cpus": "6",
+   "env": {
+    "BENCH_ARM": "eigen-repl-default",
+    "BENCH_SIZES": "256",
+    "BENCH_THREADS": "1",
+    "BENCH_MIN_TIME": "0.2",
+    "BENCH_MAX_CALL": "10.0",
+    "BENCH_SESSION_N": "512",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "BENCH_MAX_N": "1024",
+    "GLIBC_TUNABLES": "glibc.malloc.mmap_threshold=33554432:glibc.malloc.trim_threshold=67108864"
+   },
+   "cooldown_s": 2.0,
+   "temp_start": 70.25,
+   "compile_s": null,
+   "outcome": "ok",
+   "error": null,
+   "log": "results/logs/nadim-Alienware-Aurora-Ryzen-Edition-llvm23-20261014-0103Z/latency-r1-eigen-repl-default.log",
+   "sampler": [
+    [
+     60964.841,
+     4861,
+     70.125
+    ],
+    [
+     60964.941,
+     4840,
+     70.0
+    ],
+    [
+     60965.041,
+     4816,
+     70.0
+    ],
+    [
+     60965.141,
+     4816,
+     69.875
+    ],
+    [
+     60965.242,
+     4816,
+     69.75
+    ],
+    [
+     60965.342,
+     4841,
+     69.75
+    ],
+    [
+     60965.442,
+     4841,
+     69.625
+    ],
+    [
+     60965.543,
+     4841,
+     69.5
+    ],
+    [
+     60965.643,
+     4841,
+     69.5
+    ],
+    [
+     60965.743,
+     4816,
+     69.375
+    ],
+    [
+     60965.843,
+     4816,
+     69.375
+    ],
+    [
+     60965.944,
+     4812,
+     69.25
+    ],
+    [
+     60966.044,
+     4841,
+     69.25
+    ],
+    [
+     60966.144,
+     4841,
+     69.125
+    ],
+    [
+     60966.244,
+     4830,
+     69.125
+    ],
+    [
+     60966.344,
+     4816,
+     69.0
+    ],
+    [
+     60966.445,
+     4816,
+     69.0
+    ],
+    [
+     60966.545,
+     4816,
+     68.875
+    ],
+    [
+     60966.645,
+     4791,
+     68.875
+    ],
+    [
+     60966.745,
+     4806,
+     68.875
+    ],
+    [
+     60966.845,
+     4792,
+     68.75
+    ],
+    [
+     60966.946,
+     4777,
+     68.75
+    ],
+    [
+     60967.046,
+     4786,
+     68.875
+    ],
+    [
+     60967.146,
+     4787,
+     69.0
+    ],
+    [
+     60967.247,
+     4750,
+     69.0
+    ],
+    [
+     60967.347,
+     4771,
+     69.0
+    ],
+    [
+     60967.447,
+     4783,
+     69.0
+    ],
+    [
+     60967.547,
+     4767,
+     69.0
+    ],
+    [
+     60967.647,
+     4769,
+     69.0
+    ],
+    [
+     60967.748,
+     4749,
+     69.0
+    ],
+    [
+     60967.848,
+     4778,
+     69.0
+    ],
+    [
+     60967.948,
+     4742,
+     69.0
+    ],
+    [
+     60968.048,
+     4800,
+     69.0
+    ],
+    [
+     60968.149,
+     4768,
+     69.125
+    ],
+    [
+     60968.249,
+     4747,
+     69.125
+    ],
+    [
+     60968.349,
+     4755,
+     69.125
+    ],
+    [
+     60968.449,
+     4751,
+     69.125
+    ],
+    [
+     60968.549,
+     4791,
+     69.125
+    ],
+    [
+     60968.65,
+     4791,
+     69.125
+    ],
+    [
+     60968.75,
+     4766,
+     69.125
+    ],
+    [
+     60968.85,
+     4791,
+     69.125
+    ],
+    [
+     60968.951,
+     4791,
+     69.125
+    ],
+    [
+     60969.051,
+     4791,
+     69.125
+    ],
+    [
+     60969.151,
+     4791,
+     69.125
+    ],
+    [
+     60969.251,
+     4767,
+     69.125
+    ],
+    [
+     60969.351,
+     4816,
+     69.125
+    ],
+    [
+     60969.452,
+     4816,
+     69.0
+    ],
+    [
+     60969.552,
+     4791,
+     69.0
+    ],
+    [
+     60969.652,
+     4789,
+     69.0
+    ],
+    [
+     60969.752,
+     4775,
+     69.0
+    ],
+    [
+     60969.852,
+     4767,
+     69.0
+    ],
+    [
+     60969.953,
+     4742,
+     69.0
+    ],
+    [
+     60970.053,
+     4782,
+     69.0
+    ],
+    [
+     60970.154,
+     4788,
+     69.0
+    ],
+    [
+     60970.254,
+     4774,
+     69.125
+    ],
+    [
+     60970.354,
+     4785,
+     69.125
+    ],
+    [
+     60970.454,
+     4791,
+     69.125
+    ],
+    [
+     60970.554,
+     4782,
+     69.125
+    ],
+    [
+     60970.655,
+     4787,
+     69.125
+    ],
+    [
+     60970.755,
+     4772,
+     69.125
+    ],
+    [
+     60970.855,
+     3595,
+     69.0
+    ]
+   ],
+   "argv": [
+    "taskset",
+    "-c",
+    "6",
+    "/media/nadim/Data/Source/cpp_repl/bin/cpp-repl",
+    "--batch",
+    "--no-color",
+    "--clang-repl",
+    "/usr/bin/clang-repl-23",
+    "-std=c++20",
+    "-I/media/nadim/Data/Source/cpp_repl/bench/cpp",
+    "-I/usr/include/eigen3",
+    "/media/nadim/Data/Source/cpp_repl/bench/cpp/matmul.cpp",
+    "/media/nadim/Data/Source/cpp_repl/bench/cpp/session.repl"
+   ],
+   "launch": 60964.740474901,
+   "end": 60970.86681991,
+   "exit": 0,
+   "timed_out": false,
+   "records": [
+    {
+     "type": "stamp",
+     "name": "start",
+     "t": 60966.015207,
+     "_arrived": 60966.015270781
+    },
+    {
+     "type": "stamp",
+     "name": "headers",
+     "t": 60966.682145,
+     "_arrived": 60966.682212958
+    },
+    {
+     "type": "stamp",
+     "name": "control",
+     "t": 60966.683833,
+     "_arrived": 60966.683887837
+    },
+    {
+     "type": "stamp",
+     "name": "kernel",
+     "t": 60966.870974,
+     "kernel": "0x75388d3d8000",
+     "_arrived": 60966.871053074
+    },
+    {
+     "type": "env",
+     "arm": "eigen-repl-default",
+     "kernel": "bench::eigen_gemm",
+     "threads": 1,
+     "repl": true,
+     "eigen": "3.4.0",
+     "simd": "SSE, SSE2",
+     "vectorize": "none",
+     "isa": "SSE2",
+     "ndebug": false,
+     "optimize": false,
+     "openmp": 0,
+     "eigen_threads": 1,
+     "compiler": "Ubuntu Clang 23.1.2 (++20260919103626+4b1925210476-1~exp1~20260919223755.77)",
+     "cplusplus": 202002,
+     "_arrived": 60966.964023818
+    },
+    {
+     "type": "result",
+     "arm": "eigen-repl-default",
+     "n": 256,
+     "threads": 1,
+     "first_call": 0.152118866,
+     "warmup_calls": 2,
+     "k": 1,
+     "samples": [
+      0.1510815,
+      0.1510082,
+      0.1510502,
+      0.1510224,
+      0.1547031
+     ],
+     "median": 0.151050208,
+     "gflops": 0.222140919,
+     "checksum": 4104360.13,
+     "freivalds": 5.84951277e-16,
+     "too_long": false,
+     "t_start": 60966.964209,
+     "t_first_done": 60967.116328,
+     "t_end": 60968.026465,
+     "_arrived": 60968.02765045
+    },
+    {
+     "type": "done",
+     "arm": "eigen-repl-default",
+     "_arrived": 60968.027656662
+    },
+    {
+     "type": "stamp",
+     "name": "warm",
+     "t": 60968.030829,
+     "_arrived": 60968.03089024
+    },
+    {
+     "type": "cell",
+     "name": "rerun",
+     "n": 512,
+     "run": 1.2063894,
+     "_arrived": 60969.252754949
+    },
+    {
+     "type": "stamp",
+     "name": "rerun",
+     "t": 60969.25534,
+     "_arrived": 60969.255396019
+    },
+    {
+     "type": "cell",
+     "name": "new-instantiation",
+     "n": 512,
+     "run": 1.20685021,
+     "_arrived": 60970.767454943
+    },
+    {
+     "type": "stamp",
+     "name": "new-instantiation",
+     "t": 60970.77004,
+     "_arrived": 60970.770094811
+    }
+   ]
+  },
+  {
+   "arm": "eigen-repl-aot",
+   "group": "core",
+   "kind": "repl",
+   "threads": 1,
+   "round": 1,
+   "phase": "latency",
+   "cpus": "6",
+   "env": {
+    "BENCH_ARM": "eigen-repl-aot",
+    "BENCH_SIZES": "256",
+    "BENCH_THREADS": "1",
+    "BENCH_MIN_TIME": "0.2",
+    "BENCH_MAX_CALL": "10.0",
+    "BENCH_SESSION_N": "512",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "GLIBC_TUNABLES": "glibc.malloc.mmap_threshold=33554432:glibc.malloc.trim_threshold=67108864"
+   },
+   "cooldown_s": 0.0,
+   "temp_start": 68.875,
+   "compile_s": null,
+   "outcome": "ok",
+   "error": null,
+   "log": "results/logs/nadim-Alienware-Aurora-Ryzen-Edition-llvm23-20261014-0103Z/latency-r1-eigen-repl-aot.log",
+   "sampler": [
+    [
+     60970.968,
+     4826,
+     68.875
+    ],
+    [
+     60971.068,
+     4816,
+     68.75
+    ],
+    [
+     60971.168,
+     4786,
+     68.75
+    ],
+    [
+     60971.268,
+     4792,
+     68.625
+    ],
+    [
+     60971.368,
+     4816,
+     68.625
+    ],
+    [
+     60971.469,
+     4830,
+     68.5
+    ],
+    [
+     60971.569,
+     4816,
+     68.5
+    ],
+    [
+     60971.669,
+     4835,
+     68.5
+    ],
+    [
+     60971.769,
+     4839,
+     68.375
+    ],
+    [
+     60971.869,
+     4816,
+     68.375
+    ],
+    [
+     60971.97,
+     4799,
+     68.25
+    ],
+    [
+     60972.07,
+     4816,
+     68.25
+    ],
+    [
+     60972.17,
+     4816,
+     68.125
+    ],
+    [
+     60972.27,
+     4819,
+     68.125
+    ],
+    [
+     60972.371,
+     4816,
+     68.125
+    ],
+    [
+     60972.471,
+     4816,
+     68.0
+    ],
+    [
+     60972.571,
+     4816,
+     68.0
+    ],
+    [
+     60972.671,
+     4797,
+     68.0
+    ],
+    [
+     60972.771,
+     4771,
+     67.875
+    ],
+    [
+     60972.872,
+     4816,
+     67.875
+    ],
+    [
+     60972.972,
+     4667,
+     69.125
+    ],
+    [
+     60973.072,
+     4600,
+     71.125
+    ],
+    [
+     60973.172,
+     4628,
+     72.875
+    ],
+    [
+     60973.272,
+     4667,
+     74.5
+    ],
+    [
+     60973.373,
+     4644,
+     76.0
+    ],
+    [
+     60973.473,
+     4816,
+     76.0
+    ],
+    [
+     60973.573,
+     4808,
+     75.875
+    ],
+    [
+     60973.673,
+     4816,
+     75.875
+    ],
+    [
+     60973.773,
+     4742,
+     75.75
+    ],
+    [
+     60973.874,
+     4791,
+     75.625
+    ],
+    [
+     60973.974,
+     4769,
+     75.625
+    ],
+    [
+     60974.074,
+     4784,
+     75.5
+    ],
+    [
+     60974.174,
+     4791,
+     75.5
+    ],
+    [
+     60974.274,
+     4788,
+     75.375
+    ],
+    [
+     60974.375,
+     4769,
+     75.375
+    ],
+    [
+     60974.475,
+     4791,
+     75.25
+    ],
+    [
+     60974.575,
+     4747,
+     75.25
+    ],
+    [
+     60974.675,
+     4791,
+     75.125
+    ],
+    [
+     60974.775,
+     4773,
+     75.125
+    ],
+    [
+     60974.876,
+     4767,
+     75.0
+    ],
+    [
+     60974.976,
+     4866,
+     74.875
+    ]
+   ],
+   "argv": [
+    "taskset",
+    "-c",
+    "6",
+    "/media/nadim/Data/Source/cpp_repl/bin/cpp-repl",
+    "--batch",
+    "--no-color",
+    "--clang-repl",
+    "/usr/bin/clang-repl-23",
+    "-std=c++20",
+    "-I/media/nadim/Data/Source/cpp_repl/bench/cpp",
+    "-I/usr/include/eigen3",
+    "-DBENCH_AOT=1",
+    "--lib",
+    "/media/nadim/Data/Source/cpp_repl/bench/build/libbench_kernel.so",
+    "/media/nadim/Data/Source/cpp_repl/bench/cpp/matmul.cpp",
+    "/media/nadim/Data/Source/cpp_repl/bench/cpp/session.repl"
+   ],
+   "launch": 60970.867494222,
+   "end": 60975.038498653,
+   "exit": 0,
+   "timed_out": false,
+   "records": [
+    {
+     "type": "stamp",
+     "name": "start",
+     "t": 60972.141434,
+     "_arrived": 60972.141497214
+    },
+    {
+     "type": "stamp",
+     "name": "headers",
+     "t": 60972.810075,
+     "_arrived": 60972.81013305
+    },
+    {
+     "type": "stamp",
+     "name": "control",
+     "t": 60972.811666,
+     "_arrived": 60972.811719221
+    },
+    {
+     "type": "stamp",
+     "name": "kernel",
+     "t": 60972.814717,
+     "kernel": "0x715c5674e000",
+     "_arrived": 60972.814815781
+    },
+    {
+     "type": "env",
+     "arm": "eigen-repl-aot",
+     "kernel": "bench_gemm_aot",
+     "threads": 1,
+     "repl": true,
+     "eigen": "3.4.0",
+     "simd": "SSE, SSE2",
+     "vectorize": "none",
+     "isa": "SSE2",
+     "ndebug": false,
+     "optimize": false,
+     "openmp": 0,
+     "eigen_threads": 1,
+     "compiler": "Ubuntu Clang 23.1.2 (++20260919103626+4b1925210476-1~exp1~20260919223755.77)",
+     "cplusplus": 202002,
+     "aot": {
+      "eigen": "3.4.0",
+      "simd": "AVX SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2",
+      "vectorize": "SSE4.2 AVX AVX2 FMA",
+      "isa": "SSE4.2 AVX AVX2 FMA",
+      "ndebug": true,
+      "optimize": true,
+      "openmp": 0,
+      "eigen_threads": 1,
+      "compiler": "Ubuntu Clang 23.1.2 (++20260919103626+4b1925210476-1~exp1~20260919223755.77)",
+      "cplusplus": 202002
+     },
+     "_arrived": 60972.909864606
+    },
+    {
+     "type": "result",
+     "arm": "eigen-repl-aot",
+     "n": 256,
+     "threads": 1,
+     "first_call": 0.000708025,
+     "warmup_calls": 490,
+     "k": 40,
+     "samples": [
+      0.0005125197,
+      0.0005121162,
+      0.0005116653,
+      0.0005125728,
+      0.0005095273,
+      0.0005133743,
+      0.0005086204,
+      0.0005106845,
+      0.0005098324,
+      0.0005103464
+     ],
+     "median": 0.000511174925,
+     "gflops": 65.6417801,
+     "checksum": 4104360.13,
+     "freivalds": 5.69455136e-16,
+     "too_long": false,
+     "t_start": 60972.910252,
+     "t_first_done": 60972.91096,
+     "t_end": 60973.365084,
+     "_arrived": 60973.366178879
+    },
+    {
+     "type": "done",
+     "arm": "eigen-repl-aot",
+     "_arrived": 60973.36618471
+    },
+    {
+     "type": "stamp",
+     "name": "warm",
+     "t": 60973.368911,
+     "_arrived": 60973.368966395
+    },
+    {
+     "type": "cell",
+     "name": "rerun",
+     "n": 512,
+     "run": 0.004851158,
+     "_arrived": 60973.388877953
+    },
+    {
+     "type": "stamp",
+     "name": "rerun",
+     "t": 60973.390522,
+     "_arrived": 60973.390577037
+    },
+    {
+     "type": "cell",
+     "name": "new-instantiation",
+     "n": 512,
+     "run": 1.18896239,
+     "_arrived": 60974.937543152
+    },
+    {
+     "type": "stamp",
+     "name": "new-instantiation",
+     "t": 60974.940201,
+     "_arrived": 60974.940258733
+    }
+   ]
+  },
+  {
+   "arm": "eigen-native",
+   "group": "core",
+   "kind": "native",
+   "threads": 1,
+   "round": 1,
+   "phase": "throughput",
+   "cpus": "6",
+   "env": {
+    "BENCH_ARM": "eigen-native",
+    "BENCH_SIZES": "256,1024",
+    "BENCH_THREADS": "1",
+    "BENCH_MIN_TIME": "0.3",
+    "BENCH_MAX_CALL": "10.0",
+    "BENCH_SESSION_N": "512",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "GLIBC_TUNABLES": "glibc.malloc.mmap_threshold=33554432:glibc.malloc.trim_threshold=67108864"
+   },
+   "cooldown_s": 1.0,
+   "temp_start": 71.125,
+   "compile_s": null,
+   "outcome": "ok",
+   "error": null,
+   "log": "results/logs/nadim-Alienware-Aurora-Ryzen-Edition-llvm23-20261014-0103Z/throughput-r1-eigen-native.log",
+   "sampler": [
+    [
+     60976.141,
+     4717,
+     72.5
+    ],
+    [
+     60976.241,
+     4667,
+     74.125
+    ],
+    [
+     60976.341,
+     4642,
+     75.625
+    ],
+    [
+     60976.441,
+     4642,
+     77.0
+    ],
+    [
+     60976.542,
+     4692,
+     78.25
+    ],
+    [
+     60976.642,
+     4667,
+     79.375
+    ],
+    [
+     60976.742,
+     4724,
+     80.375
+    ],
+    [
+     60976.842,
+     4692,
+     81.25
+    ],
+    [
+     60976.942,
+     4650,
+     82.125
+    ],
+    [
+     60977.043,
+     4620,
+     82.875
+    ],
+    [
+     60977.143,
+     4667,
+     83.5
+    ]
+   ],
+   "argv": [
+    "taskset",
+    "-c",
+    "6",
+    "/media/nadim/Data/Source/cpp_repl/bench/build/matmul-eigen-native"
+   ],
+   "launch": 60976.040222695,
+   "end": 60977.207037129,
+   "exit": 0,
+   "timed_out": false,
+   "records": [
+    {
+     "type": "stamp",
+     "name": "start",
+     "t": 60976.042542,
+     "_arrived": 60976.042594377
+    },
+    {
+     "type": "stamp",
+     "name": "headers",
+     "t": 60976.042561,
+     "_arrived": 60976.042598956
+    },
+    {
+     "type": "stamp",
+     "name": "control",
+     "t": 60976.042563,
+     "_arrived": 60976.042601661
+    },
+    {
+     "type": "stamp",
+     "name": "kernel",
+     "t": 60976.042564,
+     "kernel": "0x578d2f0cd4a0",
+     "_arrived": 60976.042604526
+    },
+    {
+     "type": "env",
+     "arm": "eigen-native",
+     "kernel": "bench::eigen_gemm",
+     "threads": 1,
+     "repl": false,
+     "eigen": "3.4.0",
+     "simd": "AVX SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2",
+     "vectorize": "SSE4.2 AVX AVX2 FMA",
+     "isa": "SSE4.2 AVX AVX2 FMA",
+     "ndebug": true,
+     "optimize": true,
+     "openmp": 0,
+     "eigen_threads": 1,
+     "compiler": "Ubuntu Clang 23.1.2 (++20260919103626+4b1925210476-1~exp1~20260919223755.77)",
+     "cplusplus": 202002,
+     "_arrived": 60976.042613072
+    },
+    {
+     "type": "result",
+     "arm": "eigen-native",
+     "n": 256,
+     "threads": 1,
+     "first_call": 0.000850012999,
+     "warmup_calls": 490,
+     "k": 40,
+     "samples": [
+      0.0005115178,
+      0.000510304,
+      0.0005184188,
+      0.0005113077,
+      0.0005122292,
+      0.00051252,
+      0.000511727,
+      0.0005112245,
+      0.0005113818,
+      0.0005129415,
+      0.0005114114,
+      0.0005118522,
+      0.0005126522,
+      0.0005116556,
+      0.0005133603
+     ],
+     "median": 0.00051172695,
+     "gflops": 65.570969,
+     "checksum": 4104360.13,
+     "freivalds": 5.62950404e-16,
+     "too_long": false,
+     "t_start": 60976.043243,
+     "t_first_done": 60976.044093,
+     "t_end": 60976.600642,
+     "_arrived": 60976.600809603
+    },
+    {
+     "type": "result",
+     "arm": "eigen-native",
+     "n": 1024,
+     "threads": 1,
+     "first_call": 0.032875903,
+     "warmup_calls": 8,
+     "k": 1,
+     "samples": [
+      0.03236118,
+      0.03251802,
+      0.03283994,
+      0.03298032,
+      0.03269214,
+      0.03260313,
+      0.03259041,
+      0.03299089,
+      0.0327757,
+      0.03266389
+     ],
+     "median": 0.0326780155,
+     "gflops": 65.7164646,
+     "checksum": 262681949,
+     "freivalds": 1.38444525e-15,
+     "too_long": false,
+     "t_start": 60976.603656,
+     "t_first_done": 60976.636532,
+     "t_end": 60977.190303,
+     "_arrived": 60977.192182368
+    },
+    {
+     "type": "done",
+     "arm": "eigen-native",
+     "_arrived": 60977.192187788
+    }
+   ]
+  },
+  {
+   "arm": "numpy",
+   "group": "core",
+   "kind": "numpy",
+   "threads": 1,
+   "round": 1,
+   "phase": "throughput",
+   "cpus": "6",
+   "env": {
+    "BENCH_ARM": "numpy",
+    "BENCH_SIZES": "256,1024",
+    "BENCH_THREADS": "1",
+    "BENCH_MIN_TIME": "0.3",
+    "BENCH_MAX_CALL": "10.0",
+    "BENCH_SESSION_N": "512",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "GLIBC_TUNABLES": "glibc.malloc.mmap_threshold=33554432:glibc.malloc.trim_threshold=67108864"
+   },
+   "cooldown_s": 3.5,
+   "temp_start": 69.625,
+   "compile_s": null,
+   "outcome": "ok",
+   "error": null,
+   "log": "results/logs/nadim-Alienware-Aurora-Ryzen-Edition-llvm23-20261014-0103Z/throughput-r1-numpy.log",
+   "sampler": [
+    [
+     60980.812,
+     4718,
+     70.0
+    ],
+    [
+     60980.912,
+     4717,
+     71.875
+    ],
+    [
+     60981.012,
+     4692,
+     73.625
+    ],
+    [
+     60981.112,
+     4692,
+     75.125
+    ],
+    [
+     60981.213,
+     4711,
+     76.625
+    ],
+    [
+     60981.313,
+     4692,
+     77.875
+    ],
+    [
+     60981.413,
+     4685,
+     78.875
+    ],
+    [
+     60981.513,
+     4667,
+     80.0
+    ],
+    [
+     60981.613,
+     4656,
+     80.875
+    ],
+    [
+     60981.714,
+     4642,
+     81.75
+    ],
+    [
+     60981.814,
+     4667,
+     82.625
+    ],
+    [
+     60981.914,
+     4642,
+     83.25
+    ]
+   ],
+   "argv": [
+    "taskset",
+    "-c",
+    "6",
+    "/opt/bench-venv/bin/python3",
+    "/media/nadim/Data/Source/cpp_repl/bench/py/numpy_matmul.py"
+   ],
+   "launch": 60980.711527556,
+   "end": 60981.97830003,
+   "exit": 0,
+   "timed_out": false,
+   "records": [
+    {
+     "type": "env",
+     "arm": "numpy",
+     "threads": 1,
+     "numpy": "2.5.4",
+     "python": "3.12.3",
+     "executable": "/opt/bench-venv/bin/python3",
+     "blas": {
+      "user_api": "blas",
+      "internal_api": "openblas",
+      "num_threads": 1,
+      "prefix": "libscipy_openblas",
+      "filepath": "/opt/bench-venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+      "version": "0.3.34.106.0",
+      "threading_layer": "pthreads",
+      "architecture": "Haswell"
+     },
+     "_arrived": 60980.763308445
+    },
+    {
+     "type": "result",
+     "arm": "numpy",
+     "n": 256,
+     "threads": 1,
+     "first_call": 0.0007703129958827049,
+     "warmup_calls": 483,
+     "k": 39,
+     "samples": [
+      0.0005188709487228129,
+      0.0005162701539423628,
+      0.0005155382564109273,
+      0.0005178495384125898,
+      0.0005161740769742606,
+      0.0005216906155020787,
+      0.0005189652307681405,
+      0.0005179558974281789,
+      0.0005184660769419936,
+      0.0005188069999582159,
+      0.0005208405640680725,
+      0.0005187137436363488,
+      0.0005201109743211418,
+      0.0005191738462786023,
+      0.0005182143332860552
+     ],
+     "median": 0.0005187137436363488,
+     "gflops": 64.68776355292368,
+     "checksum": 4104360.129850574,
+     "freivalds": 1.8012621481511398e-16,
+     "too_long": false,
+     "t_start": 60980.764222869,
+     "t_first_done": 60980.764993182,
+     "t_end": 60981.317660271,
+     "_arrived": 60981.32235292
+    },
+    {
+     "type": "result",
+     "arm": "numpy",
+     "n": 1024,
+     "threads": 1,
+     "first_call": 0.033522571000503376,
+     "warmup_calls": 8,
+     "k": 1,
+     "samples": [
+      0.03280044800339965,
+      0.032719366005039774,
+      0.032701711999834515,
+      0.03282021600170992,
+      0.032730305996665265,
+      0.03276775699487189,
+      0.032868415997654665,
+      0.03275276800559368,
+      0.03276357900176663,
+      0.032763999995950144
+     ],
+     "median": 0.03276378949885839,
+     "gflops": 65.54442208447306,
+     "checksum": 262681949.00115836,
+     "freivalds": 2.910341709650576e-16,
+     "too_long": false,
+     "t_start": 60981.330766364,
+     "t_first_done": 60981.364288935,
+     "t_end": 60981.921259244,
+     "_arrived": 60981.922030628
+    },
+    {
+     "type": "done",
+     "arm": "numpy",
+     "_arrived": 60981.922036169
+    }
+   ]
+  },
+  {
+   "arm": "eigen-repl-default",
+   "group": "core",
+   "kind": "repl",
+   "threads": 1,
+   "round": 1,
+   "phase": "throughput",
+   "cpus": "6",
+   "env": {
+    "BENCH_ARM": "eigen-repl-default",
+    "BENCH_SIZES": "256,1024",
+    "BENCH_THREADS": "1",
+    "BENCH_MIN_TIME": "0.3",
+    "BENCH_MAX_CALL": "10.0",
+    "BENCH_SESSION_N": "512",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "BENCH_MAX_N": "1024",
+    "GLIBC_TUNABLES": "glibc.malloc.mmap_threshold=33554432:glibc.malloc.trim_threshold=67108864"
+   },
+   "cooldown_s": 3.0,
+   "temp_start": 70.875,
+   "compile_s": null,
+   "outcome": "ok",
+   "error": null,
+   "log": "results/logs/nadim-Alienware-Aurora-Ryzen-Edition-llvm23-20261014-0103Z/throughput-r1-eigen-repl-default.log",
+   "sampler": [
+    [
+     60985.083,
+     4837,
+     70.75
+    ],
+    [
+     60985.183,
+     4850,
+     70.625
+    ],
+    [
+     60985.283,
+     4816,
+     70.5
+    ],
+    [
+     60985.383,
+     4816,
+     70.5
+    ],
+    [
+     60985.483,
+     4841,
+     70.375
+    ],
+    [
+     60985.584,
+     4841,
+     70.25
+    ],
+    [
+     60985.684,
+     4841,
+     70.125
+    ],
+    [
+     60985.784,
+     4841,
+     70.125
+    ],
+    [
+     60985.884,
+     4841,
+     70.0
+    ],
+    [
+     60985.984,
+     4841,
+     69.875
+    ],
+    [
+     60986.085,
+     4791,
+     69.875
+    ],
+    [
+     60986.185,
+     4816,
+     69.75
+    ],
+    [
+     60986.285,
+     4840,
+     69.75
+    ],
+    [
+     60986.385,
+     4841,
+     69.625
+    ],
+    [
+     60986.485,
+     4841,
+     69.5
+    ],
+    [
+     60986.586,
+     4791,
+     69.5
+    ],
+    [
+     60986.686,
+     4816,
+     69.375
+    ],
+    [
+     60986.786,
+     4816,
+     69.375
+    ],
+    [
+     60986.886,
+     4762,
+     69.375
+    ],
+    [
+     60986.986,
+     4766,
+     69.25
+    ],
+    [
+     60987.087,
+     4767,
+     69.25
+    ],
+    [
+     60987.187,
+     4791,
+     69.25
+    ],
+    [
+     60987.287,
+     4791,
+     69.25
+    ],
+    [
+     60987.387,
+     4791,
+     69.25
+    ],
+    [
+     60987.487,
+     4791,
+     69.25
+    ],
+    [
+     60987.588,
+     4764,
+     69.25
+    ],
+    [
+     60987.688,
+     4791,
+     69.125
+    ],
+    [
+     60987.788,
+     4791,
+     69.125
+    ],
+    [
+     60987.888,
+     4779,
+     69.125
+    ],
+    [
+     60987.988,
+     4791,
+     69.125
+    ],
+    [
+     60988.089,
+     4745,
+     69.125
+    ],
+    [
+     60988.189,
+     4765,
+     69.125
+    ],
+    [
+     60988.289,
+     4749,
+     69.125
+    ],
+    [
+     60988.389,
+     4767,
+     69.125
+    ],
+    [
+     60988.489,
+     4791,
+     69.125
+    ],
+    [
+     60988.59,
+     4778,
+     69.125
+    ],
+    [
+     60988.69,
+     4791,
+     69.125
+    ],
+    [
+     60988.79,
+     4791,
+     69.125
+    ],
+    [
+     60988.89,
+     4792,
+     69.125
+    ],
+    [
+     60988.99,
+     4791,
+     69.125
+    ],
+    [
+     60989.091,
+     4766,
+     69.125
+    ],
+    [
+     60989.191,
+     4767,
+     69.125
+    ],
+    [
+     60989.291,
+     4770,
+     69.125
+    ],
+    [
+     60989.391,
+     4775,
+     69.125
+    ],
+    [
+     60989.491,
+     4792,
+     69.125
+    ],
+    [
+     60989.592,
+     4774,
+     69.125
+    ],
+    [
+     60989.692,
+     4791,
+     69.125
+    ],
+    [
+     60989.792,
+     4792,
+     69.125
+    ],
+    [
+     60989.892,
+     4767,
+     69.125
+    ],
+    [
+     60989.992,
+     4791,
+     69.125
+    ],
+    [
+     60990.093,
+     4789,
+     69.125
+    ],
+    [
+     60990.193,
+     4692,
+     69.25
+    ],
+    [
+     60990.293,
+     4717,
+     69.375
+    ],
+    [
+     60990.393,
+     4786,
+     69.375
+    ],
+    [
+     60990.494,
+     4727,
+     69.375
+    ],
+    [
+     60990.594,
+     4791,
+     69.375
+    ],
+    [
+     60990.694,
+     4791,
+     69.375
+    ],
+    [
+     60990.794,
+     4766,
+     69.375
+    ],
+    [
+     60990.895,
+     4742,
+     69.5
+    ],
+    [
+     60990.995,
+     4791,
+     69.5
+    ],
+    [
+     60991.095,
+     4780,
+     69.5
+    ],
+    [
+     60991.196,
+     4741,
+     69.5
+    ],
+    [
+     60991.296,
+     4767,
+     69.5
+    ],
+    [
+     60991.396,
+     4791,
+     69.5
+    ],
+    [
+     60991.496,
+     4791,
+     69.5
+    ],
+    [
+     60991.596,
+     4779,
+     69.5
+    ],
+    [
+     60991.697,
+     4791,
+     69.5
+    ],
+    [
+     60991.797,
+     4791,
+     69.5
+    ],
+    [
+     60991.897,
+     4791,
+     69.375
+    ],
+    [
+     60991.997,
+     4791,
+     69.375
+    ],
+    [
+     60992.097,
+     4791,
+     69.375
+    ],
+    [
+     60992.198,
+     4791,
+     69.375
+    ],
+    [
+     60992.298,
+     4791,
+     69.375
+    ],
+    [
+     60992.398,
+     4791,
+     69.375
+    ],
+    [
+     60992.499,
+     4791,
+     69.375
+    ],
+    [
+     60992.599,
+     4791,
+     69.375
+    ],
+    [
+     60992.699,
+     4791,
+     69.375
+    ],
+    [
+     60992.799,
+     4791,
+     69.375
+    ],
+    [
+     60992.899,
+     4742,
+     69.375
+    ],
+    [
+     60993.0,
+     4787,
+     69.375
+    ],
+    [
+     60993.1,
+     4786,
+     69.375
+    ],
+    [
+     60993.2,
+     4767,
+     69.375
+    ],
+    [
+     60993.3,
+     4792,
+     69.25
+    ],
+    [
+     60993.4,
+     4769,
+     69.25
+    ],
+    [
+     60993.501,
+     4767,
+     69.25
+    ],
+    [
+     60993.601,
+     4791,
+     69.25
+    ],
+    [
+     60993.701,
+     4767,
+     69.25
+    ],
+    [
+     60993.801,
+     4791,
+     69.25
+    ],
+    [
+     60993.901,
+     4766,
+     69.25
+    ],
+    [
+     60994.002,
+     4749,
+     69.25
+    ],
+    [
+     60994.102,
+     4791,
+     69.25
+    ],
+    [
+     60994.202,
+     4769,
+     69.25
+    ],
+    [
+     60994.302,
+     4775,
+     69.25
+    ],
+    [
+     60994.402,
+     4766,
+     69.25
+    ],
+    [
+     60994.503,
+     4767,
+     69.25
+    ],
+    [
+     60994.603,
+     4791,
+     69.25
+    ],
+    [
+     60994.703,
+     4767,
+     69.25
+    ],
+    [
+     60994.803,
+     4791,
+     69.25
+    ],
+    [
+     60994.903,
+     4776,
+     69.25
+    ],
+    [
+     60995.004,
+     4742,
+     69.25
+    ],
+    [
+     60995.104,
+     4791,
+     69.25
+    ],
+    [
+     60995.204,
+     4767,
+     69.125
+    ],
+    [
+     60995.304,
+     4791,
+     69.125
+    ],
+    [
+     60995.404,
+     4785,
+     69.125
+    ],
+    [
+     60995.505,
+     4768,
+     69.125
+    ],
+    [
+     60995.605,
+     4791,
+     69.125
+    ],
+    [
+     60995.705,
+     4742,
+     69.125
+    ],
+    [
+     60995.805,
+     4791,
+     69.125
+    ],
+    [
+     60995.905,
+     4791,
+     69.125
+    ],
+    [
+     60996.006,
+     4791,
+     69.125
+    ],
+    [
+     60996.106,
+     4791,
+     69.125
+    ],
+    [
+     60996.206,
+     4766,
+     69.125
+    ],
+    [
+     60996.306,
+     4780,
+     69.125
+    ],
+    [
+     60996.406,
+     4775,
+     69.125
+    ],
+    [
+     60996.507,
+     4766,
+     69.125
+    ],
+    [
+     60996.607,
+     4791,
+     69.125
+    ],
+    [
+     60996.707,
+     4777,
+     69.125
+    ],
+    [
+     60996.807,
+     4791,
+     69.125
+    ],
+    [
+     60996.907,
+     4791,
+     69.125
+    ],
+    [
+     60997.008,
+     4772,
+     69.125
+    ],
+    [
+     60997.108,
+     4791,
+     69.125
+    ],
+    [
+     60997.208,
+     4791,
+     69.125
+    ],
+    [
+     60997.309,
+     4791,
+     69.125
+    ],
+    [
+     60997.409,
+     4779,
+     69.125
+    ],
+    [
+     60997.509,
+     4766,
+     69.125
+    ],
+    [
+     60997.609,
+     4791,
+     69.125
+    ],
+    [
+     60997.709,
+     4766,
+     69.125
+    ],
+    [
+     60997.81,
+     4766,
+     69.125
+    ],
+    [
+     60997.91,
+     4791,
+     69.125
+    ],
+    [
+     60998.01,
+     4767,
+     69.125
+    ],
+    [
+     60998.11,
+     4788,
+     69.125
+    ],
+    [
+     60998.21,
+     4751,
+     69.125
+    ],
+    [
+     60998.31,
+     4792,
+     69.125
+    ],
+    [
+     60998.411,
+     4791,
+     69.125
+    ],
+    [
+     60998.511,
+     4767,
+     69.125
+    ],
+    [
+     60998.611,
+     4791,
+     69.125
+    ],
+    [
+     60998.711,
+     4792,
+     69.125
+    ],
+    [
+     60998.812,
+     4786,
+     69.125
+    ],
+    [
+     60998.912,
+     4792,
+     69.125
+    ],
+    [
+     60999.012,
+     4777,
+     69.0
+    ],
+    [
+     60999.112,
+     4791,
+     69.0
+    ],
+    [
+     60999.212,
+     4779,
+     69.0
+    ],
+    [
+     60999.313,
+     4767,
+     69.0
+    ],
+    [
+     60999.413,
+     4781,
+     69.0
+    ],
+    [
+     60999.513,
+     4767,
+     69.0
+    ],
+    [
+     60999.613,
+     4759,
+     69.0
+    ],
+    [
+     60999.713,
+     4791,
+     69.0
+    ],
+    [
+     60999.814,
+     4749,
+     69.0
+    ],
+    [
+     60999.914,
+     4791,
+     69.0
+    ],
+    [
+     61000.014,
+     4745,
+     69.0
+    ],
+    [
+     61000.114,
+     4774,
+     69.0
+    ],
+    [
+     61000.214,
+     4749,
+     69.0
+    ],
+    [
+     61000.315,
+     4766,
+     69.0
+    ],
+    [
+     61000.415,
+     4761,
+     69.0
+    ],
+    [
+     61000.515,
+     4783,
+     69.0
+    ],
+    [
+     61000.615,
+     4776,
+     69.0
+    ],
+    [
+     61000.715,
+     4791,
+     69.0
+    ],
+    [
+     61000.816,
+     4791,
+     69.0
+    ],
+    [
+     61000.916,
+     4771,
+     69.0
+    ],
+    [
+     61001.016,
+     4766,
+     69.0
+    ],
+    [
+     61001.116,
+     4777,
+     69.0
+    ],
+    [
+     61001.216,
+     4785,
+     69.0
+    ],
+    [
+     61001.317,
+     4743,
+     69.0
+    ],
+    [
+     61001.417,
+     4788,
+     69.0
+    ],
+    [
+     61001.517,
+     4791,
+     69.0
+    ],
+    [
+     61001.617,
+     4779,
+     69.0
+    ],
+    [
+     61001.717,
+     4791,
+     69.0
+    ],
+    [
+     61001.818,
+     4744,
+     69.0
+    ],
+    [
+     61001.918,
+     4791,
+     69.0
+    ],
+    [
+     61002.018,
+     4791,
+     69.0
+    ],
+    [
+     61002.118,
+     4791,
+     69.0
+    ],
+    [
+     61002.218,
+     4766,
+     69.0
+    ],
+    [
+     61002.319,
+     4762,
+     69.0
+    ],
+    [
+     61002.419,
+     4766,
+     69.0
+    ],
+    [
+     61002.519,
+     4791,
+     69.0
+    ],
+    [
+     61002.619,
+     4767,
+     69.0
+    ],
+    [
+     61002.719,
+     4791,
+     69.0
+    ],
+    [
+     61002.82,
+     4742,
+     69.0
+    ],
+    [
+     61002.92,
+     4791,
+     69.0
+    ],
+    [
+     61003.02,
+     4787,
+     69.0
+    ],
+    [
+     61003.12,
+     4782,
+     69.0
+    ],
+    [
+     61003.22,
+     4777,
+     69.0
+    ],
+    [
+     61003.321,
+     4767,
+     69.0
+    ],
+    [
+     61003.421,
+     4791,
+     69.0
+    ],
+    [
+     61003.521,
+     4791,
+     69.0
+    ],
+    [
+     61003.621,
+     4759,
+     69.0
+    ],
+    [
+     61003.721,
+     4779,
+     69.0
+    ],
+    [
+     61003.822,
+     4774,
+     69.0
+    ],
+    [
+     61003.922,
+     4791,
+     69.0
+    ],
+    [
+     61004.022,
+     4789,
+     69.0
+    ],
+    [
+     61004.122,
+     4767,
+     69.0
+    ],
+    [
+     61004.222,
+     4791,
+     69.0
+    ],
+    [
+     61004.323,
+     4772,
+     69.0
+    ],
+    [
+     61004.423,
+     4791,
+     69.0
+    ],
+    [
+     61004.523,
+     4791,
+     69.0
+    ],
+    [
+     61004.623,
+     4762,
+     69.0
+    ],
+    [
+     61004.723,
+     4791,
+     69.0
+    ],
+    [
+     61004.824,
+     4780,
+     69.0
+    ],
+    [
+     61004.924,
+     4772,
+     69.0
+    ],
+    [
+     61005.024,
+     4791,
+     69.0
+    ],
+    [
+     61005.124,
+     4766,
+     69.0
+    ],
+    [
+     61005.224,
+     4792,
+     69.0
+    ],
+    [
+     61005.325,
+     4778,
+     69.0
+    ],
+    [
+     61005.425,
+     4773,
+     69.0
+    ],
+    [
+     61005.525,
+     4791,
+     69.0
+    ],
+    [
+     61005.626,
+     4766,
+     69.0
+    ],
+    [
+     61005.726,
+     4791,
+     69.0
+    ],
+    [
+     61005.826,
+     4772,
+     69.0
+    ],
+    [
+     61005.926,
+     4791,
+     69.0
+    ],
+    [
+     61006.026,
+     4769,
+     69.0
+    ],
+    [
+     61006.127,
+     4766,
+     69.0
+    ],
+    [
+     61006.227,
+     4791,
+     69.0
+    ],
+    [
+     61006.327,
+     4791,
+     69.0
+    ],
+    [
+     61006.427,
+     4791,
+     69.0
+    ],
+    [
+     61006.527,
+     4791,
+     69.0
+    ],
+    [
+     61006.628,
+     4766,
+     69.0
+    ],
+    [
+     61006.728,
+     4786,
+     69.0
+    ],
+    [
+     61006.828,
+     4791,
+     69.0
+    ],
+    [
+     61006.928,
+     4777,
+     69.0
+    ],
+    [
+     61007.028,
+     4791,
+     69.0
+    ],
+    [
+     61007.129,
+     4774,
+     69.0
+    ],
+    [
+     61007.229,
+     4762,
+     69.0
+    ],
+    [
+     61007.329,
+     4763,
+     69.0
+    ],
+    [
+     61007.43,
+     4753,
+     69.0
+    ],
+    [
+     61007.53,
+     4791,
+     69.0
+    ],
+    [
+     61007.63,
+     4770,
+     69.0
+    ],
+    [
+     61007.73,
+     4767,
+     69.0
+    ],
+    [
+     61007.83,
+     4791,
+     69.0
+    ],
+    [
+     61007.93,
+     4779,
+     69.0
+    ],
+    [
+     61008.031,
+     4791,
+     69.125
+    ],
+    [
+     61008.131,
+     4787,
+     69.125
+    ],
+    [
+     61008.231,
+     4791,
+     69.125
+    ],
+    [
+     61008.331,
+     4792,
+     69.125
+    ],
+    [
+     61008.431,
+     4780,
+     69.125
+    ],
+    [
+     61008.532,
+     4791,
+     69.125
+    ],
+    [
+     61008.632,
+     4771,
+     69.125
+    ],
+    [
+     61008.732,
+     4791,
+     69.125
+    ],
+    [
+     61008.832,
+     4791,
+     69.125
+    ],
+    [
+     61008.932,
+     4782,
+     69.125
+    ],
+    [
+     61009.033,
+     4791,
+     69.125
+    ],
+    [
+     61009.133,
+     4766,
+     69.125
+    ],
+    [
+     61009.233,
+     4767,
+     69.125
+    ],
+    [
+     61009.333,
+     4791,
+     69.125
+    ],
+    [
+     61009.433,
+     4742,
+     69.125
+    ],
+    [
+     61009.534,
+     4779,
+     69.125
+    ],
+    [
+     61009.634,
+     4792,
+     69.125
+    ],
+    [
+     61009.734,
+     4767,
+     69.125
+    ],
+    [
+     61009.834,
+     4742,
+     69.125
+    ],
+    [
+     61009.934,
+     4748,
+     69.125
+    ],
+    [
+     61010.035,
+     4791,
+     69.125
+    ],
+    [
+     61010.135,
+     4792,
+     69.125
+    ],
+    [
+     61010.235,
+     4767,
+     69.125
+    ],
+    [
+     61010.335,
+     4790,
+     69.125
+    ],
+    [
+     61010.435,
+     4767,
+     69.125
+    ],
+    [
+     61010.536,
+     4791,
+     69.125
+    ],
+    [
+     61010.636,
+     4791,
+     69.125
+    ],
+    [
+     61010.736,
+     4747,
+     69.125
+    ],
+    [
+     61010.836,
+     4743,
+     69.125
+    ],
+    [
+     61010.936,
+     4762,
+     69.125
+    ],
+    [
+     61011.037,
+     4791,
+     69.125
+    ],
+    [
+     61011.137,
+     4791,
+     69.125
+    ],
+    [
+     61011.237,
+     4791,
+     69.125
+    ],
+    [
+     61011.337,
+     4791,
+     69.125
+    ],
+    [
+     61011.438,
+     4766,
+     69.125
+    ],
+    [
+     61011.538,
+     4783,
+     69.125
+    ],
+    [
+     61011.638,
+     4791,
+     69.125
+    ],
+    [
+     61011.738,
+     4766,
+     69.125
+    ],
+    [
+     61011.838,
+     4791,
+     69.125
+    ],
+    [
+     61011.939,
+     4791,
+     69.125
+    ],
+    [
+     61012.039,
+     4767,
+     69.125
+    ],
+    [
+     61012.139,
+     4766,
+     69.125
+    ],
+    [
+     61012.239,
+     4751,
+     69.125
+    ],
+    [
+     61012.339,
+     4791,
+     69.125
+    ],
+    [
+     61012.44,
+     4791,
+     69.125
+    ],
+    [
+     61012.54,
+     4791,
+     69.125
+    ],
+    [
+     61012.64,
+     4791,
+     69.125
+    ],
+    [
+     61012.74,
+     4752,
+     69.125
+    ],
+    [
+     61012.84,
+     4791,
+     69.125
+    ],
+    [
+     61012.941,
+     4789,
+     69.0
+    ],
+    [
+     61013.041,
+     4766,
+     69.0
+    ],
+    [
+     61013.141,
+     4741,
+     69.0
+    ],
+    [
+     61013.241,
+     4753,
+     69.0
+    ],
+    [
+     61013.341,
+     4791,
+     69.0
+    ],
+    [
+     61013.442,
+     4766,
+     69.0
+    ],
+    [
+     61013.542,
+     4788,
+     69.0
+    ],
+    [
+     61013.642,
+     4791,
+     69.0
+    ],
+    [
+     61013.742,
+     4766,
+     69.0
+    ],
+    [
+     61013.842,
+     4791,
+     69.0
+    ],
+    [
+     61013.943,
+     4791,
+     69.0
+    ],
+    [
+     61014.043,
+     4765,
+     69.0
+    ],
+    [
+     61014.143,
+     4742,
+     69.0
+    ],
+    [
+     61014.243,
+     4742,
+     69.0
+    ],
+    [
+     61014.343,
+     4791,
+     69.0
+    ],
+    [
+     61014.444,
+     4791,
+     69.0
+    ],
+    [
+     61014.544,
+     4766,
+     69.0
+    ],
+    [
+     61014.644,
+     4791,
+     69.0
+    ],
+    [
+     61014.744,
+     4757,
+     69.0
+    ],
+    [
+     61014.844,
+     4791,
+     69.0
+    ],
+    [
+     61014.945,
+     4792,
+     69.0
+    ],
+    [
+     61015.045,
+     4767,
+     69.0
+    ],
+    [
+     61015.145,
+     4763,
+     69.0
+    ],
+    [
+     61015.245,
+     4749,
+     69.0
+    ],
+    [
+     61015.346,
+     4791,
+     69.0
+    ],
+    [
+     61015.446,
+     4791,
+     69.0
+    ],
+    [
+     61015.546,
+     4766,
+     69.0
+    ],
+    [
+     61015.646,
+     4791,
+     69.0
+    ],
+    [
+     61015.746,
+     4773,
+     69.0
+    ],
+    [
+     61015.847,
+     4779,
+     69.0
+    ],
+    [
+     61015.947,
+     4791,
+     69.0
+    ],
+    [
+     61016.047,
+     4766,
+     69.0
+    ],
+    [
+     61016.147,
+     4741,
+     69.0
+    ],
+    [
+     61016.247,
+     4755,
+     69.0
+    ],
+    [
+     61016.348,
+     4777,
+     69.0
+    ],
+    [
+     61016.448,
+     4791,
+     69.0
+    ],
+    [
+     61016.548,
+     4751,
+     69.0
+    ],
+    [
+     61016.648,
+     4791,
+     69.0
+    ],
+    [
+     61016.749,
+     4791,
+     69.0
+    ],
+    [
+     61016.849,
+     4766,
+     69.0
+    ],
+    [
+     61016.949,
+     4780,
+     69.0
+    ],
+    [
+     61017.049,
+     4742,
+     69.0
+    ],
+    [
+     61017.15,
+     4766,
+     69.125
+    ],
+    [
+     61017.25,
+     4770,
+     69.125
+    ],
+    [
+     61017.35,
+     4783,
+     69.125
+    ],
+    [
+     61017.45,
+     4791,
+     69.125
+    ],
+    [
+     61017.55,
+     4766,
+     69.125
+    ],
+    [
+     61017.651,
+     4791,
+     69.125
+    ],
+    [
+     61017.751,
+     4791,
+     69.125
+    ],
+    [
+     61017.851,
+     4767,
+     69.125
+    ],
+    [
+     61017.951,
+     4772,
+     69.125
+    ],
+    [
+     61018.051,
+     4757,
+     69.125
+    ],
+    [
+     61018.152,
+     4766,
+     69.125
+    ],
+    [
+     61018.252,
+     4790,
+     69.125
+    ],
+    [
+     61018.353,
+     4772,
+     69.125
+    ],
+    [
+     61018.453,
+     4792,
+     69.125
+    ],
+    [
+     61018.553,
+     4742,
+     69.125
+    ],
+    [
+     61018.653,
+     4791,
+     69.125
+    ],
+    [
+     61018.753,
+     4791,
+     69.125
+    ],
+    [
+     61018.854,
+     4787,
+     69.125
+    ],
+    [
+     61018.954,
+     4791,
+     69.125
+    ],
+    [
+     61019.054,
+     4755,
+     69.125
+    ],
+    [
+     61019.154,
+     4791,
+     69.125
+    ],
+    [
+     61019.254,
+     4791,
+     69.125
+    ],
+    [
+     61019.355,
+     4766,
+     69.125
+    ],
+    [
+     61019.455,
+     4791,
+     69.125
+    ],
+    [
+     61019.555,
+     4763,
+     69.125
+    ],
+    [
+     61019.655,
+     4791,
+     69.125
+    ],
+    [
+     61019.755,
+     4791,
+     69.125
+    ],
+    [
+     61019.856,
+     4791,
+     69.125
+    ],
+    [
+     61019.956,
+     4773,
+     69.125
+    ],
+    [
+     61020.056,
+     4727,
+     69.125
+    ],
+    [
+     61020.156,
+     4741,
+     69.25
+    ],
+    [
+     61020.257,
+     4721,
+     69.5
+    ],
+    [
+     61020.357,
+     4742,
+     69.625
+    ],
+    [
+     61020.457,
+     4717,
+     69.875
+    ],
+    [
+     61020.557,
+     4717,
+     70.125
+    ],
+    [
+     61020.658,
+     4717,
+     70.25
+    ],
+    [
+     61020.758,
+     4717,
+     70.375
+    ],
+    [
+     61020.858,
+     4717,
+     70.5
+    ],
+    [
+     61020.958,
+     4717,
+     70.625
+    ],
+    [
+     61021.059,
+     4717,
+     70.625
+    ],
+    [
+     61021.159,
+     4717,
+     71.0
+    ],
+    [
+     61021.259,
+     4717,
+     71.25
+    ],
+    [
+     61021.36,
+     4767,
+     71.25
+    ],
+    [
+     61021.46,
+     4767,
+     71.25
+    ],
+    [
+     61021.56,
+     4783,
+     71.25
+    ],
+    [
+     61021.66,
+     4791,
+     71.125
+    ],
+    [
+     61021.76,
+     4783,
+     71.125
+    ],
+    [
+     61021.861,
+     4788,
+     71.125
+    ],
+    [
+     61021.961,
+     4742,
+     71.125
+    ],
+    [
+     61022.061,
+     4785,
+     71.125
+    ],
+    [
+     61022.161,
+     4742,
+     71.125
+    ],
+    [
+     61022.262,
+     4782,
+     71.0
+    ],
+    [
+     61022.362,
+     4767,
+     71.0
+    ],
+    [
+     61022.463,
+     4766,
+     71.0
+    ],
+    [
+     61022.563,
+     4767,
+     71.0
+    ],
+    [
+     61022.663,
+     4667,
+     71.0
+    ],
+    [
+     61022.764,
+     4776,
+     71.0
+    ],
+    [
+     61022.865,
+     4766,
+     71.0
+    ],
+    [
+     61022.965,
+     4766,
+     71.0
+    ],
+    [
+     61023.065,
+     4742,
+     71.0
+    ],
+    [
+     61023.165,
+     4782,
+     70.875
+    ],
+    [
+     61023.266,
+     4766,
+     70.875
+    ],
+    [
+     61023.366,
+     4773,
+     70.875
+    ],
+    [
+     61023.466,
+     4768,
+     70.875
+    ],
+    [
+     61023.566,
+     4744,
+     70.875
+    ],
+    [
+     61023.666,
+     4791,
+     70.875
+    ],
+    [
+     61023.767,
+     4791,
+     70.75
+    ],
+    [
+     61023.867,
+     4766,
+     70.75
+    ],
+    [
+     61023.967,
+     4791,
+     70.75
+    ],
+    [
+     61024.067,
+     4765,
+     70.75
+    ],
+    [
+     61024.167,
+     4785,
+     70.75
+    ],
+    [
+     61024.268,
+     4792,
+     70.75
+    ],
+    [
+     61024.368,
+     4767,
+     70.75
+    ],
+    [
+     61024.468,
+     4791,
+     70.625
+    ],
+    [
+     61024.568,
+     4773,
+     70.625
+    ],
+    [
+     61024.668,
+     4786,
+     70.625
+    ],
+    [
+     61024.769,
+     4781,
+     70.625
+    ],
+    [
+     61024.869,
+     4752,
+     70.625
+    ],
+    [
+     61024.969,
+     4791,
+     70.625
+    ],
+    [
+     61025.069,
+     4765,
+     70.5
+    ],
+    [
+     61025.169,
+     4791,
+     70.5
+    ],
+    [
+     61025.269,
+     4791,
+     70.5
+    ],
+    [
+     61025.37,
+     4754,
+     70.5
+    ],
+    [
+     61025.47,
+     4791,
+     70.5
+    ],
+    [
+     61025.57,
+     4752,
+     70.5
+    ],
+    [
+     61025.67,
+     4767,
+     70.5
+    ],
+    [
+     61025.77,
+     4784,
+     70.375
+    ],
+    [
+     61025.871,
+     4753,
+     70.375
+    ],
+    [
+     61025.971,
+     4792,
+     70.375
+    ],
+    [
+     61026.071,
+     4791,
+     70.375
+    ],
+    [
+     61026.171,
+     4790,
+     70.375
+    ],
+    [
+     61026.272,
+     4791,
+     70.375
+    ],
+    [
+     61026.372,
+     4742,
+     70.375
+    ],
+    [
+     61026.472,
+     4791,
+     70.25
+    ],
+    [
+     61026.572,
+     4791,
+     70.25
+    ],
+    [
+     61026.672,
+     4767,
+     70.25
+    ],
+    [
+     61026.773,
+     4791,
+     70.25
+    ],
+    [
+     61026.873,
+     4767,
+     70.25
+    ],
+    [
+     61026.973,
+     4777,
+     70.25
+    ],
+    [
+     61027.074,
+     4791,
+     70.25
+    ],
+    [
+     61027.174,
+     4766,
+     70.125
+    ],
+    [
+     61027.274,
+     4791,
+     70.125
+    ],
+    [
+     61027.374,
+     4749,
+     70.125
+    ],
+    [
+     61027.474,
+     4791,
+     70.125
+    ],
+    [
+     61027.575,
+     4791,
+     70.125
+    ],
+    [
+     61027.675,
+     4766,
+     70.125
+    ],
+    [
+     61027.775,
+     4791,
+     70.125
+    ],
+    [
+     61027.875,
+     4760,
+     70.125
+    ],
+    [
+     61027.976,
+     4779,
+     70.0
+    ],
+    [
+     61028.076,
+     4782,
+     70.0
+    ],
+    [
+     61028.176,
+     4746,
+     70.0
+    ],
+    [
+     61028.276,
+     4791,
+     70.0
+    ],
+    [
+     61028.376,
+     4767,
+     70.0
+    ],
+    [
+     61028.477,
+     4767,
+     70.0
+    ],
+    [
+     61028.577,
+     4791,
+     70.0
+    ],
+    [
+     61028.677,
+     4766,
+     70.0
+    ],
+    [
+     61028.777,
+     4791,
+     70.0
+    ],
+    [
+     61028.877,
+     4777,
+     69.875
+    ],
+    [
+     61028.978,
+     4782,
+     69.875
+    ],
+    [
+     61029.078,
+     4780,
+     70.0
+    ],
+    [
+     61029.178,
+     4767,
+     70.0
+    ],
+    [
+     61029.278,
+     4791,
+     70.0
+    ],
+    [
+     61029.378,
+     4783,
+     69.875
+    ],
+    [
+     61029.479,
+     4791,
+     69.875
+    ],
+    [
+     61029.579,
+     4778,
+     69.875
+    ],
+    [
+     61029.679,
+     4767,
+     69.875
+    ],
+    [
+     61029.779,
+     4791,
+     69.875
+    ],
+    [
+     61029.879,
+     4781,
+     69.875
+    ],
+    [
+     61029.98,
+     4784,
+     69.875
+    ],
+    [
+     61030.08,
+     4742,
+     69.875
+    ],
+    [
+     61030.18,
+     4767,
+     69.875
+    ],
+    [
+     61030.28,
+     4791,
+     69.875
+    ],
+    [
+     61030.38,
+     4742,
+     69.875
+    ],
+    [
+     61030.481,
+     4772,
+     69.875
+    ],
+    [
+     61030.581,
+     4792,
+     69.875
+    ],
+    [
+     61030.681,
+     4742,
+     69.75
+    ],
+    [
+     61030.781,
+     4791,
+     69.75
+    ],
+    [
+     61030.882,
+     4791,
+     69.75
+    ],
+    [
+     61030.982,
+     4766,
+     69.75
+    ],
+    [
+     61031.082,
+     4775,
+     69.75
+    ],
+    [
+     61031.182,
+     4742,
+     69.75
+    ],
+    [
+     61031.282,
+     4791,
+     69.75
+    ],
+    [
+     61031.383,
+     4767,
+     69.75
+    ],
+    [
+     61031.483,
+     4764,
+     69.75
+    ],
+    [
+     61031.583,
+     4791,
+     69.75
+    ],
+    [
+     61031.683,
+     4766,
+     69.75
+    ],
+    [
+     61031.783,
+     4791,
+     69.75
+    ],
+    [
+     61031.884,
+     4759,
+     69.625
+    ],
+    [
+     61031.984,
+     4766,
+     69.625
+    ],
+    [
+     61032.084,
+     4762,
+     69.625
+    ],
+    [
+     61032.184,
+     4755,
+     69.625
+    ],
+    [
+     61032.284,
+     4766,
+     69.625
+    ],
+    [
+     61032.385,
+     4770,
+     69.625
+    ],
+    [
+     61032.485,
+     4742,
+     69.625
+    ],
+    [
+     61032.585,
+     4791,
+     69.625
+    ],
+    [
+     61032.685,
+     4766,
+     69.625
+    ],
+    [
+     61032.785,
+     4791,
+     69.625
+    ],
+    [
+     61032.886,
+     4760,
+     69.625
+    ],
+    [
+     61032.986,
+     4743,
+     69.625
+    ],
+    [
+     61033.086,
+     4760,
+     69.625
+    ],
+    [
+     61033.186,
+     4781,
+     69.5
+    ],
+    [
+     61033.286,
+     4753,
+     69.5
+    ],
+    [
+     61033.387,
+     4791,
+     69.5
+    ],
+    [
+     61033.487,
+     4746,
+     69.5
+    ],
+    [
+     61033.587,
+     4791,
+     69.5
+    ],
+    [
+     61033.687,
+     4767,
+     69.5
+    ],
+    [
+     61033.788,
+     4779,
+     69.5
+    ],
+    [
+     61033.888,
+     4750,
+     69.5
+    ],
+    [
+     61033.988,
+     4767,
+     69.5
+    ],
+    [
+     61034.088,
+     4765,
+     69.5
+    ],
+    [
+     61034.188,
+     4792,
+     69.5
+    ],
+    [
+     61034.289,
+     4767,
+     69.5
+    ],
+    [
+     61034.389,
+     4782,
+     69.5
+    ],
+    [
+     61034.489,
+     4766,
+     69.5
+    ],
+    [
+     61034.589,
+     4791,
+     69.5
+    ],
+    [
+     61034.689,
+     4771,
+     69.375
+    ],
+    [
+     61034.79,
+     4782,
+     69.375
+    ],
+    [
+     61034.89,
+     4767,
+     69.375
+    ],
+    [
+     61034.99,
+     4742,
+     69.375
+    ],
+    [
+     61035.09,
+     4791,
+     69.375
+    ],
+    [
+     61035.19,
+     4792,
+     69.375
+    ],
+    [
+     61035.291,
+     4767,
+     69.375
+    ],
+    [
+     61035.391,
+     4791,
+     69.375
+    ],
+    [
+     61035.491,
+     4758,
+     69.375
+    ],
+    [
+     61035.591,
+     4791,
+     69.375
+    ],
+    [
+     61035.691,
+     4789,
+     69.375
+    ],
+    [
+     61035.792,
+     4760,
+     69.375
+    ],
+    [
+     61035.892,
+     4779,
+     69.375
+    ],
+    [
+     61035.992,
+     4754,
+     69.375
+    ],
+    [
+     61036.092,
+     4770,
+     69.375
+    ],
+    [
+     61036.192,
+     4791,
+     69.375
+    ],
+    [
+     61036.293,
+     4741,
+     69.375
+    ],
+    [
+     61036.393,
+     4776,
+     69.375
+    ],
+    [
+     61036.493,
+     4776,
+     69.375
+    ],
+    [
+     61036.593,
+     4786,
+     69.375
+    ],
+    [
+     61036.693,
+     4791,
+     69.375
+    ],
+    [
+     61036.794,
+     4767,
+     69.25
+    ],
+    [
+     61036.894,
+     4791,
+     69.25
+    ],
+    [
+     61036.994,
+     4791,
+     69.25
+    ],
+    [
+     61037.094,
+     4785,
+     69.25
+    ],
+    [
+     61037.194,
+     4768,
+     69.25
+    ],
+    [
+     61037.295,
+     4744,
+     69.25
+    ],
+    [
+     61037.395,
+     4791,
+     69.25
+    ],
+    [
+     61037.495,
+     4791,
+     69.25
+    ],
+    [
+     61037.595,
+     4791,
+     69.25
+    ],
+    [
+     61037.696,
+     4791,
+     69.25
+    ],
+    [
+     61037.796,
+     4767,
+     69.25
+    ],
+    [
+     61037.896,
+     4791,
+     69.25
+    ],
+    [
+     61037.996,
+     4787,
+     69.25
+    ],
+    [
+     61038.097,
+     4791,
+     69.25
+    ],
+    [
+     61038.197,
+     4772,
+     69.25
+    ],
+    [
+     61038.297,
+     4766,
+     69.25
+    ],
+    [
+     61038.397,
+     4786,
+     69.25
+    ],
+    [
+     61038.497,
+     4791,
+     69.25
+    ],
+    [
+     61038.598,
+     4766,
+     69.25
+    ],
+    [
+     61038.698,
+     4786,
+     69.25
+    ],
+    [
+     61038.798,
+     4763,
+     69.25
+    ],
+    [
+     61038.898,
+     4791,
+     69.25
+    ],
+    [
+     61038.998,
+     4782,
+     69.25
+    ],
+    [
+     61039.099,
+     4780,
+     69.25
+    ],
+    [
+     61039.199,
+     4767,
+     69.25
+    ],
+    [
+     61039.299,
+     4770,
+     69.25
+    ],
+    [
+     61039.399,
+     4792,
+     69.25
+    ],
+    [
+     61039.499,
+     4791,
+     69.25
+    ],
+    [
+     61039.6,
+     4778,
+     69.25
+    ],
+    [
+     61039.7,
+     4792,
+     69.25
+    ],
+    [
+     61039.8,
+     4783,
+     69.25
+    ],
+    [
+     61039.9,
+     4791,
+     69.25
+    ],
+    [
+     61040.0,
+     4791,
+     69.25
+    ],
+    [
+     61040.101,
+     4756,
+     69.25
+    ],
+    [
+     61040.201,
+     4782,
+     69.25
+    ],
+    [
+     61040.301,
+     4791,
+     69.25
+    ],
+    [
+     61040.401,
+     4766,
+     69.25
+    ],
+    [
+     61040.501,
+     4791,
+     69.25
+    ],
+    [
+     61040.602,
+     4767,
+     69.25
+    ],
+    [
+     61040.702,
+     4776,
+     69.25
+    ],
+    [
+     61040.802,
+     4791,
+     69.25
+    ],
+    [
+     61040.902,
+     4791,
+     69.25
+    ],
+    [
+     61041.003,
+     4766,
+     69.25
+    ],
+    [
+     61041.103,
+     4758,
+     69.25
+    ],
+    [
+     61041.203,
+     4791,
+     69.25
+    ],
+    [
+     61041.303,
+     4790,
+     69.25
+    ],
+    [
+     61041.403,
+     4789,
+     69.25
+    ],
+    [
+     61041.504,
+     4788,
+     69.25
+    ],
+    [
+     61041.604,
+     4759,
+     69.25
+    ],
+    [
+     61041.704,
+     4766,
+     69.25
+    ],
+    [
+     61041.804,
+     4766,
+     69.25
+    ],
+    [
+     61041.904,
+     4766,
+     69.25
+    ],
+    [
+     61042.005,
+     4766,
+     69.25
+    ],
+    [
+     61042.105,
+     4766,
+     69.25
+    ],
+    [
+     61042.205,
+     4791,
+     69.25
+    ],
+    [
+     61042.305,
+     4775,
+     69.25
+    ],
+    [
+     61042.405,
+     4766,
+     69.25
+    ],
+    [
+     61042.506,
+     4791,
+     69.25
+    ],
+    [
+     61042.606,
+     4760,
+     69.125
+    ],
+    [
+     61042.706,
+     4742,
+     69.25
+    ],
+    [
+     61042.806,
+     4791,
+     69.25
+    ],
+    [
+     61042.906,
+     4767,
+     69.25
+    ],
+    [
+     61043.007,
+     4790,
+     69.25
+    ],
+    [
+     61043.107,
+     4776,
+     69.25
+    ],
+    [
+     61043.207,
+     4766,
+     69.25
+    ],
+    [
+     61043.307,
+     4778,
+     69.25
+    ],
+    [
+     61043.407,
+     4767,
+     69.25
+    ],
+    [
+     61043.508,
+     4789,
+     69.25
+    ],
+    [
+     61043.608,
+     4791,
+     69.25
+    ],
+    [
+     61043.708,
+     4767,
+     69.25
+    ],
+    [
+     61043.808,
+     4791,
+     69.25
+    ],
+    [
+     61043.908,
+     4750,
+     69.25
+    ],
+    [
+     61044.009,
+     4792,
+     69.25
+    ],
+    [
+     61044.109,
+     4792,
+     69.25
+    ],
+    [
+     61044.209,
+     4772,
+     69.25
+    ],
+    [
+     61044.309,
+     4792,
+     69.25
+    ],
+    [
+     61044.409,
+     4767,
+     69.25
+    ],
+    [
+     61044.51,
+     4792,
+     69.25
+    ],
+    [
+     61044.61,
+     4792,
+     69.25
+    ],
+    [
+     61044.71,
+     4762,
+     69.25
+    ],
+    [
+     61044.81,
+     4775,
+     69.125
+    ],
+    [
+     61044.91,
+     4764,
+     69.125
+    ],
+    [
+     61045.011,
+     4767,
+     69.125
+    ],
+    [
+     61045.111,
+     4791,
+     69.125
+    ],
+    [
+     61045.211,
+     4767,
+     69.125
+    ],
+    [
+     61045.311,
+     4791,
+     69.125
+    ],
+    [
+     61045.411,
+     4754,
+     69.125
+    ],
+    [
+     61045.511,
+     4774,
+     69.125
+    ],
+    [
+     61045.612,
+     4791,
+     69.125
+    ],
+    [
+     61045.712,
+     4767,
+     69.125
+    ],
+    [
+     61045.812,
+     4773,
+     69.125
+    ],
+    [
+     61045.912,
+     4742,
+     69.125
+    ],
+    [
+     61046.012,
+     3600,
+     69.125
+    ]
+   ],
+   "argv": [
+    "taskset",
+    "-c",
+    "6",
+    "/media/nadim/Data/Source/cpp_repl/bin/cpp-repl",
+    "--batch",
+    "--no-color",
+    "--clang-repl",
+    "/usr/bin/clang-repl-23",
+    "-std=c++20",
+    "-I/media/nadim/Data/Source/cpp_repl/bench/cpp",
+    "-I/usr/include/eigen3",
+    "/media/nadim/Data/Source/cpp_repl/bench/cpp/matmul.cpp"
+   ],
+   "launch": 60984.982297491,
+   "end": 61046.062986357,
+   "exit": 0,
+   "timed_out": false,
+   "records": [
+    {
+     "type": "stamp",
+     "name": "start",
+     "t": 60986.255942,
+     "_arrived": 60986.256010071
+    },
+    {
+     "type": "stamp",
+     "name": "headers",
+     "t": 60986.923117,
+     "_arrived": 60986.923175052
+    },
+    {
+     "type": "stamp",
+     "name": "control",
+     "t": 60986.924733,
+     "_arrived": 60986.924787442
+    },
+    {
+     "type": "stamp",
+     "name": "kernel",
+     "t": 60987.114656,
+     "kernel": "0x765777997000",
+     "_arrived": 60987.114724587
+    },
+    {
+     "type": "env",
+     "arm": "eigen-repl-default",
+     "kernel": "bench::eigen_gemm",
+     "threads": 1,
+     "repl": true,
+     "eigen": "3.4.0",
+     "simd": "SSE, SSE2",
+     "vectorize": "none",
+     "isa": "SSE2",
+     "ndebug": false,
+     "optimize": false,
+     "openmp": 0,
+     "eigen_threads": 1,
+     "compiler": "Ubuntu Clang 23.1.2 (++20260919103626+4b1925210476-1~exp1~20260919223755.77)",
+     "cplusplus": 202002,
+     "_arrived": 60987.206767056
+    },
+    {
+     "type": "result",
+     "arm": "eigen-repl-default",
+     "n": 256,
+     "threads": 1,
+     "first_call": 0.151134029,
+     "warmup_calls": 2,
+     "k": 1,
+     "samples": [
+      0.1507007,
+      0.1507018,
+      0.1507855,
+      0.1509843,
+      0.1510507
+     ],
+     "median": 0.15078554,
+     "gflops": 0.222530834,
+     "checksum": 4104360.13,
+     "freivalds": 5.84951277e-16,
+     "too_long": false,
+     "t_start": 60987.20699,
+     "t_first_done": 60987.358124,
+     "t_end": 60988.263189,
+     "_arrived": 60988.264296322
+    },
+    {
+     "type": "result",
+     "arm": "eigen-repl-default",
+     "n": 1024,
+     "threads": 1,
+     "first_call": 9.60823908,
+     "warmup_calls": 2,
+     "k": 1,
+     "samples": [
+      9.61151,
+      9.640169,
+      9.611187,
+      9.610293
+     ],
+     "median": 9.61134859,
+     "gflops": 0.223432084,
+     "checksum": 262681949,
+     "freivalds": 1.38881286e-15,
+     "too_long": false,
+     "t_start": 60988.269613,
+     "t_first_done": 60997.877852,
+     "t_end": 61045.953424,
+     "_arrived": 61045.969327075
+    },
+    {
+     "type": "done",
+     "arm": "eigen-repl-default",
+     "_arrived": 61045.969336964
+    }
+   ]
+  },
+  {
+   "arm": "naive-native",
+   "group": "diag",
+   "kind": "native",
+   "threads": 1,
+   "round": 1,
+   "phase": "throughput",
+   "cpus": "6",
+   "env": {
+    "BENCH_ARM": "naive-native",
+    "BENCH_SIZES": "256,1024",
+    "BENCH_THREADS": "1",
+    "BENCH_MIN_TIME": "0.3",
+    "BENCH_MAX_CALL": "10.0",
+    "BENCH_SESSION_N": "512",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "BENCH_MAX_N": "1024",
+    "GLIBC_TUNABLES": "glibc.malloc.mmap_threshold=33554432:glibc.malloc.trim_threshold=67108864"
+   },
+   "cooldown_s": 0.0,
+   "temp_start": 69.0,
+   "compile_s": null,
+   "outcome": "ok",
+   "error": null,
+   "log": "results/logs/nadim-Alienware-Aurora-Ryzen-Edition-llvm23-20261014-0103Z/throughput-r1-naive-native.log",
+   "sampler": [
+    [
+     61046.164,
+     4718,
+     69.375
+    ],
+    [
+     61046.264,
+     4717,
+     70.0
+    ],
+    [
+     61046.364,
+     4717,
+     70.625
+    ],
+    [
+     61046.464,
+     4717,
+     71.125
+    ],
+    [
+     61046.564,
+     4742,
+     71.625
+    ],
+    [
+     61046.665,
+     4717,
+     72.125
+    ],
+    [
+     61046.765,
+     4718,
+     72.875
+    ],
+    [
+     61046.865,
+     4742,
+     73.625
+    ],
+    [
+     61046.965,
+     4692,
+     74.625
+    ],
+    [
+     61047.065,
+     4692,
+     75.5
+    ],
+    [
+     61047.166,
+     4717,
+     76.125
+    ],
+    [
+     61047.266,
+     4742,
+     76.625
+    ],
+    [
+     61047.366,
+     4742,
+     77.375
+    ]
+   ],
+   "argv": [
+    "taskset",
+    "-c",
+    "6",
+    "/media/nadim/Data/Source/cpp_repl/bench/build/matmul-naive-native"
+   ],
+   "launch": 61046.063673202,
+   "end": 61047.430054179,
+   "exit": 0,
+   "timed_out": false,
+   "records": [
+    {
+     "type": "stamp",
+     "name": "start",
+     "t": 61046.06569,
+     "_arrived": 61046.065727464
+    },
+    {
+     "type": "stamp",
+     "name": "headers",
+     "t": 61046.065715,
+     "_arrived": 61046.065731181
+    },
+    {
+     "type": "stamp",
+     "name": "control",
+     "t": 61046.065717,
+     "_arrived": 61046.065733606
+    },
+    {
+     "type": "stamp",
+     "name": "kernel",
+     "t": 61046.065718,
+     "kernel": "0x622ac7665440",
+     "_arrived": 61046.065738084
+    },
+    {
+     "type": "env",
+     "arm": "naive-native",
+     "kernel": "bench::naive_gemm",
+     "threads": 1,
+     "repl": false,
+     "eigen": "3.4.0",
+     "simd": "AVX SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2",
+     "vectorize": "SSE4.2 AVX AVX2 FMA",
+     "isa": "SSE4.2 AVX AVX2 FMA",
+     "ndebug": true,
+     "optimize": true,
+     "openmp": 0,
+     "eigen_threads": 1,
+     "compiler": "Ubuntu Clang 23.1.2 (++20260919103626+4b1925210476-1~exp1~20260919223755.77)",
+     "cplusplus": 202002,
+     "_arrived": 61046.065745047
+    },
+    {
+     "type": "result",
+     "arm": "naive-native",
+     "n": 256,
+     "threads": 1,
+     "first_call": 0.00164979,
+     "warmup_calls": 153,
+     "k": 13,
+     "samples": [
+      0.001640379,
+      0.001639477,
+      0.001641536,
+      0.001638009,
+      0.001638377,
+      0.001640469,
+      0.001640578,
+      0.001639454,
+      0.001640501,
+      0.001638506,
+      0.001639983,
+      0.001637408,
+      0.00163884,
+      0.001638615,
+      0.001637426
+     ],
+     "median": 0.00163945392,
+     "gflops": 20.4668344,
+     "checksum": 4104360.13,
+     "freivalds": 5.94910507e-16,
+     "too_long": false,
+     "t_start": 61046.066347,
+     "t_first_done": 61046.067997,
+     "t_end": 61046.636279,
+     "_arrived": 61046.636434619
+    },
+    {
+     "type": "result",
+     "arm": "naive-native",
+     "n": 1024,
+     "threads": 1,
+     "first_call": 0.092421909,
+     "warmup_calls": 3,
+     "k": 1,
+     "samples": [
+      0.09207563,
+      0.09177096,
+      0.09387168,
+      0.09470824,
+      0.09709376
+     ],
+     "median": 0.093871681,
+     "gflops": 22.8767997,
+     "checksum": 262681949,
+     "freivalds": 1.48726187e-15,
+     "too_long": false,
+     "t_start": 61046.639384,
+     "t_first_done": 61046.731806,
+     "t_end": 61047.385282,
+     "_arrived": 61047.38703193
+    },
+    {
+     "type": "done",
+     "arm": "naive-native",
+     "_arrived": 61047.38703713
+    }
+   ]
+  },
+  {
+   "arm": "naive-repl",
+   "group": "diag",
+   "kind": "repl",
+   "threads": 1,
+   "round": 1,
+   "phase": "throughput",
+   "cpus": "6",
+   "env": {
+    "BENCH_ARM": "naive-repl",
+    "BENCH_SIZES": "256,1024",
+    "BENCH_THREADS": "1",
+    "BENCH_MIN_TIME": "0.3",
+    "BENCH_MAX_CALL": "10.0",
+    "BENCH_SESSION_N": "512",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "BENCH_MAX_N": "1024",
+    "GLIBC_TUNABLES": "glibc.malloc.mmap_threshold=33554432:glibc.malloc.trim_threshold=67108864"
+   },
+   "cooldown_s": 2.0,
+   "temp_start": 70.25,
+   "compile_s": null,
+   "outcome": "ok",
+   "error": null,
+   "log": "results/logs/nadim-Alienware-Aurora-Ryzen-Edition-llvm23-20261014-0103Z/throughput-r1-naive-repl.log",
+   "sampler": [
+    [
+     61049.533,
+     4866,
+     70.125
+    ],
+    [
+     61049.633,
+     4841,
+     70.0
+    ],
+    [
+     61049.733,
+     4833,
+     70.0
+    ],
+    [
+     61049.834,
+     4816,
+     69.875
+    ],
+    [
+     61049.934,
+     4841,
+     69.75
+    ],
+    [
+     61050.034,
+     4848,
+     69.75
+    ],
+    [
+     61050.134,
+     4830,
+     69.625
+    ],
+    [
+     61050.235,
+     4816,
+     69.5
+    ],
+    [
+     61050.335,
+     4841,
+     69.5
+    ],
+    [
+     61050.435,
+     4841,
+     69.375
+    ],
+    [
+     61050.535,
+     4861,
+     69.375
+    ],
+    [
+     61050.635,
+     4816,
+     69.25
+    ],
+    [
+     61050.736,
+     4816,
+     69.25
+    ],
+    [
+     61050.836,
+     4797,
+     69.125
+    ],
+    [
+     61050.936,
+     4816,
+     69.0
+    ],
+    [
+     61051.036,
+     4841,
+     69.0
+    ],
+    [
+     61051.136,
+     4841,
+     68.875
+    ],
+    [
+     61051.237,
+     4816,
+     68.875
+    ],
+    [
+     61051.337,
+     4823,
+     68.75
+    ],
+    [
+     61051.437,
+     4841,
+     68.75
+    ],
+    [
+     61051.537,
+     4816,
+     68.75
+    ],
+    [
+     61051.637,
+     4799,
+     68.625
+    ],
+    [
+     61051.738,
+     4840,
+     68.625
+    ],
+    [
+     61051.838,
+     4816,
+     68.625
+    ],
+    [
+     61051.938,
+     4816,
+     68.5
+    ],
+    [
+     61052.038,
+     4791,
+     68.5
+    ],
+    [
+     61052.138,
+     4710,
+     69.0
+    ],
+    [
+     61052.239,
+     4717,
+     69.875
+    ],
+    [
+     61052.339,
+     4717,
+     70.625
+    ],
+    [
+     61052.439,
+     4701,
+     71.5
+    ],
+    [
+     61052.54,
+     4717,
+     72.375
+    ],
+    [
+     61052.64,
+     4717,
+     73.125
+    ],
+    [
+     61052.74,
+     4707,
+     73.625
+    ],
+    [
+     61052.84,
+     4731,
+     74.375
+    ],
+    [
+     61052.94,
+     4722,
+     75.0
+    ],
+    [
+     61053.041,
+     4717,
+     75.5
+    ],
+    [
+     61053.141,
+     4692,
+     76.125
+    ],
+    [
+     61053.241,
+     4742,
+     76.875
+    ],
+    [
+     61053.341,
+     4742,
+     77.625
+    ],
+    [
+     61053.441,
+     3596,
+     77.75
+    ]
+   ],
+   "argv": [
+    "taskset",
+    "-c",
+    "6",
+    "/media/nadim/Data/Source/cpp_repl/bin/cpp-repl",
+    "--batch",
+    "--no-color",
+    "--clang-repl",
+    "/usr/bin/clang-repl-23",
+    "-std=c++20",
+    "-O3",
+    "-march=native",
+    "-DNDEBUG",
+    "-I/media/nadim/Data/Source/cpp_repl/bench/cpp",
+    "-I/usr/include/eigen3",
+    "-DBENCH_NAIVE=1",
+    "/media/nadim/Data/Source/cpp_repl/bench/cpp/matmul.cpp"
+   ],
+   "launch": 61049.432607552,
+   "end": 61053.455488067,
+   "exit": 0,
+   "timed_out": false,
+   "records": [
+    {
+     "type": "stamp",
+     "name": "start",
+     "t": 61050.752949,
+     "_arrived": 61050.753018091
+    },
+    {
+     "type": "stamp",
+     "name": "headers",
+     "t": 61051.742587,
+     "_arrived": 61051.742650583
+    },
+    {
+     "type": "stamp",
+     "name": "control",
+     "t": 61051.745407,
+     "_arrived": 61051.745503761
+    },
+    {
+     "type": "stamp",
+     "name": "kernel",
+     "t": 61051.757333,
+     "kernel": "0x75ee6b782000",
+     "_arrived": 61051.757388711
+    },
+    {
+     "type": "env",
+     "arm": "naive-repl",
+     "kernel": "bench::naive_gemm",
+     "threads": 1,
+     "repl": true,
+     "eigen": "3.4.0",
+     "simd": "AVX SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2",
+     "vectorize": "SSE4.2 AVX AVX2 FMA",
+     "isa": "SSE4.2 AVX AVX2 FMA",
+     "ndebug": true,
+     "optimize": true,
+     "openmp": 0,
+     "eigen_threads": 1,
+     "compiler": "Ubuntu Clang 23.1.2 (++20260919103626+4b1925210476-1~exp1~20260919223755.77)",
+     "cplusplus": 202002,
+     "_arrived": 61052.064072267
+    },
+    {
+     "type": "result",
+     "arm": "naive-repl",
+     "n": 256,
+     "threads": 1,
+     "first_call": 0.001504596,
+     "warmup_calls": 170,
+     "k": 14,
+     "samples": [
+      0.001476748,
+      0.001479609,
+      0.001489958,
+      0.001479908,
+      0.001470733,
+      0.00147868,
+      0.001481249,
+      0.001480099,
+      0.001476601,
+      0.001478936,
+      0.001478227,
+      0.001477308,
+      0.001480392,
+      0.001471875,
+      0.001470726
+     ],
+     "median": 0.00147867986,
+     "gflops": 22.6921547,
+     "checksum": 4104360.13,
+     "freivalds": 5.94910507e-16,
+     "too_long": false,
+     "t_start": 61052.062821,
+     "t_first_done": 61052.064326,
+     "t_end": 61052.624575,
+     "_arrived": 61052.624816636
+    },
+    {
+     "type": "result",
+     "arm": "naive-repl",
+     "n": 1024,
+     "threads": 1,
+     "first_call": 0.092607943,
+     "warmup_calls": 3,
+     "k": 1,
+     "samples": [
+      0.09187266,
+      0.09206885,
+      0.09193971,
+      0.09169813,
+      0.09151486
+     ],
+     "median": 0.091872658,
+     "gflops": 23.3745675,
+     "checksum": 262681949,
+     "freivalds": 1.48726187e-15,
+     "too_long": false,
+     "t_start": 61052.627709,
+     "t_first_done": 61052.720317,
+     "t_end": 61053.362938,
+     "_arrived": 61053.36473015
+    },
+    {
+     "type": "done",
+     "arm": "naive-repl",
+     "_arrived": 61053.364735591
+    }
+   ]
+  },
+  {
+   "arm": "eigen-repl",
+   "group": "core",
+   "kind": "repl",
+   "threads": 1,
+   "round": 1,
+   "phase": "throughput",
+   "cpus": "6",
+   "env": {
+    "BENCH_ARM": "eigen-repl",
+    "BENCH_SIZES": "256,1024",
+    "BENCH_THREADS": "1",
+    "BENCH_MIN_TIME": "0.3",
+    "BENCH_MAX_CALL": "10.0",
+    "BENCH_SESSION_N": "512",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "GLIBC_TUNABLES": "glibc.malloc.mmap_threshold=33554432:glibc.malloc.trim_threshold=67108864"
+   },
+   "cooldown_s": 2.0,
+   "temp_start": 70.25,
+   "compile_s": null,
+   "outcome": "ok",
+   "error": null,
+   "log": "results/logs/nadim-Alienware-Aurora-Ryzen-Edition-llvm23-20261014-0103Z/throughput-r1-eigen-repl.log",
+   "sampler": [
+    [
+     61055.558,
+     4866,
+     70.125
+    ],
+    [
+     61055.658,
+     4864,
+     70.0
+    ],
+    [
+     61055.758,
+     4816,
+     69.875
+    ],
+    [
+     61055.859,
+     4816,
+     69.875
+    ],
+    [
+     61055.959,
+     4841,
+     69.75
+    ],
+    [
+     61056.059,
+     4841,
+     69.625
+    ],
+    [
+     61056.159,
+     4816,
+     69.625
+    ],
+    [
+     61056.259,
+     4816,
+     69.5
+    ],
+    [
+     61056.36,
+     4823,
+     69.5
+    ],
+    [
+     61056.46,
+     4841,
+     69.375
+    ],
+    [
+     61056.56,
+     4841,
+     69.25
+    ],
+    [
+     61056.66,
+     4821,
+     69.25
+    ],
+    [
+     61056.76,
+     4823,
+     69.125
+    ],
+    [
+     61056.861,
+     4841,
+     69.125
+    ],
+    [
+     61056.961,
+     4841,
+     69.0
+    ],
+    [
+     61057.061,
+     4802,
+     69.0
+    ],
+    [
+     61057.161,
+     4816,
+     68.875
+    ],
+    [
+     61057.261,
+     4816,
+     68.75
+    ],
+    [
+     61057.361,
+     4816,
+     68.75
+    ],
+    [
+     61057.462,
+     4841,
+     68.75
+    ],
+    [
+     61057.562,
+     4803,
+     68.625
+    ],
+    [
+     61057.662,
+     4816,
+     68.625
+    ],
+    [
+     61057.762,
+     4809,
+     68.625
+    ],
+    [
+     61057.862,
+     4816,
+     68.5
+    ],
+    [
+     61057.963,
+     4816,
+     68.5
+    ],
+    [
+     61058.063,
+     4780,
+     68.5
+    ],
+    [
+     61058.163,
+     4766,
+     68.5
+    ],
+    [
+     61058.263,
+     4737,
+     68.625
+    ],
+    [
+     61058.363,
+     4816,
+     68.625
+    ],
+    [
+     61058.464,
+     4816,
+     68.625
+    ],
+    [
+     61058.564,
+     4766,
+     68.5
+    ],
+    [
+     61058.664,
+     4642,
+     70.125
+    ],
+    [
+     61058.764,
+     4667,
+     72.0
+    ],
+    [
+     61058.865,
+     4643,
+     73.75
+    ],
+    [
+     61058.965,
+     4663,
+     75.25
+    ],
+    [
+     61059.065,
+     4599,
+     76.625
+    ],
+    [
+     61059.165,
+     4642,
+     77.875
+    ],
+    [
+     61059.265,
+     4617,
+     79.125
+    ],
+    [
+     61059.366,
+     4613,
+     80.125
+    ],
+    [
+     61059.466,
+     4639,
+     81.0
+    ],
+    [
+     61059.566,
+     4649,
+     81.875
+    ],
+    [
+     61059.666,
+     4680,
+     82.625
+    ],
+    [
+     61059.766,
+     3584,
+     83.125
+    ]
+   ],
+   "argv": [
+    "taskset",
+    "-c",
+    "6",
+    "/media/nadim/Data/Source/cpp_repl/bin/cpp-repl",
+    "--batch",
+    "--no-color",
+    "--clang-repl",
+    "/usr/bin/clang-repl-23",
+    "-std=c++20",
+    "-O3",
+    "-march=native",
+    "-DNDEBUG",
+    "-I/media/nadim/Data/Source/cpp_repl/bench/cpp",
+    "-I/usr/include/eigen3",
+    "/media/nadim/Data/Source/cpp_repl/bench/cpp/matmul.cpp"
+   ],
+   "launch": 61055.457610861,
+   "end": 61059.830103469,
+   "exit": 0,
+   "timed_out": false,
+   "records": [
+    {
+     "type": "stamp",
+     "name": "start",
+     "t": 61056.766366,
+     "_arrived": 61056.766429363
+    },
+    {
+     "type": "stamp",
+     "name": "headers",
+     "t": 61057.75522,
+     "_arrived": 61057.755282559
+    },
+    {
+     "type": "stamp",
+     "name": "control",
+     "t": 61057.758051,
+     "_arrived": 61057.758104167
+    },
+    {
+     "type": "stamp",
+     "name": "kernel",
+     "t": 61058.273612,
+     "kernel": "0x77c795b8e000",
+     "_arrived": 61058.273728122
+    },
+    {
+     "type": "env",
+     "arm": "eigen-repl",
+     "kernel": "bench::eigen_gemm",
+     "threads": 1,
+     "repl": true,
+     "eigen": "3.4.0",
+     "simd": "AVX SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2",
+     "vectorize": "SSE4.2 AVX AVX2 FMA",
+     "isa": "SSE4.2 AVX AVX2 FMA",
+     "ndebug": true,
+     "optimize": true,
+     "openmp": 0,
+     "eigen_threads": 1,
+     "compiler": "Ubuntu Clang 23.1.2 (++20260919103626+4b1925210476-1~exp1~20260919223755.77)",
+     "cplusplus": 202002,
+     "_arrived": 61058.579967209
+    },
+    {
+     "type": "result",
+     "arm": "eigen-repl",
+     "n": 256,
+     "threads": 1,
+     "first_call": 0.000545087001,
+     "warmup_calls": 489,
+     "k": 40,
+     "samples": [
+      0.0005125172,
+      0.0005123028,
+      0.000511213,
+      0.0005112568,
+      0.0005121235,
+      0.0005115498,
+      0.000513885,
+      0.0005179597,
+      0.0005217989,
+      0.0005198382,
+      0.0005189894,
+      0.0005203635,
+      0.0005156681,
+      0.0005141818,
+      0.000514813
+     ],
+     "median": 0.0005141818,
+     "gflops": 65.2579146,
+     "checksum": 4104360.13,
+     "freivalds": 5.62950404e-16,
+     "too_long": false,
+     "t_start": 61058.58005,
+     "t_first_done": 61058.580595,
+     "t_end": 61059.139233,
+     "_arrived": 61059.139469906
+    },
+    {
+     "type": "result",
+     "arm": "eigen-repl",
+     "n": 1024,
+     "threads": 1,
+     "first_call": 0.033474098,
+     "warmup_calls": 8,
+     "k": 1,
+     "samples": [
+      0.03256701,
+      0.03233473,
+      0.0325806,
+      0.0324701,
+      0.03248395,
+      0.03240487,
+      0.03237136,
+      0.03239988,
+      0.03246113,
+      0.0323472
+     ],
+     "median": 0.032433001,
+     "gflops": 66.2129184,
+     "checksum": 262681949,
+     "freivalds": 1.38444525e-15,
+     "too_long": false,
+     "t_start": 61059.142922,
+     "t_first_done": 61059.176396,
+     "t_end": 61059.727344,
+     "_arrived": 61059.729226479
+    },
+    {
+     "type": "done",
+     "arm": "eigen-repl",
+     "_arrived": 61059.72923212
+    }
+   ]
+  },
+  {
+   "arm": "eigen-repl-aot",
+   "group": "core",
+   "kind": "repl",
+   "threads": 1,
+   "round": 1,
+   "phase": "throughput",
+   "cpus": "6",
+   "env": {
+    "BENCH_ARM": "eigen-repl-aot",
+    "BENCH_SIZES": "256,1024",
+    "BENCH_THREADS": "1",
+    "BENCH_MIN_TIME": "0.3",
+    "BENCH_MAX_CALL": "10.0",
+    "BENCH_SESSION_N": "512",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "GLIBC_TUNABLES": "glibc.malloc.mmap_threshold=33554432:glibc.malloc.trim_threshold=67108864"
+   },
+   "cooldown_s": 3.0,
+   "temp_start": 70.75,
+   "compile_s": null,
+   "outcome": "ok",
+   "error": null,
+   "log": "results/logs/nadim-Alienware-Aurora-Ryzen-Edition-llvm23-20261014-0103Z/throughput-r1-eigen-repl-aot.log",
+   "sampler": [
+    [
+     61062.934,
+     4866,
+     70.625
+    ],
+    [
+     61063.034,
+     4843,
+     70.5
+    ],
+    [
+     61063.135,
+     4818,
+     70.375
+    ],
+    [
+     61063.235,
+     4822,
+     70.25
+    ],
+    [
+     61063.335,
+     4806,
+     70.25
+    ],
+    [
+     61063.435,
+     4841,
+     70.125
+    ],
+    [
+     61063.535,
+     4820,
+     70.0
+    ],
+    [
+     61063.636,
+     4841,
+     70.0
+    ],
+    [
+     61063.736,
+     4830,
+     69.875
+    ],
+    [
+     61063.836,
+     4841,
+     69.75
+    ],
+    [
+     61063.936,
+     4816,
+     69.75
+    ],
+    [
+     61064.036,
+     4816,
+     69.625
+    ],
+    [
+     61064.137,
+     4841,
+     69.625
+    ],
+    [
+     61064.237,
+     4816,
+     69.5
+    ],
+    [
+     61064.337,
+     4825,
+     69.375
+    ],
+    [
+     61064.437,
+     4841,
+     69.375
+    ],
+    [
+     61064.537,
+     4798,
+     69.25
+    ],
+    [
+     61064.638,
+     4816,
+     69.25
+    ],
+    [
+     61064.738,
+     4791,
+     69.25
+    ],
+    [
+     61064.838,
+     4791,
+     69.125
+    ],
+    [
+     61064.938,
+     4617,
+     70.125
+    ],
+    [
+     61065.038,
+     4657,
+     72.0
+    ],
+    [
+     61065.139,
+     4642,
+     73.75
+    ],
+    [
+     61065.239,
+     4617,
+     75.25
+    ],
+    [
+     61065.339,
+     4667,
+     76.75
+    ],
+    [
+     61065.439,
+     4682,
+     78.0
+    ],
+    [
+     61065.539,
+     4657,
+     79.125
+    ],
+    [
+     61065.64,
+     4667,
+     80.125
+    ],
+    [
+     61065.74,
+     4667,
+     81.0
+    ],
+    [
+     61065.84,
+     4663,
+     81.875
+    ],
+    [
+     61065.94,
+     4658,
+     82.625
+    ],
+    [
+     61066.04,
+     4677,
+     83.25
+    ]
+   ],
+   "argv": [
+    "taskset",
+    "-c",
+    "6",
+    "/media/nadim/Data/Source/cpp_repl/bin/cpp-repl",
+    "--batch",
+    "--no-color",
+    "--clang-repl",
+    "/usr/bin/clang-repl-23",
+    "-std=c++20",
+    "-I/media/nadim/Data/Source/cpp_repl/bench/cpp",
+    "-I/usr/include/eigen3",
+    "-DBENCH_AOT=1",
+    "--lib",
+    "/media/nadim/Data/Source/cpp_repl/bench/build/libbench_kernel.so",
+    "/media/nadim/Data/Source/cpp_repl/bench/cpp/matmul.cpp"
+   ],
+   "launch": 61062.833974815,
+   "end": 61066.104026078,
+   "exit": 0,
+   "timed_out": false,
+   "records": [
+    {
+     "type": "stamp",
+     "name": "start",
+     "t": 61064.109708,
+     "_arrived": 61064.109770817
+    },
+    {
+     "type": "stamp",
+     "name": "headers",
+     "t": 61064.781023,
+     "_arrived": 61064.781081487
+    },
+    {
+     "type": "stamp",
+     "name": "control",
+     "t": 61064.782605,
+     "_arrived": 61064.782736776
+    },
+    {
+     "type": "stamp",
+     "name": "kernel",
+     "t": 61064.785636,
+     "kernel": "0x7b579123b000",
+     "_arrived": 61064.785691134
+    },
+    {
+     "type": "env",
+     "arm": "eigen-repl-aot",
+     "kernel": "bench_gemm_aot",
+     "threads": 1,
+     "repl": true,
+     "eigen": "3.4.0",
+     "simd": "SSE, SSE2",
+     "vectorize": "none",
+     "isa": "SSE2",
+     "ndebug": false,
+     "optimize": false,
+     "openmp": 0,
+     "eigen_threads": 1,
+     "compiler": "Ubuntu Clang 23.1.2 (++20260919103626+4b1925210476-1~exp1~20260919223755.77)",
+     "cplusplus": 202002,
+     "aot": {
+      "eigen": "3.4.0",
+      "simd": "AVX SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2",
+      "vectorize": "SSE4.2 AVX AVX2 FMA",
+      "isa": "SSE4.2 AVX AVX2 FMA",
+      "ndebug": true,
+      "optimize": true,
+      "openmp": 0,
+      "eigen_threads": 1,
+      "compiler": "Ubuntu Clang 23.1.2 (++20260919103626+4b1925210476-1~exp1~20260919223755.77)",
+      "cplusplus": 202002
+     },
+     "_arrived": 61064.880068249
+    },
+    {
+     "type": "result",
+     "arm": "eigen-repl-aot",
+     "n": 256,
+     "threads": 1,
+     "first_call": 0.000874117002,
+     "warmup_calls": 488,
+     "k": 40,
+     "samples": [
+      0.0005127606,
+      0.0005190094,
+      0.000517753,
+      0.0005119503,
+      0.0005133006,
+      0.0005148581,
+      0.0005131566,
+      0.0005121963,
+      0.0005123944,
+      0.0005141224,
+      0.0005126461,
+      0.0005143476,
+      0.0005131604,
+      0.0005130199,
+      0.0005121648
+     ],
+     "median": 0.0005131566,
+     "gflops": 65.3882889,
+     "checksum": 4104360.13,
+     "freivalds": 5.69455136e-16,
+     "too_long": false,
+     "t_start": 61064.8796,
+     "t_first_done": 61064.880474,
+     "t_end": 61065.438105,
+     "_arrived": 61065.439308735
+    },
+    {
+     "type": "result",
+     "arm": "eigen-repl-aot",
+     "n": 1024,
+     "threads": 1,
+     "first_call": 0.032708823,
+     "warmup_calls": 8,
+     "k": 1,
+     "samples": [
+      0.03223632,
+      0.0322794,
+      0.03214667,
+      0.03221799,
+      0.03219961,
+      0.03227826,
+      0.0321059,
+      0.03223653,
+      0.03220283,
+      0.03222015
+     ],
+     "median": 0.03221907,
+     "gflops": 66.6525647,
+     "checksum": 262681949,
+     "freivalds": 1.35851992e-15,
+     "too_long": false,
+     "t_start": 61065.444543,
+     "t_first_done": 61065.477252,
+     "t_end": 61066.02487,
+     "_arrived": 61066.041775219
+    },
+    {
+     "type": "done",
+     "arm": "eigen-repl-aot",
+     "_arrived": 61066.04178115
+    }
+   ]
+  },
+  {
+   "arm": "eigen-repl-generic",
+   "group": "diag",
+   "kind": "repl",
+   "threads": 1,
+   "round": 1,
+   "phase": "throughput",
+   "cpus": "6",
+   "env": {
+    "BENCH_ARM": "eigen-repl-generic",
+    "BENCH_SIZES": "256,1024",
+    "BENCH_THREADS": "1",
+    "BENCH_MIN_TIME": "0.3",
+    "BENCH_MAX_CALL": "10.0",
+    "BENCH_SESSION_N": "512",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "GLIBC_TUNABLES": "glibc.malloc.mmap_threshold=33554432:glibc.malloc.trim_threshold=67108864"
+   },
+   "cooldown_s": 3.0,
+   "temp_start": 70.875,
+   "compile_s": null,
+   "outcome": "ok",
+   "error": null,
+   "log": "results/logs/nadim-Alienware-Aurora-Ryzen-Edition-llvm23-20261014-0103Z/throughput-r1-eigen-repl-generic.log",
+   "sampler": [
+    [
+     61069.209,
+     4835,
+     70.75
+    ],
+    [
+     61069.309,
+     4816,
+     70.625
+    ],
+    [
+     61069.409,
+     4841,
+     70.5
+    ],
+    [
+     61069.51,
+     4837,
+     70.5
+    ],
+    [
+     61069.61,
+     4841,
+     70.375
+    ],
+    [
+     61069.71,
+     4816,
+     70.25
+    ],
+    [
+     61069.81,
+     4816,
+     70.25
+    ],
+    [
+     61069.91,
+     4841,
+     70.125
+    ],
+    [
+     61070.011,
+     4841,
+     70.0
+    ],
+    [
+     61070.111,
+     4830,
+     70.0
+    ],
+    [
+     61070.211,
+     4791,
+     69.875
+    ],
+    [
+     61070.311,
+     4816,
+     69.875
+    ],
+    [
+     61070.412,
+     4841,
+     69.75
+    ],
+    [
+     61070.512,
+     4816,
+     69.625
+    ],
+    [
+     61070.612,
+     4835,
+     69.625
+    ],
+    [
+     61070.712,
+     4816,
+     69.5
+    ],
+    [
+     61070.812,
+     4816,
+     69.5
+    ],
+    [
+     61070.913,
+     4816,
+     69.5
+    ],
+    [
+     61071.013,
+     4816,
+     69.375
+    ],
+    [
+     61071.113,
+     4816,
+     69.375
+    ],
+    [
+     61071.213,
+     4807,
+     69.25
+    ],
+    [
+     61071.313,
+     4791,
+     69.25
+    ],
+    [
+     61071.414,
+     4822,
+     69.25
+    ],
+    [
+     61071.514,
+     4816,
+     69.25
+    ],
+    [
+     61071.614,
+     4795,
+     69.125
+    ],
+    [
+     61071.714,
+     4723,
+     70.0
+    ],
+    [
+     61071.814,
+     4717,
+     71.0
+    ],
+    [
+     61071.915,
+     4742,
+     72.125
+    ],
+    [
+     61072.015,
+     4697,
+     73.25
+    ],
+    [
+     61072.115,
+     4742,
+     74.375
+    ],
+    [
+     61072.215,
+     4695,
+     75.25
+    ],
+    [
+     61072.315,
+     4742,
+     76.0
+    ],
+    [
+     61072.416,
+     4742,
+     76.75
+    ],
+    [
+     61072.516,
+     4692,
+     77.5
+    ],
+    [
+     61072.616,
+     4742,
+     78.25
+    ],
+    [
+     61072.716,
+     4742,
+     78.875
+    ],
+    [
+     61072.816,
+     4742,
+     79.375
+    ],
+    [
+     61072.917,
+     4742,
+     80.0
+    ]
+   ],
+   "argv": [
+    "taskset",
+    "-c",
+    "6",
+    "/media/nadim/Data/Source/cpp_repl/bin/cpp-repl",
+    "--batch",
+    "--no-color",
+    "--clang-repl",
+    "/usr/bin/clang-repl-23",
+    "-std=c++20",
+    "-O3",
+    "-DNDEBUG",
+    "-I/media/nadim/Data/Source/cpp_repl/bench/cpp",
+    "-I/usr/include/eigen3",
+    "/media/nadim/Data/Source/cpp_repl/bench/cpp/matmul.cpp"
+   ],
+   "launch": 61069.108350342,
+   "end": 61072.98118074,
+   "exit": 0,
+   "timed_out": false,
+   "records": [
+    {
+     "type": "stamp",
+     "name": "start",
+     "t": 61070.361873,
+     "_arrived": 61070.36193589
+    },
+    {
+     "type": "stamp",
+     "name": "headers",
+     "t": 61071.005282,
+     "_arrived": 61071.005348718
+    },
+    {
+     "type": "stamp",
+     "name": "control",
+     "t": 61071.007866,
+     "_arrived": 61071.007919803
+    },
+    {
+     "type": "stamp",
+     "name": "kernel",
+     "t": 61071.365343,
+     "kernel": "0x71badf197000",
+     "_arrived": 61071.365407719
+    },
+    {
+     "type": "env",
+     "arm": "eigen-repl-generic",
+     "kernel": "bench::eigen_gemm",
+     "threads": 1,
+     "repl": true,
+     "eigen": "3.4.0",
+     "simd": "SSE, SSE2",
+     "vectorize": "none",
+     "isa": "SSE2",
+     "ndebug": true,
+     "optimize": true,
+     "openmp": 0,
+     "eigen_threads": 1,
+     "compiler": "Ubuntu Clang 23.1.2 (++20260919103626+4b1925210476-1~exp1~20260919223755.77)",
+     "cplusplus": 202002,
+     "_arrived": 61071.623102157
+    },
+    {
+     "type": "result",
+     "arm": "eigen-repl-generic",
+     "n": 256,
+     "threads": 1,
+     "first_call": 0.001666621,
+     "warmup_calls": 177,
+     "k": 15,
+     "samples": [
+      0.001414137,
+      0.001416117,
+      0.001417815,
+      0.001414062,
+      0.001429656,
+      0.001414514,
+      0.001417466,
+      0.001419526,
+      0.001414434,
+      0.001417654,
+      0.001412925,
+      0.001413313,
+      0.001411851,
+      0.001423167,
+      0.001420927
+     ],
+     "median": 0.0014161174,
+     "gflops": 23.6946683,
+     "checksum": 4104360.13,
+     "freivalds": 5.84951277e-16,
+     "too_long": false,
+     "t_start": 61071.623153,
+     "t_first_done": 61071.62482,
+     "t_end": 61072.193396,
+     "_arrived": 61072.193626795
+    },
+    {
+     "type": "result",
+     "arm": "eigen-repl-generic",
+     "n": 1024,
+     "threads": 1,
+     "first_call": 0.090511202,
+     "warmup_calls": 3,
+     "k": 1,
+     "samples": [
+      0.08985427,
+      0.08859355,
+      0.08842354,
+      0.08843731,
+      0.08846208
+     ],
+     "median": 0.088462079,
+     "gflops": 24.2757538,
+     "checksum": 262681949,
+     "freivalds": 1.38881286e-15,
+     "too_long": false,
+     "t_start": 61072.19725,
+     "t_first_done": 61072.287761,
+     "t_end": 61072.910655,
+     "_arrived": 61072.91272349
+    },
+    {
+     "type": "done",
+     "arm": "eigen-repl-generic",
+     "_arrived": 61072.91272902
+    }
+   ]
+  },
+  {
+   "arm": "eigen-native-gcc",
+   "group": "diag",
+   "kind": "native",
+   "threads": 1,
+   "round": 1,
+   "phase": "throughput",
+   "cpus": "6",
+   "env": {
+    "BENCH_ARM": "eigen-native-gcc",
+    "BENCH_SIZES": "256,1024",
+    "BENCH_THREADS": "1",
+    "BENCH_MIN_TIME": "0.3",
+    "BENCH_MAX_CALL": "10.0",
+    "BENCH_SESSION_N": "512",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "GLIBC_TUNABLES": "glibc.malloc.mmap_threshold=33554432:glibc.malloc.trim_threshold=67108864"
+   },
+   "cooldown_s": 2.5,
+   "temp_start": 70.0,
+   "compile_s": null,
+   "outcome": "ok",
+   "error": null,
+   "log": "results/logs/nadim-Alienware-Aurora-Ryzen-Edition-llvm23-20261014-0103Z/throughput-r1-eigen-native-gcc.log",
+   "sampler": [
+    [
+     61075.585,
+     4724,
+     70.375
+    ],
+    [
+     61075.685,
+     4717,
+     71.0
+    ],
+    [
+     61075.785,
+     4740,
+     71.75
+    ],
+    [
+     61075.886,
+     4716,
+     72.625
+    ],
+    [
+     61075.986,
+     4741,
+     73.75
+    ],
+    [
+     61076.086,
+     4742,
+     74.75
+    ],
+    [
+     61076.186,
+     4742,
+     75.75
+    ],
+    [
+     61076.287,
+     4742,
+     76.75
+    ],
+    [
+     61076.387,
+     4724,
+     77.75
+    ],
+    [
+     61076.487,
+     4742,
+     78.625
+    ],
+    [
+     61076.587,
+     4742,
+     79.5
+    ]
+   ],
+   "argv": [
+    "taskset",
+    "-c",
+    "6",
+    "/media/nadim/Data/Source/cpp_repl/bench/build/matmul-eigen-native-gcc"
+   ],
+   "launch": 61075.484612667,
+   "end": 61076.651482882,
+   "exit": 0,
+   "timed_out": false,
+   "records": [
+    {
+     "type": "stamp",
+     "name": "start",
+     "t": 61075.487063,
+     "_arrived": 61075.487116426
+    },
+    {
+     "type": "stamp",
+     "name": "headers",
+     "t": 61075.487085,
+     "_arrived": 61075.487120874
+    },
+    {
+     "type": "stamp",
+     "name": "control",
+     "t": 61075.487086,
+     "_arrived": 61075.487123539
+    },
+    {
+     "type": "stamp",
+     "name": "kernel",
+     "t": 61075.487087,
+     "kernel": "0x5975b914b670",
+     "_arrived": 61075.487130773
+    },
+    {
+     "type": "env",
+     "arm": "eigen-native-gcc",
+     "kernel": "bench::eigen_gemm",
+     "threads": 1,
+     "repl": false,
+     "eigen": "3.4.0",
+     "simd": "AVX SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2",
+     "vectorize": "SSE4.2 AVX AVX2 FMA",
+     "isa": "SSE4.2 AVX AVX2 FMA",
+     "ndebug": true,
+     "optimize": true,
+     "openmp": 0,
+     "eigen_threads": 1,
+     "compiler": "13.3.0",
+     "cplusplus": 202002,
+     "_arrived": 61075.487143166
+    },
+    {
+     "type": "result",
+     "arm": "eigen-native-gcc",
+     "n": 256,
+     "threads": 1,
+     "first_call": 0.000984414997,
+     "warmup_calls": 360,
+     "k": 29,
+     "samples": [
+      0.0006973272,
+      0.000696182,
+      0.0006951434,
+      0.000695945,
+      0.0006962984,
+      0.0006937235,
+      0.0006942742,
+      0.0006937591,
+      0.0006933166,
+      0.0006932381,
+      0.0006941312,
+      0.0006935736,
+      0.0006950554,
+      0.0006984628,
+      0.0006941316
+     ],
+     "median": 0.000694274241,
+     "gflops": 48.3302275,
+     "checksum": 4104360.13,
+     "freivalds": 5.62950404e-16,
+     "too_long": false,
+     "t_start": 61075.487795,
+     "t_first_done": 61075.488779,
+     "t_end": 61076.040486,
+     "_arrived": 61076.040640082
+    },
+    {
+     "type": "result",
+     "arm": "eigen-native-gcc",
+     "n": 1024,
+     "threads": 1,
+     "first_call": 0.044337164,
+     "warmup_calls": 6,
+     "k": 1,
+     "samples": [
+      0.04377046,
+      0.04385084,
+      0.04374136,
+      0.04370702,
+      0.04369673,
+      0.04368472,
+      0.04365732
+     ],
+     "median": 0.043707016,
+     "gflops": 49.1336139,
+     "checksum": 262681949,
+     "freivalds": 1.38444525e-15,
+     "too_long": false,
+     "t_start": 61076.043822,
+     "t_first_done": 61076.088159,
+     "t_end": 61076.614631,
+     "_arrived": 61076.616524124
+    },
+    {
+     "type": "done",
+     "arm": "eigen-native-gcc",
+     "_arrived": 61076.616530035
+    }
+   ]
+  },
+  {
+   "arm": "eigen-repl-omp",
+   "group": "mt",
+   "kind": "repl",
+   "threads": 16,
+   "round": 1,
+   "phase": "throughput",
+   "cpus": "0-15",
+   "env": {
+    "BENCH_ARM": "eigen-repl-omp",
+    "BENCH_SIZES": "256,1024",
+    "BENCH_THREADS": "16",
+    "BENCH_MIN_TIME": "0.3",
+    "BENCH_MAX_CALL": "10.0",
+    "BENCH_SESSION_N": "512",
+    "OMP_NUM_THREADS": "16",
+    "OPENBLAS_NUM_THREADS": "16",
+    "OMP_PLACES": "cores",
+    "OMP_PROC_BIND": "close",
+    "GLIBC_TUNABLES": "glibc.malloc.mmap_threshold=33554432:glibc.malloc.trim_threshold=67108864"
+   },
+   "cooldown_s": 2.5,
+   "temp_start": 70.0,
+   "compile_s": null,
+   "outcome": "ok",
+   "error": null,
+   "log": "results/logs/nadim-Alienware-Aurora-Ryzen-Edition-llvm23-20261014-0103Z/throughput-r1-eigen-repl-omp.log",
+   "sampler": [
+    [
+     61079.256,
+     2074,
+     69.875
+    ],
+    [
+     61079.357,
+     2090,
+     69.75
+    ],
+    [
+     61079.458,
+     1948,
+     69.625
+    ],
+    [
+     61079.558,
+     2087,
+     69.625
+    ],
+    [
+     61079.659,
+     2273,
+     69.5
+    ],
+    [
+     61079.76,
+     1947,
+     69.5
+    ],
+    [
+     61079.86,
+     2078,
+     69.375
+    ],
+    [
+     61079.961,
+     2087,
+     69.25
+    ],
+    [
+     61080.062,
+     3753,
+     69.25
+    ],
+    [
+     61080.163,
+     2997,
+     69.25
+    ],
+    [
+     61080.264,
+     3515,
+     69.25
+    ],
+    [
+     61080.364,
+     2427,
+     69.25
+    ],
+    [
+     61080.465,
+     2810,
+     69.25
+    ],
+    [
+     61080.566,
+     2257,
+     69.25
+    ],
+    [
+     61080.667,
+     2266,
+     69.25
+    ],
+    [
+     61080.768,
+     3918,
+     69.25
+    ],
+    [
+     61080.868,
+     2133,
+     69.125
+    ],
+    [
+     61080.969,
+     2463,
+     69.125
+    ],
+    [
+     61081.07,
+     4128,
+     69.125
+    ],
+    [
+     61081.17,
+     2753,
+     69.125
+    ],
+    [
+     61081.271,
+     2077,
+     69.125
+    ],
+    [
+     61081.372,
+     2347,
+     69.125
+    ],
+    [
+     61081.472,
+     2084,
+     69.125
+    ],
+    [
+     61081.573,
+     1945,
+     69.125
+    ],
+    [
+     61081.674,
+     2147,
+     69.125
+    ],
+    [
+     61081.775,
+     2065,
+     69.0
+    ],
+    [
+     61081.875,
+     2216,
+     69.0
+    ],
+    [
+     61081.976,
+     2079,
+     69.125
+    ],
+    [
+     61082.077,
+     1946,
+     69.125
+    ],
+    [
+     61082.178,
+     2545,
+     69.125
+    ],
+    [
+     61082.278,
+     2209,
+     69.0
+    ],
+    [
+     61082.38,
+     2422,
+     69.0
+    ],
+    [
+     61082.481,
+     4081,
+     68.875
+    ],
+    [
+     61082.582,
+     4093,
+     68.625
+    ],
+    [
+     61082.683,
+     4512,
+     68.625
+    ],
+    [
+     61082.784,
+     4267,
+     68.5
+    ],
+    [
+     61082.885,
+     4093,
+     68.375
+    ],
+    [
+     61082.986,
+     3767,
+     68.375
+    ],
+    [
+     61083.087,
+     3792,
+     68.25
+    ],
+    [
+     61083.188,
+     3685,
+     68.125
+    ],
+    [
+     61083.289,
+     4000,
+     68.125
+    ],
+    [
+     61083.391,
+     3996,
+     68.0
+    ],
+    [
+     61083.491,
+     3456,
+     67.875
+    ]
+   ],
+   "argv": [
+    "taskset",
+    "-c",
+    "0-15",
+    "/media/nadim/Data/Source/cpp_repl/bin/cpp-repl",
+    "--batch",
+    "--no-color",
+    "--clang-repl",
+    "/usr/bin/clang-repl-23",
+    "-std=c++20",
+    "-O3",
+    "-march=native",
+    "-DNDEBUG",
+    "-I/media/nadim/Data/Source/cpp_repl/bench/cpp",
+    "-I/usr/include/eigen3",
+    "-fopenmp",
+    "--lib",
+    "/lib/x86_64-linux-gnu/libomp.so",
+    "/media/nadim/Data/Source/cpp_repl/bench/cpp/matmul.cpp"
+   ],
+   "launch": 61079.155169839,
+   "end": 61083.577791321,
+   "exit": 0,
+   "timed_out": false,
+   "records": [
+    {
+     "type": "stamp",
+     "name": "start",
+     "t": 61080.471748,
+     "_arrived": 61080.471792845
+    },
+    {
+     "type": "stamp",
+     "name": "headers",
+     "t": 61081.47303,
+     "_arrived": 61081.473113461
+    },
+    {
+     "type": "stamp",
+     "name": "control",
+     "t": 61081.475907,
+     "_arrived": 61081.475974963
+    },
+    {
+     "type": "stamp",
+     "name": "kernel",
+     "t": 61082.023985,
+     "kernel": "0x73260896b000",
+     "_arrived": 61082.024048303
+    },
+    {
+     "type": "env",
+     "arm": "eigen-repl-omp",
+     "kernel": "bench::eigen_gemm",
+     "threads": 16,
+     "repl": true,
+     "eigen": "3.4.0",
+     "simd": "AVX SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2",
+     "vectorize": "SSE4.2 AVX AVX2 FMA",
+     "isa": "SSE4.2 AVX AVX2 FMA",
+     "ndebug": true,
+     "optimize": true,
+     "openmp": 202011,
+     "eigen_threads": 16,
+     "compiler": "Ubuntu Clang 23.1.2 (++20260919103626+4b1925210476-1~exp1~20260919223755.77)",
+     "cplusplus": 202002,
+     "_arrived": 61082.335617946
+    },
+    {
+     "type": "result",
+     "arm": "eigen-repl-omp",
+     "n": 256,
+     "threads": 16,
+     "first_call": 0.004467249,
+     "warmup_calls": 1904,
+     "k": 153,
+     "samples": [
+      0.0001252579,
+      0.0001295083,
+      0.0001299269,
+      0.0001292073,
+      0.0001336935,
+      0.0001330575,
+      0.0001307638,
+      0.0001291826,
+      0.0001282881,
+      0.0001271927,
+      0.0001250689,
+      0.0001264805,
+      0.0001247363,
+      0.0001228742,
+      0.0001232895,
+      0.0001341248
+     ],
+     "median": 0.000128735366,
+     "gflops": 260.646573,
+     "checksum": 4104360.13,
+     "freivalds": 5.96676698e-16,
+     "too_long": false,
+     "t_start": 61082.335748,
+     "t_first_done": 61082.340215,
+     "t_end": 61082.899921,
+     "_arrived": 61082.901237757
+    },
+    {
+     "type": "result",
+     "arm": "eigen-repl-omp",
+     "n": 1024,
+     "threads": 16,
+     "first_call": 0.004365677,
+     "warmup_calls": 68,
+     "k": 6,
+     "samples": [
+      0.003630212,
+      0.003623934,
+      0.003597594,
+      0.003609864,
+      0.003631754,
+      0.003631603,
+      0.003627132,
+      0.003637156,
+      0.003601333,
+      0.003623927,
+      0.003631623,
+      0.003601766,
+      0.00361042,
+      0.003633126
+     ],
+     "median": 0.00362553283,
+     "gflops": 592.322218,
+     "checksum": 262681949,
+     "freivalds": 1.36743857e-15,
+     "too_long": false,
+     "t_start": 61082.904472,
+     "t_first_done": 61082.908838,
+     "t_end": 61083.459252,
+     "_arrived": 61083.46192505
+    },
+    {
+     "type": "done",
+     "arm": "eigen-repl-omp",
+     "_arrived": 61083.46193551
+    }
+   ]
+  },
+  {
+   "arm": "numpy@16",
+   "group": "mt",
+   "kind": "numpy",
+   "threads": 16,
+   "round": 1,
+   "phase": "throughput",
+   "cpus": "0-15",
+   "env": {
+    "BENCH_ARM": "numpy@16",
+    "BENCH_SIZES": "256,1024",
+    "BENCH_THREADS": "16",
+    "BENCH_MIN_TIME": "0.3",
+    "BENCH_MAX_CALL": "10.0",
+    "BENCH_SESSION_N": "512",
+    "OMP_NUM_THREADS": "16",
+    "OPENBLAS_NUM_THREADS": "16",
+    "OMP_PLACES": "cores",
+    "OMP_PROC_BIND": "close",
+    "GLIBC_TUNABLES": "glibc.malloc.mmap_threshold=33554432:glibc.malloc.trim_threshold=67108864"
+   },
+   "cooldown_s": 0.0,
+   "temp_start": 67.75,
+   "compile_s": null,
+   "outcome": "ok",
+   "error": null,
+   "log": "results/logs/nadim-Alienware-Aurora-Ryzen-Edition-llvm23-20261014-0103Z/throughput-r1-numpy-16.log",
+   "sampler": [
+    [
+     61083.679,
+     4467,
+     67.625
+    ],
+    [
+     61083.781,
+     4168,
+     67.5
+    ],
+    [
+     61083.882,
+     4068,
+     67.375
+    ],
+    [
+     61083.983,
+     4068,
+     67.125
+    ],
+    [
+     61084.084,
+     4043,
+     67.0
+    ],
+    [
+     61084.185,
+     4043,
+     66.875
+    ],
+    [
+     61084.286,
+     3690,
+     66.75
+    ],
+    [
+     61084.387,
+     3522,
+     66.625
+    ],
+    [
+     61084.488,
+     3861,
+     66.5
+    ],
+    [
+     61084.59,
+     4096,
+     66.375
+    ],
+    [
+     61084.691,
+     3868,
+     66.375
+    ],
+    [
+     61084.791,
+     3793,
+     66.25
+    ]
+   ],
+   "argv": [
+    "taskset",
+    "-c",
+    "0-15",
+    "/opt/bench-venv/bin/python3",
+    "/media/nadim/Data/Source/cpp_repl/bench/py/numpy_matmul.py"
+   ],
+   "launch": 61083.578473937,
+   "end": 61084.844583461,
+   "exit": 0,
+   "timed_out": false,
+   "records": [
+    {
+     "type": "env",
+     "arm": "numpy@16",
+     "threads": 16,
+     "numpy": "2.5.4",
+     "python": "3.12.3",
+     "executable": "/opt/bench-venv/bin/python3",
+     "blas": {
+      "user_api": "blas",
+      "internal_api": "openblas",
+      "num_threads": 16,
+      "prefix": "libscipy_openblas",
+      "filepath": "/opt/bench-venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+      "version": "0.3.34.106.0",
+      "threading_layer": "pthreads",
+      "architecture": "Haswell"
+     },
+     "_arrived": 61083.635138938
+    },
+    {
+     "type": "result",
+     "arm": "numpy@16",
+     "n": 256,
+     "threads": 16,
+     "first_call": 0.0004164849960943684,
+     "warmup_calls": 1783,
+     "k": 143,
+     "samples": [
+      0.00013664820279528784,
+      0.0001369200419847059,
+      0.00013770319583908804,
+      0.0001362684615106172,
+      0.00013676429375187148,
+      0.00013890777621133305,
+      0.00013816042658115795,
+      0.00013631106295477978,
+      0.0001360705384693167,
+      0.00013626069231430994,
+      0.0001368819930003728,
+      0.00013567090909227963,
+      0.00013625003496987642,
+      0.00013610052447147355,
+      0.00014096893706168473,
+      0.00013692886716160286
+     ],
+     "median": 0.00013670624827357965,
+     "gflops": 245.44914679283798,
+     "checksum": 4104360.129850574,
+     "freivalds": 1.8012621481511398e-16,
+     "too_long": false,
+     "t_start": 61083.636137439,
+     "t_first_done": 61083.636553924,
+     "t_end": 61084.19974474,
+     "_arrived": 61084.204662617
+    },
+    {
+     "type": "result",
+     "arm": "numpy@16",
+     "n": 1024,
+     "threads": 16,
+     "first_call": 0.005893745998037048,
+     "warmup_calls": 60,
+     "k": 5,
+     "samples": [
+      0.003947170200990513,
+      0.003940918199077714,
+      0.003925234799680766,
+      0.004041786400193814,
+      0.004014096199534833,
+      0.004085612999915611,
+      0.0042145839994191196,
+      0.003954055199574214,
+      0.004059161200711969,
+      0.004027024400420487,
+      0.003935043200908694,
+      0.003958810000040103,
+      0.0039510653994511815,
+      0.003939783999521751,
+      0.003940161000355147,
+      0.003934612400189508
+     ],
+     "median": 0.0039525602995126976,
+     "gflops": 543.314582263238,
+     "checksum": 262681949.00115836,
+     "freivalds": 2.910341709650576e-16,
+     "too_long": false,
+     "t_start": 61084.214235777,
+     "t_first_done": 61084.220129523,
+     "t_end": 61084.786019602,
+     "_arrived": 61084.786855187
+    },
+    {
+     "type": "done",
+     "arm": "numpy@16",
+     "_arrived": 61084.786865096
+    }
+   ]
+  },
+  {
+   "arm": "eigen-repl-aot-omp",
+   "group": "mt",
+   "kind": "repl",
+   "threads": 16,
+   "round": 1,
+   "phase": "throughput",
+   "cpus": "0-15",
+   "env": {
+    "BENCH_ARM": "eigen-repl-aot-omp",
+    "BENCH_SIZES": "256,1024",
+    "BENCH_THREADS": "16",
+    "BENCH_MIN_TIME": "0.3",
+    "BENCH_MAX_CALL": "10.0",
+    "BENCH_SESSION_N": "512",
+    "OMP_NUM_THREADS": "16",
+    "OPENBLAS_NUM_THREADS": "16",
+    "OMP_PLACES": "cores",
+    "OMP_PROC_BIND": "close",
+    "GLIBC_TUNABLES": "glibc.malloc.mmap_threshold=33554432:glibc.malloc.trim_threshold=67108864"
+   },
+   "cooldown_s": 0.0,
+   "temp_start": 66.125,
+   "compile_s": null,
+   "outcome": "ok",
+   "error": null,
+   "log": "results/logs/nadim-Alienware-Aurora-Ryzen-Edition-llvm23-20261014-0103Z/throughput-r1-eigen-repl-aot-omp.log",
+   "sampler": [
+    [
+     61084.946,
+     2172,
+     66.0
+    ],
+    [
+     61085.047,
+     1931,
+     65.875
+    ],
+    [
+     61085.147,
+     2062,
+     65.75
+    ],
+    [
+     61085.248,
+     1946,
+     65.75
+    ],
+    [
+     61085.349,
+     1948,
+     65.75
+    ],
+    [
+     61085.449,
+     1946,
+     65.75
+    ],
+    [
+     61085.55,
+     1945,
+     65.75
+    ],
+    [
+     61085.651,
+     2090,
+     65.75
+    ],
+    [
+     61085.752,
+     1948,
+     65.75
+    ],
+    [
+     61085.852,
+     2268,
+     65.625
+    ],
+    [
+     61085.953,
+     2287,
+     65.625
+    ],
+    [
+     61086.054,
+     1945,
+     65.625
+    ],
+    [
+     61086.154,
+     2147,
+     65.5
+    ],
+    [
+     61086.255,
+     1948,
+     65.5
+    ],
+    [
+     61086.356,
+     1948,
+     65.5
+    ],
+    [
+     61086.457,
+     1946,
+     65.5
+    ],
+    [
+     61086.557,
+     1946,
+     65.5
+    ],
+    [
+     61086.658,
+     1945,
+     65.5
+    ],
+    [
+     61086.759,
+     1945,
+     65.625
+    ],
+    [
+     61086.86,
+     2084,
+     65.625
+    ],
+    [
+     61086.961,
+     3818,
+     65.625
+    ],
+    [
+     61087.062,
+     4100,
+     65.375
+    ],
+    [
+     61087.163,
+     4217,
+     65.25
+    ],
+    [
+     61087.263,
+     4456,
+     65.25
+    ],
+    [
+     61087.364,
+     4193,
+     65.125
+    ],
+    [
+     61087.466,
+     4093,
+     65.0
+    ],
+    [
+     61087.567,
+     3882,
+     65.0
+    ],
+    [
+     61087.668,
+     3918,
+     64.875
+    ],
+    [
+     61087.769,
+     3793,
+     64.875
+    ],
+    [
+     61087.87,
+     3913,
+     64.875
+    ],
+    [
+     61087.971,
+     3993,
+     64.75
+    ],
+    [
+     61088.071,
+     3503,
+     64.75
+    ]
+   ],
+   "argv": [
+    "taskset",
+    "-c",
+    "0-15",
+    "/media/nadim/Data/Source/cpp_repl/bin/cpp-repl",
+    "--batch",
+    "--no-color",
+    "--clang-repl",
+    "/usr/bin/clang-repl-23",
+    "-std=c++20",
+    "-I/media/nadim/Data/Source/cpp_repl/bench/cpp",
+    "-I/usr/include/eigen3",
+    "-DBENCH_AOT=1",
+    "--lib",
+    "/media/nadim/Data/Source/cpp_repl/bench/build/libbench_kernel_omp.so",
+    "/media/nadim/Data/Source/cpp_repl/bench/cpp/matmul.cpp"
+   ],
+   "launch": 61084.845271357,
+   "end": 61088.121376615,
+   "exit": 0,
+   "timed_out": false,
+   "records": [
+    {
+     "type": "stamp",
+     "name": "start",
+     "t": 61086.132112,
+     "_arrived": 61086.132172323
+    },
+    {
+     "type": "stamp",
+     "name": "headers",
+     "t": 61086.790586,
+     "_arrived": 61086.790653338
+    },
+    {
+     "type": "stamp",
+     "name": "control",
+     "t": 61086.792102,
+     "_arrived": 61086.792168743
+    },
+    {
+     "type": "stamp",
+     "name": "kernel",
+     "t": 61086.79505,
+     "kernel": "0x73753b360000",
+     "_arrived": 61086.795118482
+    },
+    {
+     "type": "env",
+     "arm": "eigen-repl-aot-omp",
+     "kernel": "bench_gemm_aot",
+     "threads": 16,
+     "repl": true,
+     "eigen": "3.4.0",
+     "simd": "SSE, SSE2",
+     "vectorize": "none",
+     "isa": "SSE2",
+     "ndebug": false,
+     "optimize": false,
+     "openmp": 0,
+     "eigen_threads": 1,
+     "compiler": "Ubuntu Clang 23.1.2 (++20260919103626+4b1925210476-1~exp1~20260919223755.77)",
+     "cplusplus": 202002,
+     "aot": {
+      "eigen": "3.4.0",
+      "simd": "AVX SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2",
+      "vectorize": "SSE4.2 AVX AVX2 FMA",
+      "isa": "SSE4.2 AVX AVX2 FMA",
+      "ndebug": true,
+      "optimize": true,
+      "openmp": 202011,
+      "eigen_threads": 16,
+      "compiler": "Ubuntu Clang 23.1.2 (++20260919103626+4b1925210476-1~exp1~20260919223755.77)",
+      "cplusplus": 202002
+     },
+     "_arrived": 61086.888802879
+    },
+    {
+     "type": "result",
+     "arm": "eigen-repl-aot-omp",
+     "n": 256,
+     "threads": 16,
+     "first_call": 0.005021212,
+     "warmup_calls": 1902,
+     "k": 153,
+     "samples": [
+      0.0001252482,
+      0.0001274994,
+      0.0001271154,
+      0.0001281807,
+      0.0001297405,
+      0.0001319632,
+      0.0001330309,
+      0.0001317431,
+      0.0001292997,
+      0.0001270303,
+      0.0001263571,
+      0.0001262696,
+      0.0001249349,
+      0.0001250347,
+      0.0001244547,
+      0.0001249369
+     ],
+     "median": 0.00012707282,
+     "gflops": 264.056719,
+     "checksum": 4104360.13,
+     "freivalds": 6.01652749e-16,
+     "too_long": false,
+     "t_start": 61086.889216,
+     "t_first_done": 61086.894237,
+     "t_end": 61087.451863,
+     "_arrived": 61087.453308324
+    },
+    {
+     "type": "result",
+     "arm": "eigen-repl-aot-omp",
+     "n": 1024,
+     "threads": 16,
+     "first_call": 0.004036106,
+     "warmup_calls": 69,
+     "k": 6,
+     "samples": [
+      0.003675556,
+      0.003654021,
+      0.003650298,
+      0.003607052,
+      0.003671358,
+      0.003605214,
+      0.003664275,
+      0.003641094,
+      0.003668824,
+      0.003667401,
+      0.003696901,
+      0.003674137,
+      0.003645423,
+      0.003645174
+     ],
+     "median": 0.00365914775,
+     "gflops": 586.880824,
+     "checksum": 262681949,
+     "freivalds": 1.36923119e-15,
+     "too_long": false,
+     "t_start": 61087.458803,
+     "t_first_done": 61087.462839,
+     "t_end": 61088.016628,
+     "_arrived": 61088.036008099
+    },
+    {
+     "type": "done",
+     "arm": "eigen-repl-aot-omp",
+     "_arrived": 61088.03601394
+    }
+   ]
+  },
+  {
+   "arm": "eigen-native-omp",
+   "group": "mt",
+   "kind": "native",
+   "threads": 16,
+   "round": 1,
+   "phase": "throughput",
+   "cpus": "0-15",
+   "env": {
+    "BENCH_ARM": "eigen-native-omp",
+    "BENCH_SIZES": "256,1024",
+    "BENCH_THREADS": "16",
+    "BENCH_MIN_TIME": "0.3",
+    "BENCH_MAX_CALL": "10.0",
+    "BENCH_SESSION_N": "512",
+    "OMP_NUM_THREADS": "16",
+    "OPENBLAS_NUM_THREADS": "16",
+    "OMP_PLACES": "cores",
+    "OMP_PROC_BIND": "close",
+    "GLIBC_TUNABLES": "glibc.malloc.mmap_threshold=33554432:glibc.malloc.trim_threshold=67108864"
+   },
+   "cooldown_s": 0.0,
+   "temp_start": 64.625,
+   "compile_s": null,
+   "outcome": "ok",
+   "error": null,
+   "log": "results/logs/nadim-Alienware-Aurora-Ryzen-Edition-llvm23-20261014-0103Z/throughput-r1-eigen-native-omp.log",
+   "sampler": [
+    [
+     61088.223,
+     4107,
+     64.5
+    ],
+    [
+     61088.324,
+     3993,
+     64.375
+    ],
+    [
+     61088.425,
+     4292,
+     64.25
+    ],
+    [
+     61088.526,
+     4317,
+     64.25
+    ],
+    [
+     61088.627,
+     4118,
+     64.125
+    ],
+    [
+     61088.728,
+     3927,
+     64.0
+    ],
+    [
+     61088.829,
+     3708,
+     64.0
+    ],
+    [
+     61088.93,
+     3805,
+     64.0
+    ],
+    [
+     61089.031,
+     3530,
+     63.875
+    ],
+    [
+     61089.132,
+     3789,
+     63.875
+    ],
+    [
+     61089.233,
+     3724,
+     63.875
+    ]
+   ],
+   "argv": [
+    "taskset",
+    "-c",
+    "0-15",
+    "/media/nadim/Data/Source/cpp_repl/bench/build/matmul-eigen-native-omp"
+   ],
+   "launch": 61088.122033783,
+   "end": 61089.287876027,
+   "exit": 0,
+   "timed_out": false,
+   "records": [
+    {
+     "type": "stamp",
+     "name": "start",
+     "t": 61088.1239,
+     "_arrived": 61088.12393171
+    },
+    {
+     "type": "stamp",
+     "name": "headers",
+     "t": 61088.123917,
+     "_arrived": 61088.123935998
+    },
+    {
+     "type": "stamp",
+     "name": "control",
+     "t": 61088.123919,
+     "_arrived": 61088.123938883
+    },
+    {
+     "type": "stamp",
+     "name": "kernel",
+     "t": 61088.12392,
+     "kernel": "0x62cb32c09530",
+     "_arrived": 61088.123941688
+    },
+    {
+     "type": "env",
+     "arm": "eigen-native-omp",
+     "kernel": "bench::eigen_gemm",
+     "threads": 16,
+     "repl": false,
+     "eigen": "3.4.0",
+     "simd": "AVX SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2",
+     "vectorize": "SSE4.2 AVX AVX2 FMA",
+     "isa": "SSE4.2 AVX AVX2 FMA",
+     "ndebug": true,
+     "optimize": true,
+     "openmp": 202011,
+     "eigen_threads": 16,
+     "compiler": "Ubuntu Clang 23.1.2 (++20260919103626+4b1925210476-1~exp1~20260919223755.77)",
+     "cplusplus": 202002,
+     "_arrived": 61088.124594959
+    },
+    {
+     "type": "result",
+     "arm": "eigen-native-omp",
+     "n": 256,
+     "threads": 16,
+     "first_call": 0.001423402,
+     "warmup_calls": 1959,
+     "k": 157,
+     "samples": [
+      0.0001255371,
+      0.000126333,
+      0.0001279209,
+      0.0001289032,
+      0.0001294155,
+      0.0001314531,
+      0.0001291155,
+      0.0001283133,
+      0.0001267222,
+      0.0001258148,
+      0.0001251694,
+      0.0001252311,
+      0.0001258399,
+      0.0001246858,
+      0.000124858,
+      0.0001252426
+     ],
+     "median": 0.000126086449,
+     "gflops": 266.122428,
+     "checksum": 4104360.13,
+     "freivalds": 5.96676698e-16,
+     "too_long": false,
+     "t_start": 61088.125317,
+     "t_first_done": 61088.12674,
+     "t_end": 61088.694168,
+     "_arrived": 61088.694351431
+    },
+    {
+     "type": "result",
+     "arm": "eigen-native-omp",
+     "n": 1024,
+     "threads": 16,
+     "first_call": 0.003966555,
+     "warmup_calls": 71,
+     "k": 6,
+     "samples": [
+      0.003546593,
+      0.003519946,
+      0.003763873,
+      0.003548892,
+      0.003520297,
+      0.003502837,
+      0.003525488,
+      0.003517188,
+      0.003492182,
+      0.003497579,
+      0.003493167,
+      0.003522189,
+      0.00349886,
+      0.003518198,
+      0.003542448
+     ],
+     "median": 0.00351994617,
+     "gflops": 610.089912,
+     "checksum": 262681949,
+     "freivalds": 1.36743857e-15,
+     "too_long": false,
+     "t_start": 61088.697571,
+     "t_first_done": 61088.701538,
+     "t_end": 61089.265911,
+     "_arrived": 61089.268402913
+    },
+    {
+     "type": "done",
+     "arm": "eigen-native-omp",
+     "_arrived": 61089.268408253
+    }
+   ]
+  }
+ ],
+ "checks": [
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 5.62950404e-16",
+   "arm": "eigen-repl",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 3.640677509234744e-11",
+   "arm": "eigen-repl",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "65.9 GFLOP/s against a peak of 81.4",
+   "arm": "eigen-repl",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 5.62950404e-16",
+   "arm": "eigen-native",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 3.640677509234744e-11",
+   "arm": "eigen-native",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "65.8 GFLOP/s against a peak of 81.4",
+   "arm": "eigen-native",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 1.8012621481511398e-16",
+   "arm": "numpy",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 1.1345527014577362e-16",
+   "arm": "numpy",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "63.6 GFLOP/s against a peak of 81.4",
+   "arm": "numpy",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 5.84951277e-16",
+   "arm": "eigen-repl-default",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 3.640677509234744e-11",
+   "arm": "eigen-repl-default",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "0.2 GFLOP/s against a peak of 81.4",
+   "arm": "eigen-repl-default",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 5.69455136e-16",
+   "arm": "eigen-repl-aot",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 3.640677509234744e-11",
+   "arm": "eigen-repl-aot",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "65.6 GFLOP/s against a peak of 81.4",
+   "arm": "eigen-repl-aot",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 5.62950404e-16",
+   "arm": "eigen-native",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 3.640677509234744e-11",
+   "arm": "eigen-native",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "65.6 GFLOP/s against a peak of 81.4",
+   "arm": "eigen-native",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 1.38444525e-15",
+   "arm": "eigen-native",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 4.409730744611741e-12",
+   "arm": "eigen-native",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "65.7 GFLOP/s against a peak of 81.4",
+   "arm": "eigen-native",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 1.8012621481511398e-16",
+   "arm": "numpy",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 1.1345527014577362e-16",
+   "arm": "numpy",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "64.7 GFLOP/s against a peak of 81.4",
+   "arm": "numpy",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 2.910341709650576e-16",
+   "arm": "numpy",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 0.0",
+   "arm": "numpy",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "65.5 GFLOP/s against a peak of 81.4",
+   "arm": "numpy",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 5.84951277e-16",
+   "arm": "eigen-repl-default",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 3.640677509234744e-11",
+   "arm": "eigen-repl-default",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "0.2 GFLOP/s against a peak of 81.4",
+   "arm": "eigen-repl-default",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 1.38881286e-15",
+   "arm": "eigen-repl-default",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 4.409730744611741e-12",
+   "arm": "eigen-repl-default",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "0.2 GFLOP/s against a peak of 81.4",
+   "arm": "eigen-repl-default",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 5.94910507e-16",
+   "arm": "naive-native",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 3.640677509234744e-11",
+   "arm": "naive-native",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "20.5 GFLOP/s against a peak of 81.4",
+   "arm": "naive-native",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 1.48726187e-15",
+   "arm": "naive-native",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 4.409730744611741e-12",
+   "arm": "naive-native",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "22.9 GFLOP/s against a peak of 81.4",
+   "arm": "naive-native",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 5.94910507e-16",
+   "arm": "naive-repl",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 3.640677509234744e-11",
+   "arm": "naive-repl",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "22.7 GFLOP/s against a peak of 81.4",
+   "arm": "naive-repl",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 1.48726187e-15",
+   "arm": "naive-repl",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 4.409730744611741e-12",
+   "arm": "naive-repl",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "23.4 GFLOP/s against a peak of 81.4",
+   "arm": "naive-repl",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 5.62950404e-16",
+   "arm": "eigen-repl",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 3.640677509234744e-11",
+   "arm": "eigen-repl",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "65.3 GFLOP/s against a peak of 81.4",
+   "arm": "eigen-repl",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 1.38444525e-15",
+   "arm": "eigen-repl",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 4.409730744611741e-12",
+   "arm": "eigen-repl",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "66.2 GFLOP/s against a peak of 81.4",
+   "arm": "eigen-repl",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 5.69455136e-16",
+   "arm": "eigen-repl-aot",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 3.640677509234744e-11",
+   "arm": "eigen-repl-aot",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "65.4 GFLOP/s against a peak of 81.4",
+   "arm": "eigen-repl-aot",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 1.35851992e-15",
+   "arm": "eigen-repl-aot",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 4.409730744611741e-12",
+   "arm": "eigen-repl-aot",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "66.7 GFLOP/s against a peak of 81.4",
+   "arm": "eigen-repl-aot",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 5.84951277e-16",
+   "arm": "eigen-repl-generic",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 3.640677509234744e-11",
+   "arm": "eigen-repl-generic",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "23.7 GFLOP/s against a peak of 81.4",
+   "arm": "eigen-repl-generic",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 1.38881286e-15",
+   "arm": "eigen-repl-generic",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 4.409730744611741e-12",
+   "arm": "eigen-repl-generic",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "24.3 GFLOP/s against a peak of 81.4",
+   "arm": "eigen-repl-generic",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 5.62950404e-16",
+   "arm": "eigen-native-gcc",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 3.640677509234744e-11",
+   "arm": "eigen-native-gcc",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "48.3 GFLOP/s against a peak of 81.4",
+   "arm": "eigen-native-gcc",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 1.38444525e-15",
+   "arm": "eigen-native-gcc",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 4.409730744611741e-12",
+   "arm": "eigen-native-gcc",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "49.1 GFLOP/s against a peak of 81.4",
+   "arm": "eigen-native-gcc",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 5.96676698e-16",
+   "arm": "eigen-repl-omp",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 3.640677509234744e-11",
+   "arm": "eigen-repl-omp",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "260.6 GFLOP/s against a peak of 1302.1",
+   "arm": "eigen-repl-omp",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 1.36743857e-15",
+   "arm": "eigen-repl-omp",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 4.409730744611741e-12",
+   "arm": "eigen-repl-omp",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "592.3 GFLOP/s against a peak of 1302.1",
+   "arm": "eigen-repl-omp",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 1.8012621481511398e-16",
+   "arm": "numpy@16",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 1.1345527014577362e-16",
+   "arm": "numpy@16",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "245.4 GFLOP/s against a peak of 1302.1",
+   "arm": "numpy@16",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 2.910341709650576e-16",
+   "arm": "numpy@16",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 0.0",
+   "arm": "numpy@16",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "543.3 GFLOP/s against a peak of 1302.1",
+   "arm": "numpy@16",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 6.01652749e-16",
+   "arm": "eigen-repl-aot-omp",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 3.640677509234744e-11",
+   "arm": "eigen-repl-aot-omp",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "264.1 GFLOP/s against a peak of 1302.1",
+   "arm": "eigen-repl-aot-omp",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 1.36923119e-15",
+   "arm": "eigen-repl-aot-omp",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 4.409730744611741e-12",
+   "arm": "eigen-repl-aot-omp",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "586.9 GFLOP/s against a peak of 1302.1",
+   "arm": "eigen-repl-aot-omp",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 5.96676698e-16",
+   "arm": "eigen-native-omp",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 3.640677509234744e-11",
+   "arm": "eigen-native-omp",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "266.1 GFLOP/s against a peak of 1302.1",
+   "arm": "eigen-native-omp",
+   "n": 256,
+   "round": 1
+  },
+  {
+   "check": "freivalds",
+   "ok": true,
+   "detail": "residual 1.36743857e-15",
+   "arm": "eigen-native-omp",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "checksum",
+   "ok": true,
+   "detail": "relative error 4.409730744611741e-12",
+   "arm": "eigen-native-omp",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "below peak",
+   "ok": true,
+   "detail": "610.1 GFLOP/s against a peak of 1302.1",
+   "arm": "eigen-native-omp",
+   "n": 1024,
+   "round": 1
+  },
+  {
+   "check": "same build settings",
+   "ok": true,
+   "detail": "identical",
+   "arm": "eigen-repl",
+   "n": null,
+   "round": null
+  },
+  {
+   "check": "same build settings",
+   "ok": true,
+   "detail": "identical",
+   "arm": "eigen-repl-aot",
+   "n": null,
+   "round": null
+  },
+  {
+   "check": "same build settings",
+   "ok": true,
+   "detail": "identical",
+   "arm": "eigen-repl-omp",
+   "n": null,
+   "round": null
+  },
+  {
+   "check": "same build settings",
+   "ok": true,
+   "detail": "identical",
+   "arm": "eigen-repl-aot-omp",
+   "n": null,
+   "round": null
+  },
+  {
+   "check": "same build settings",
+   "ok": true,
+   "detail": "identical",
+   "arm": "naive-repl",
+   "n": null,
+   "round": null
+  },
+  {
+   "check": "optimised BLAS",
+   "ok": true,
+   "detail": "openblas 0.3.34.106.0 (Haswell)",
+   "arm": "numpy",
+   "n": null,
+   "round": null
+  },
+  {
+   "check": "optimised BLAS",
+   "ok": true,
+   "detail": "openblas 0.3.34.106.0 (Haswell)",
+   "arm": "numpy@16",
+   "n": null,
+   "round": null
+  }
+ ],
+ "valid": true
+}

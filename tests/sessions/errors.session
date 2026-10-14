@@ -1,0 +1,19 @@
+# A golden session. cpp-repl --batch runs the inputs (the prompt lines) and must
+# print this transcript. <any> matches one line, <any lines> any number of them;
+# addresses and input_line numbers are normalised.
+c++> int ok = 1;
+c++> undeclared_name + 1
+<any lines>
+error: Parsing failed.
+c++> ok
+1
+c++> int ok = 2;
+<any lines>
+error: Parsing failed.
+c++> ok = 3;
+c++> ok
+3
+c++> std::vector<int> w{1, 2
+...> , 3};
+c++> w
+[1, 2, 3]

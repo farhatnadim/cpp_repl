@@ -1,0 +1,32 @@
+# A golden session. cpp-repl --batch runs the inputs (the prompt lines) and must
+# print this transcript. <any> matches one line, <any lines> any number of them;
+# addresses and input_line numbers are normalised.
+# args: -p eigen
+# requires: profile=eigen
+c++> Eigen::Matrix2d m;
+c++> m << 1, 2, 3, 4;
+c++> m
+Matrix<double> 2×2
+    1    2
+    3    4
+c++> m * m
+Matrix<double> 2×2
+    7   10
+   15   22
+c++> Eigen::MatrixXd big = Eigen::MatrixXd::Identity(12, 12);
+c++> big
+Matrix<double> 12×12
+    1    0    0  ...    0    0    0
+    0    1    0  ...    0    0    0
+    0    0    1  ...    0    0    0
+  ...  ...  ...  ...  ...  ...  ...
+    0    0    0  ...    1    0    0
+    0    0    0  ...    0    1    0
+    0    0    0  ...    0    0    1
+c++> Eigen::Vector3d(1, 2, 3).transpose()
+Matrix<double> 1×3
+    1    2    3
+c++> std::vector<Eigen::Vector2d>{Eigen::Vector2d(1, 2)}
+[[[1], [2]]]
+c++> m.determinant()
+-2

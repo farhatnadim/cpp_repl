@@ -1,0 +1,57 @@
+# A golden session. cpp-repl --batch runs the inputs (the prompt lines) and must
+# print this transcript. <any> matches one line, <any lines> any number of them;
+# addresses and input_line numbers are normalised.
+# args: -p usd
+# requires: profile=usd
+usd> auto stage = UsdStage::CreateInMemory();
+usd> auto sphere = UsdGeomSphere::Define(stage, SdfPath("/World/Ball"));
+usd> sphere.GetRadiusAttr().Set(2.0);
+usd> sphere.GetRadiusAttr().Set(3.0, UsdTimeCode(1));
+usd> sphere.GetRadiusAttr()
+/World/Ball.radius (double) = 2
+  time samples: {1: 3}
+usd> sphere
+UsdGeomSphere: def Sphere /World/Ball
+  authored properties: radius
+  children: none
+usd> sphere.GetPrim()
+def Sphere /World/Ball
+  authored properties: radius
+  children: none
+usd> stage->GetPrimAtPath(SdfPath("/World"))
+def /World
+  authored properties: none
+  children: Ball
+usd> std::vector<UsdPrim>{stage->GetPrimAtPath(SdfPath("/World")), sphere.GetPrim()}
+[/World, /World/Ball]
+usd> tree(stage)
+def "World"
+  def Sphere "Ball"
+usd> stage
+#usda 1.0
+
+def "World"
+{
+    def Sphere "Ball"
+    {
+        double radius = 2
+        double radius.timeSamples = {
+            1: 3,
+        }
+    }
+}
+
+usd> UsdGeomPrimvarsAPI(sphere).CreatePrimvar(TfToken("displayColor2"), SdfValueTypeNames->Color3fArray)
+/World/Ball.primvars:displayColor2 (color3f[]) has no default value
+usd> SdfPath("/a/b")
+/a/b
+usd> TfToken("hello")
+hello
+usd> GfVec3f(1, 2, 3)
+(1, 2, 3)
+usd> UsdTimeCode::Default()
+DEFAULT
+usd> std::string("x")
+"x"
+usd> stage->GetRootLayer()->GetIdentifier().size() > 0
+true

@@ -1,0 +1,115 @@
+# A golden session. cpp-repl --batch runs the inputs (the prompt lines) and must
+# print this transcript. <any> matches one line, <any lines> any number of them;
+# addresses and input_line numbers are normalised.
+c++> int answer = 42;
+c++> answer
+42
+c++> answer * 2.5
+105
+c++> 0.1 + 0.2
+0.30000000000000004
+c++> 1.0 / 3
+0.3333333333333333
+c++> true && false
+false
+c++> 'x'
+'x'
+c++> "a \"quoted\"\tstring\n"
+"a \"quoted\"\tstring\n"
+c++> std::string("hello")
+"hello"
+c++> nullptr
+nullptr
+c++> std::vector<int>{1, 2, 3}
+[1, 2, 3]
+c++> std::vector<std::string>{"a", "b"}
+["a", "b"]
+c++> std::map<std::string, int>{{"one", 1}, {"two", 2}}
+{"one": 1, "two": 2}
+c++> std::set<int>{3, 1, 2}
+{1, 2, 3}
+c++> std::array<double, 3>{1, 2.5, 1e100}
+[1, 2.5, 1e+100]
+c++> std::make_tuple(1, "two", 3.0)
+(1, "two", 3)
+c++> std::make_pair(std::string("k"), 7)
+("k", 7)
+c++> std::optional<int>{}
+nullopt
+c++> std::optional<int>{5}
+5
+c++> std::vector<int>(150, 0).size()
+150
+c++> enum class Colour { red, green };
+c++> Colour::green
+Colour(1)
+c++> struct Point { double x, y; };
+c++> Point p{1, 2};
+c++> p
+<Point>
+c++> std::ostream &operator<<(std::ostream &os, const Point &q) { return os << "Point(" << q.x << ", " << q.y << ")"; }
+c++> p
+Point(1, 2)
+c++> std::vector<Point>{p, {3, 4}}.size()
+2
+c++> std::cout << "printed " << 42
+printed 42
+c++> std::cout << "no newline";
+no newline
+c++> int total = 0;
+c++> for (int i = 1; i <= 3; ++i) {
+...>   for (int j = 1; j <= 2; ++j) {
+...>     total += i * j;
+...>   }
+...> }
+c++> total
+18
+c++> for (auto [k, v] : std::map<int, char>{{1, 'a'}, {2, 'b'}}) {
+...>   std::cout << k << v << ' ';
+...> }
+1a 2b 
+c++> std::vector<int> v{5, 3, 8};
+c++> std::sort(v.begin(), v.end());
+c++> v
+[3, 5, 8]
+c++> if (v.size() > 2) {
+...>   std::cout << "big\n";
+...> }
+...> else {
+...>   std::cout << "small\n";
+...> }
+big
+c++> try {
+...>   throw std::runtime_error("boom");
+...> } catch (const std::exception &e) {
+...>   std::cout << "caught " << e.what() << '\n';
+...> }
+caught boom
+c++> int n = 3;
+c++> do {
+...>   std::cout << n-- << ' ';
+...> } while (n > 0);
+3 2 1 
+c++> switch (answer) {
+...>   case 42: std::cout << "the answer\n"; break;
+...>   default: std::cout << "something else\n";
+...> }
+the answer
+c++> template <class T> T twice(T x) { return x + x; }
+c++> twice(21)
+42
+c++> twice(std::string("ab"))
+"abab"
+c++> auto square = [](int x) { return x * x; };
+c++> square(9)
+81
+c++> std::accumulate(v.begin(), v.end(), 0)
+16
+c++> int a = 1; int b = 2;
+c++> a + b
+3
+c++> %undo
+undo: a + b
+[undo: restored 49 inputs]
+c++> b
+2

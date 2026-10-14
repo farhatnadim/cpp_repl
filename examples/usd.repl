@@ -1,0 +1,11 @@
+// OpenUSD at the prompt: cpp-repl -p usd examples/usd.repl
+// (set USD_ROOT, or pass --compile-commands for a build that uses OpenUSD)
+auto stage = UsdStage::CreateInMemory();
+auto world = UsdGeomXform::Define(stage, SdfPath("/World"));
+auto ball = UsdGeomSphere::Define(stage, SdfPath("/World/Ball"));
+ball.GetRadiusAttr().Set(2.0);
+ball.GetRadiusAttr().Set(3.0, UsdTimeCode(24));
+ball.GetRadiusAttr()
+ball
+tree(stage)
+stage

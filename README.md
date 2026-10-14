@@ -1,0 +1,388 @@
+# cpp-repl
+
+A C++ REPL for any library, on top of LLVM's
+[clang-repl](https://clang.llvm.org/docs/ClangRepl.html). You type C++ as you
+would inside `main()`, and:
+
+- **Blocks finish themselves.** Enter runs an input once its brackets balance
+  and its statement is complete, and opens a new line otherwise. A multi-line
+  `if` waits for its `else`.
+- **Values print.** A bare expression prints its value: containers, maps,
+  tuples and optionals, and your own types through their `operator<<`.
+  Profiles add Eigen matrices and OpenUSD stages.
+- **A crash costs nothing.** A segfault, a Ctrl-C or a link failure replays the
+  session's journal into a spare clang-repl that is already running. Five
+  inputs come back in 0.05 s, every variable with them.
+- **Programs and sessions convert both ways.**
+  - `cpp-repl prog.cpp` runs `main()` one statement at a time and leaves you
+    at the prompt, its variables in scope.
+  - `%save-cpp` writes the session back out as a program that builds.
+- **It runs at native speed.** With `-O3 --native`, Eigen typed at the prompt
+  multiplies matrices as fast as clang++-compiled Eigen, and as fast as NumPy
+  (see [Speed](#speed)). `%timeit` times a statement as IPython does.
+- **It points at your project.** It takes `compile_commands.json`, a
+  `cpp-repl.toml`, compiler flags and shared libraries.
+- **It works with every clang-repl from 18 to 24.** It works around what each
+  version gets wrong ([Why a front end](#why-a-front-end)), and Docker images
+  carry the newest one.
+
+```
+$ cpp-repl --docker
+c++> std::vector<int> v{5, 3, 8, 1};
+c++> std::sort(v.begin(), v.end(), [](int a, int b) { return a > b; });
+c++> v
+[8, 5, 3, 1]
+c++> std::map<std::string, int> ages{{"ada", 36}, {"alan", 41}};
+c++> ages
+{"ada": 36, "alan": 41}
+c++> for (const auto &[name, age] : ages) {
+...>   std::cout << name << " is " << age << '\n';
+...> }
+ada is 36
+alan is 41
+c++> int *p = nullptr;
+c++> *p = 42;
+[clang-repl crashed (SIGSEGV): restored 7 inputs]
+c++> v
+[8, 5, 3, 1]
+
+$ cpp-repl --docker -p eigen -O3 --native
+c++> Eigen::Matrix2d m{{1, 2}, {3, 4}};
+c++> m * m.inverse()
+Matrix<double> 2×2
+    1    0
+    0    1
+c++> Eigen::MatrixXd A = Eigen::MatrixXd::Random(1024, 1024), B = Eigen::MatrixXd::Random(1024, 1024);
+c++> Eigen::MatrixXd C(1024, 1024);
+c++> %timeit C.noalias() = A * B;
+34.6 ms ± 440 µs per loop (mean ± std. dev. of 7 runs, 10 loops each; JIT at -O3)
+```
+
+That product is 62 GFLOP/s on one core of a Ryzen 9 5950X, the same as
+clang++ -O3 makes of it.
+
+## Install and run
+
+Linux, Python 3.11 or newer, and either a clang-repl or Docker.
+
+```sh
+git clone https://github.com/farhatnadim/cpp_repl.git && cd cpp_repl
+
+bin/cpp-repl                 # uses the newest clang-repl on PATH (Ubuntu: apt install clang-tools-18)
+make docker                  # or: an image with clang-repl 23 from apt.llvm.org, about a minute
+bin/cpp-repl-docker          # cpp-repl in that image; the same as cpp-repl --docker
+
+pip install -e '.[ui]'       # optional: cpp-repl on PATH, with prompt_toolkit for highlighting as you type
+```
+
+Without prompt_toolkit, input goes through readline, a line at a time. With
+Pygments, output is coloured. `cpp-repl --docker` mounts the working
+directory, the checkout and whatever your configuration reads, each at its
+own path, so paths mean the same inside the container and out.
+
+### Which clang-repl
+
+| clang-repl | Where it comes from | Notes |
+| --- | --- | --- |
+| 23 | `make docker` (apt.llvm.org) | Recommended. Runs Eigen's kernels and OpenMP. cpp-repl works around its crash on lambdas at top level. |
+| 18 | Ubuntu 24.04, `clang-tools-18` | Most code works. Its JIT cannot assemble inline `asm`, so Eigen's dynamic-size products abort the backend. cpp-repl rebuilds the session, but the product cannot run. |
+| main | `make docker-snapshot` | LLVM's development snapshot, for trying fixes that are not released yet. |
+| any ref | `make docker-src LLVM_REF=...` | Built from llvm-project in 30 to 60 minutes. |
+
+## Using it
+
+```
+c++> std::vector<int> v{5, 3, 8};
+c++> std::sort(v.begin(), v.end());
+c++> v
+[3, 5, 8]
+c++> for (int x : v) {
+...>   std::cout << x * x << ' ';
+...> }
+9 25 64
+c++> std::map<std::string, int>{{"one", 1}, {"two", 2}}
+{"one": 1, "two": 2}
+```
+
+- **Enter** runs the input once it is complete. **Esc then Enter** runs a block
+  as it stands. A pasted block can mix `#include` lines and code. If it ends in
+  a bare expression, its value prints, as a notebook cell's does.
+- **Tab** completes names from every header the session includes, and the
+  session's own names. **Ctrl-R** searches the history.
+- **Ctrl-C** stops a running input and rebuilds the session without it.
+
+| Command | What it does |
+| --- | --- |
+| `%undo` | drop the last input (the session is replayed without it) |
+| `%restart`, `%reset` | rebuild from the journal; start again, empty |
+| `%journal` | list the inputs so far |
+| `%save FILE`, `%save-cpp FILE` | the journal as a `.repl` file, or as a C++ program |
+| `%load FILE` | run a C++ source or a `.repl` file |
+| `%lib PATH` | load a shared library |
+| `%time INPUT` | run INPUT, then print how long it took, compiling included |
+| `%timeit INPUT` | time INPUT in a loop, as IPython does |
+| `%flags` | the session's flags, preludes and libraries |
+| `%help`, `%quit` | |
+
+### Files
+
+```sh
+cpp-repl prog.cpp            # run prog.cpp's main(), then keep the prompt
+cpp-repl --batch prog.cpp    # run it and exit; exit status 1 if an input failed
+cpp-repl --emit prog.cpp     # print the inputs prog.cpp becomes
+cpp-repl a.repl              # a session saved with %save
+```
+
+A C++ source becomes inputs like this:
+- Each `#include`, `#define` and file-scope declaration or function is one input.
+- An `#if ... #endif` region is one input.
+- `main()`'s body runs one statement at a time. Its `argc` and `argv` get
+  stand-in values.
+- A final `return 0;` is dropped, and `return run();` still runs `run()`.
+- Quoted includes next to the source are found. A `#pragma` stays with the
+  statement after it. `CPP_REPL` is defined, so a source can tell where it
+  runs.
+
+`%save-cpp FILE` writes the session as a program:
+- includes and definitions at file scope;
+- everything else in `main()`;
+- bare expressions as `show(...)` calls.
+
+Build it with the session's own flags:
+
+```sh
+clang++ $(cpp-repl -p eigen -O2 --cflags) saved.cpp $(cpp-repl -p eigen -O2 --libs)
+```
+
+### Speed: -O and --native
+
+The JIT compiles at **-O0** unless asked otherwise, which is quick to compile
+and slow to run: Eigen's matrix product runs about 300 times slower than
+compiled. `-O2` or `-O3` turns the optimiser on, and `--native`
+(`-march=native`) lets it use AVX and FMA. With both, code typed at the prompt
+runs as fast as clang++'s ([Speed](#speed)). `%timeit` says which level is in
+use.
+
+```sh
+cpp-repl -p eigen -O3 --native
+```
+
+## Your project, your libraries
+
+Compiler flags go to clang as they are: `-I DIR`, `-isystem DIR`,
+`-D NAME=VALUE`, `-U NAME`, `-O3`, `-std=c++23`, `-march=...`, `-f...`,
+`-W...`, `-pthread`. Shared libraries load with `--lib`.
+
+```sh
+cpp-repl -I include -DFAST=1 --lib build/libmylib.so -O2
+cpp-repl --compile-commands build      # flags as your build compiles: -I, -D, -std, -m
+```
+
+From `compile_commands.json`, cpp-repl takes the flags of the entry for the
+file you load (or the first entry). The optimisation level and warnings stay
+the REPL's own.
+
+A `cpp-repl.toml` in the working directory, or any directory above it, says
+the same once for a project. `-c FILE` reads another; paths in it are relative
+to the file:
+
+```toml
+std = "c++23"
+include = ["include", "third_party/fmt/include"]
+defines = ["FAST=1"]
+flags = ["-O2", "-march=native"]
+libs = ["build/libmylib.so"]
+prelude = ["tools/repl_prelude.h"]   # -include'd into every session
+profiles = ["eigen"]
+compile_commands = "build"
+```
+
+The precedence, from lowest to highest:
+1. profiles
+2. compile_commands.json
+3. cpp-repl.toml
+4. `-c` files
+5. the command line
+
+For `-I`, the first match wins; for `-D`, the last definition wins. The
+prelude's templates need C++20, so a lower `-std` is raised, and the startup
+line says so.
+
+### Profiles
+
+| Profile | What it adds |
+| --- | --- |
+| `-p eigen` | `<Eigen/Dense>`, found through `EIGEN_ROOT`, pkg-config or the usual places. A matrix prints with its shape; past 10 rows or columns, only the first and last three. |
+| `-p usd` | OpenUSD's libraries and `using namespace pxr`. A stage prints its usda; a prim its type, properties and children; an attribute its value and time samples. `tree(stage)` prints the hierarchy. The install is found through the `CMakeCache.txt` next to `compile_commands.json`, then `USD_ROOT`. |
+
+A profile of your own is a `cpp-repl.toml`-style file, loaded with `-c`. To
+make your types print, give them an `operator<<`; cpp-repl finds one defined
+even after the type was first printed. For a display of more than one line,
+specialise `repl::Show<T>`. See `src/cpp_repl/prelude/cpp_repl.h`, and
+`profiles/eigen/cpp_repl_eigen.h` for an example.
+
+## Why a front end
+
+clang-repl is a real C++ JIT, but typed at directly it hangs, crashes or
+misprints on everyday input. In what follows:
+- *raw* means clang-repl alone, fed over a pipe by
+  [`tests/compat/harness.py`](tests/compat/harness.py);
+- *cpp-repl* means the same input typed into cpp-repl.
+
+| Raw clang-repl | 18.1.3 | 23.1.2 | 24.0.0 | cpp-repl |
+| --- | --- | --- | --- | --- |
+| A line ending in an open `{` | hangs (killed after 20 s) | hangs (killed after 20 s) | hangs (killed after 20 s) | waits for the block to close |
+| Two top-level range-for loops | prints '1 1 1' and '' | works | works | runs each loop inside a function |
+| Nested top-level `for` loops (llvm#89506) | prints '00 01' | works | works | runs the loop inside a function |
+| A top-level `try`/`catch` | link error, and later inputs fail | works | works | runs it inside a function |
+| A lambda called in a top-level statement | works | crashes (SIGSEGV) | works | runs the statement inside a function |
+| A lambda passed to a template in a top-level statement | works | crashes (SIGSEGV) | works | runs the statement inside a function |
+| A bare `x + 1`, no semicolon | prints nothing | prints (int) 42 | prints (int) 42 | prints 42 |
+| A bare `std::vector<int>{1, 2, 3}` | link error | link error | link error | prints [1, 2, 3] |
+| A bare call of a void function | does not run it | does not run it | does not run it | runs it |
+| Inline assembly, as in Eigen's matrix product | fatal error: no inline asm in the JIT | works | works | the same (a clang-repl limit) |
+| An `#if` region, through an `#include`d file | works | works | works | sends #if regions this way |
+| A dynamic initialiser in an `-include`d header | does not run it | runs it | runs it | keeps the prelude free of them |
+| A prompt written to a pipe | prints no prompt | prints no prompt | prints no prompt | learns it at startup and strips it |
+| The error `%lib` prints for a missing file | error: <path>: cannot open shared object file: No such file or directory | error: <path>: cannot open shared object file: No such file or directory | error: <path>: cannot open shared object file: No such file or directory | uses it as the end-of-output marker |
+| How a parse error ends | error: Parsing failed. | error: Parsing failed. | error: Parsing failed. | classifies it as an error |
+| `-Xcc -O2` in the JIT | __OPTIMIZE__ = 1 | __OPTIMIZE__ = 1 | __OPTIMIZE__ = 1 | -O2 on its command line |
+| The JIT without `-O` | __OPTIMIZE__ undefined | __OPTIMIZE__ undefined | __OPTIMIZE__ undefined | -O0 too; see %timeit's note |
+| `-Xcc -march=native` in the JIT | __AVX2__ = 1 | __AVX2__ = 1 | __AVX2__ = 1 | --native |
+| `%help` | unknown | known | known | its own %help |
+| `%undo` | works | works | works | replays the journal without the last input |
+
+Probed with tests/compat/harness.py: 18.1.3 on 2026-10-14, 23.1.2 on 2026-10-14, 24.0.0 on 2026-10-14.
+
+The way around each problem:
+- **The unclosed `{`:** cpp-repl never sends an incomplete input.
+- **Loops, `try` and lambdas:** cpp-repl runs these inside a function of their
+  own. Lambdas at top level are a new crash in 23.1 and already fixed on
+  main.
+- **Printing a value:** cpp-repl always calls its own printer. That is how
+  class values print in every version.
+- **Crash reports:** cpp-repl turns core dumps off before any library loads,
+  so a crash leaves no report behind (Ubuntu's apport writes them).
+
+## Speed
+
+The question was how fast C++ typed at the prompt runs, against native
+C++ and NumPy. The workload is a dense matrix product of n × n doubles. The
+same Eigen source ran compiled by clang++ 23, typed into cpp-repl over
+clang-repl 23, and as a kernel compiled ahead of time and called from the
+REPL. NumPy ran with OpenBLAS.
+
+The method:
+- three rounds;
+- pinned cores;
+- validity checks on every result;
+- hypotheses written down before the first run.
+
+Everything is in [bench/](bench/README.md).
+
+![GFLOP/s against n](bench/results/nadim-Alienware-Aurora-Ryzen-Edition-llvm23-20261014-0125Z-gflops.png)
+
+| One thread, n = 1024 | GFLOP/s |
+| --- | ---: |
+| Eigen, compiled by clang++ -O3 -march=native | 64.0 |
+| Eigen typed into cpp-repl -O3 --native | 64.4 |
+| cpp-repl calling a kernel compiled ahead of time | 63.1 |
+| NumPy (OpenBLAS) | 60.7 |
+| cpp-repl with no flags (-O0) | 0.2 |
+
+- **Tuned, the JIT is the compiler.** With `-O3 --native`, Eigen at the
+  prompt runs at 0.98–1.02 of native at every size from 32 to 3072. With 16
+  threads, OpenMP inside the JIT runs at 0.97–1.00 of native, up to
+  660 GFLOP/s.
+- **Untuned, it is about 300× slower.** The default is -O0, and leaving out
+  `--native` costs almost two thirds of the speed.
+- **NumPy was a few percent behind Eigen at every size,** contrary to the
+  prediction written down before the run.
+- **What the REPL costs is compile time, not run time.**
+  - Cold start to the first product: 3.2 s, against 2.5 s to compile and
+    run natively and 0.06 s in NumPy.
+  - In a running session, calling the kernel again costs 0.08 s, and a new
+    product expression 0.72 s to compile.
+
+## Limits
+
+- **Each input is compiled on its own, and a name can't be defined twice.**
+  `auto x = ...` a second time is an error. Assign instead, pick a new name,
+  or `%undo`.
+- **Variables typed at the prompt are globals.** A name can clash with a C
+  library function: `int index = 3;` fails.
+- **Rebuilding replays the journal,** file writes and other side effects
+  included.
+- **Typed code can't read stdin,** because the front end uses it to talk to
+  clang-repl.
+- **A multi-line raw string literal becomes an ordinary escaped literal.**
+  Inputs are sent one line each, except `#if` regions, which go through a
+  file.
+- **Startup takes about 1.3 s,** or 1.0 s with `--no-std`, which leaves out
+  the standard library prelude. A profile adds its headers: Eigen about
+  0.5 s, OpenUSD about 3 s. Docker adds about 0.2 s.
+- **Your headers must compile with your clang-repl.**
+  - clang 23 rejects TBB 2020's headers, so the `usd` profile needs an
+    OpenUSD built against oneTBB there.
+  - clang-repl 18 can't run Eigen's dynamic-size products, as the table shows.
+- **C++20 is the floor.**
+
+## How it works
+
+- **[`lexer.py`](src/cpp_repl/lexer.py)** finds where inputs and statements
+  end. It decides what clang-repl gets:
+  - control flow and lambda statements inside a function of their own;
+  - `#pragma` as `_Pragma`;
+  - an `#if` region through a temporary file and an `#include`;
+  - a bare expression through `repl::print_expr`.
+- **[`backend.py`](src/cpp_repl/backend.py)** runs clang-repl over a pipe.
+  - **Marker:** after each input it sends `%lib` of a path that cannot exist.
+    The error clang-repl prints marks where the input's output ends, and adds
+    nothing to the session.
+  - **Calibration:** at startup it learns the marker's text and any prompt.
+    It also checks that a parse error is recognised.
+- **[`session.py`](src/cpp_repl/session.py)** journals the inputs that
+  worked. After a crash, a Ctrl-C, a link failure or `%undo`, it replays them
+  into a spare clang-repl started in advance.
+- **[`prelude/cpp_repl.h`](src/cpp_repl/prelude/cpp_repl.h)** is the C++
+  every session starts from: `show`, `Show<T>`/`Put<T>`, `keep` and `timeit`.
+  Profiles add their own headers.
+
+cpp-repl began as `repl/usd-repl` in
+[openusd-tutorial](https://github.com/farhatnadim/openusd-tutorial), a REPL for learning OpenUSD's C++ API.
+`scripts/parity.py` checks that both tools run that tutorial's 20 lessons
+alike.
+
+## Related work
+
+| Project | What it is | Difference |
+| --- | --- | --- |
+| [cling](https://github.com/root-project/cling) | CERN's C++ interpreter (ROOT), on its own LLVM fork | Mature and full-featured, but it is LLVM 20 and its own build. cpp-repl uses stock clang-repl, and any of them. |
+| [xeus-cpp](https://github.com/compiler-research/xeus-cpp) | A Jupyter kernel over CppInterOp and clang-repl, with a WebAssembly build | Notebooks rather than a terminal. CppInterOp supports up to LLVM 22. |
+| [clang-repl-kernel](https://pypi.org/project/clang-repl-kernel/) | A Python Jupyter kernel over clang-repl | Tested with clang 18. |
+
+## Development
+
+```sh
+make test          # unit and fake-backend tests: no clang-repl needed
+make test-host     # every test against the host's clang-repl
+make test-docker   # every test inside cpp-repl:llvm23 (make docker first)
+make parity        # openusd-tutorial's lessons through usd-repl and cpp-repl -p usd
+make compat        # probe the host's clang-repl; make compat-docker for the images
+make compat-table  # the "Why a front end" table from the probes
+make bench-quick   # a 3-minute benchmark run (make docker-bench first)
+```
+
+The test suite passes on clang-repl 18.1.3, 23.1.2 and the 24 snapshot:
+- unit tests;
+- a fake clang-repl that prints prompts, splits its output and crashes on cue;
+- golden transcripts;
+- integration tests for crashes, Ctrl-C, link failures and `%save-cpp` round
+  trips.
+
+[AGENTS.md](AGENTS.md) describes the layout and how to probe clang-repl
+safely.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

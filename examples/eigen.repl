@@ -1,0 +1,12 @@
+// Eigen at the prompt: cpp-repl -p eigen -O3 --native examples/eigen.repl
+// (the matrix product needs clang-repl 23 or newer: cpp-repl --docker -p eigen -O3 --native)
+Eigen::Matrix3d R = Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitZ()).toRotationMatrix();
+R
+R * Eigen::Vector3d(1, 0, 0)
+R.determinant()
+Eigen::MatrixXd A = Eigen::MatrixXd::Random(256, 256);
+Eigen::MatrixXd B = Eigen::MatrixXd::Random(256, 256);
+Eigen::MatrixXd C(256, 256);
+C.noalias() = A * B;
+C.topLeftCorner(3, 3)
+%timeit C.noalias() = A * B;

@@ -98,7 +98,7 @@ def main():
         if 'error_here' in line:
             out(f'input_line_{n}:1:1: error: use of undeclared identifier \'error_here\'\nerror: Parsing failed.\n')
             continue
-        m = re.search(r'repl::print_expr\(\[\]\(\) -> decltype\(auto\) \{ return \((.*)\); \}\);', line)
+        m = re.search(r'repl::print_expr\(\[\]\(\) -> decltype\(auto\) \{ return \(\((.*)\), repl::settle\{\}\); \}\);', line)
         if m:
             expr = m.group(1)
             if expr == 'void_call()':

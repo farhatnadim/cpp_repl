@@ -241,7 +241,8 @@ class Session:
         kind = send.kind
         if kind == 'expr':
             # Run in a function: a lambda in a top-level statement crashes clang-repl 23.
-            printed = in_function(self._fresh(), f'repl::print_expr([]() -> decltype(auto) {{ return ({line}); }});')
+            printed = in_function(self._fresh(),
+                                  f'repl::print_expr([]() -> decltype(auto) {{ return (({line}), repl::settle{{}}); }});')
             output, result = self._send(printed, echo=False)
             if result != 'error':
                 if VOID_MARK in output:

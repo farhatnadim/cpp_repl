@@ -30,3 +30,7 @@ c++> std::vector<Eigen::Vector2d>{Eigen::Vector2d(1, 2)}
 [[[1], [2]]]
 c++> m.determinant()
 -2
+c++> m * Eigen::Vector2d(1, 0)
+Matrix<double> 2×1
+    1
+    3

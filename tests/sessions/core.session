@@ -113,3 +113,8 @@ undo: a + b
 [undo: restored 49 inputs]
 c++> b
 2
+c++> struct Tracked { bool alive = true; ~Tracked() { alive = false; } };
+c++> struct View { const Tracked &t; bool eval() const { return t.alive; } };
+c++> View look(const Tracked &t) { return {t}; }
+c++> look(Tracked{})
+true

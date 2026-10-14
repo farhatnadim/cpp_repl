@@ -85,11 +85,17 @@ def docker_command(argv, args, options):
     for name in ('TERM', 'NO_COLOR', 'COLUMNS', 'LINES', 'USD_ROOT', 'EIGEN_ROOT'):
         if name in os.environ:
             cmd += ['-e', name]
-    own = [cwd, CHECKOUT.resolve(), state]
-    cmd += ['-v', f'{cwd}:{cwd}', '-w', str(cwd), '-v', f'{CHECKOUT}:{CHECKOUT}:ro', '-v', f'{state}:{state}']
+    # Each directory is mounted once (Docker refuses a second mount at the
+    # same path); the working directory may be the checkout itself.
+    volumes = {cwd: 'rw'}
+    volumes.setdefault(CHECKOUT.resolve(), 'ro')
+    volumes.setdefault(state, 'rw')
     for m in mounts(cfg, args.mount, options.files):
-        if not _inside(m, own):
-            cmd += ['-v', f'{m}:{m}:ro']
+        if not _inside(m, list(volumes)):
+            volumes[m] = 'ro'
+    for path, mode in volumes.items():
+        cmd += ['-v', f'{path}:{path}' + (':ro' if mode == 'ro' else '')]
+    cmd += ['-w', str(cwd)]
     inner = _without(argv, {'--image', '--mount', '--clang-repl'}, {'--docker', '--dry-run'})
     cmd += [image, 'python3', str(CHECKOUT / 'bin' / 'cpp-repl'), *inner]
     return image, cmd

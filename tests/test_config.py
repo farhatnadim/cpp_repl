@@ -163,3 +163,17 @@ def test_docker_command(tmp_path, monkeypatch):
     assert not any(v.startswith('/usr/include') for v in volumes)   # the image has its own
     assert cmd[cmd.index(image) + 1:] == ['python3', str(CHECKOUT / 'bin' / 'cpp-repl'), '-O2', '--batch', 'x.cpp']
     assert ['--user', f'{os.getuid()}:{os.getgid()}'] == cmd[cmd.index('--user'):cmd.index('--user') + 2]
+
+
+def test_docker_command_from_the_checkout(monkeypatch):
+    """Run from the checkout itself, it is mounted once, writable."""
+    from types import SimpleNamespace
+
+    from cpp_repl.docker import CHECKOUT, docker_command
+    monkeypatch.delenv('CPP_REPL_IMAGE', raising=False)
+    options = Options(cwd=CHECKOUT, no_config=True)
+    _, cmd = docker_command(['--docker'], SimpleNamespace(image=None, mount=[]), options)
+    volumes = [cmd[i + 1] for i, a in enumerate(cmd) if a == '-v']
+    targets = [v.split(':')[1] for v in volumes]
+    assert len(targets) == len(set(targets))
+    assert f'{CHECKOUT}:{CHECKOUT}' in volumes

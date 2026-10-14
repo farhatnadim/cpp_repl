@@ -246,10 +246,46 @@ void show(const T &x)
   Show<T>::show(x);
 }
 
-// What cpp-repl sends for a bare expression: show its value, or just run it
-// when it is void. A void expression ends its output with '\x1e', which tells
-// cpp-repl to save it as a plain statement in %save-cpp. So does an
-// expression that returns a stream, as `std::cout << 42` does.
+// cpp-repl sends a bare expression EXPR as
+//   repl::print_expr([]() -> decltype(auto) { return ((EXPR), repl::settle{}); })
+// The comma settles the value inside the full expression, while the
+// temporaries it refers to still live. Eigen's `R * Eigen::Vector3d(1, 0, 0)`
+// refers to its temporary vector: returned as it is, it would be evaluated
+// after the vector is gone. A void EXPR takes the built-in comma instead, and
+// the lambda returns a settle.
+struct settle {};
+
+namespace detail {
+
+// A type whose .eval() gives a value of another type, as an expression
+// template's does. The second requirement is checked only when the first
+// holds, which an `if constexpr (a && b)` would not do.
+template <class T>
+concept expression_template = requires (const T &x) {
+  x.eval();
+  requires !std::is_same_v<std::remove_cvref_t<decltype(x.eval())>, T>;
+};
+
+}  // namespace detail
+
+// An expression template as its value, a temporary as a value of its own,
+// and an lvalue as itself.
+template <class T>
+decltype(auto) operator,(T &&x, settle)
+{
+  using U = std::remove_cvref_t<T>;
+  if constexpr (detail::expression_template<U>)
+    return x.eval();
+  else if constexpr (std::is_lvalue_reference_v<T>)
+    return static_cast<T>(x);
+  else
+    return U(std::move(x));
+}
+
+// Shows the value of a bare expression, or just runs it when it is void. A
+// void expression ends its output with '\x1e', which tells cpp-repl to save
+// it as a plain statement in %save-cpp. So does an expression that returns a
+// stream, as `std::cout << 42` does.
 inline constexpr char void_mark = '\x1e';
 
 template <class F>
@@ -257,7 +293,7 @@ void print_expr(F f)
 {
   using R = decltype(f());
   using V = std::remove_cvref_t<R>;
-  if constexpr (std::is_void_v<R> || std::is_base_of_v<std::ios_base, V>) {
+  if constexpr (std::is_void_v<R> || std::is_same_v<V, settle> || std::is_base_of_v<std::ios_base, V>) {
     f();
     std::cout << void_mark << std::flush;
   } else {

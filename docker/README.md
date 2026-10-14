@@ -1,8 +1,9 @@
 # Docker images
 
 `Dockerfile` holds the toolchain images cpp-repl runs in. The images contain no
-cpp-repl code: `cpp-repl --docker` mounts the checkout read-only at its own
-path, so an image only changes when the toolchain does.
+cpp-repl code: `cpp-repl --docker` mounts the checkout at its own path,
+read-only unless it is the working directory, so an image only changes when
+the toolchain does.
 
 | Target | Tag | What it adds |
 | --- | --- | --- |

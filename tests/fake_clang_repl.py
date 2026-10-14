@@ -11,7 +11,7 @@ It reads one input per line and answers:
   crash()              dies of SIGSEGV          hang()            never answers
   link_fail()          a JIT link error         too_many()        clang's "too many errors", then a loop
   syntax error         anything with 'error_here' in it fails to parse
-  ...repl::print_expr(... return (N); ...)...   prints N; return (void_call()) prints the void mark
+  ...repl::print_expr(((N), ...))...   prints N; with void_call() for N, the void mark
 anything else is silently accepted.
 
 Environment: FAKE_PROMPT is printed before each input is read (as clang-repl
@@ -98,7 +98,7 @@ def main():
         if 'error_here' in line:
             out(f'input_line_{n}:1:1: error: use of undeclared identifier \'error_here\'\nerror: Parsing failed.\n')
             continue
-        m = re.search(r'repl::print_expr\(\[\]\(\) -> decltype\(auto\) \{ return \(\((.*)\), repl::settle\{\}\); \}\);', line)
+        m = re.search(r'repl::print_expr\(\(\((.*)\), repl::printer<cpp_repl_tag>\{\}\)\);', line)
         if m:
             expr = m.group(1)
             if expr == 'void_call()':

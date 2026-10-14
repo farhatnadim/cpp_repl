@@ -240,9 +240,10 @@ class Session:
         line = self._file(send.text) if send.file else send.text
         kind = send.kind
         if kind == 'expr':
-            # Run in a function: a lambda in a top-level statement crashes clang-repl 23.
-            printed = in_function(self._fresh(),
-                                  f'repl::print_expr([]() -> decltype(auto) {{ return (({line}), repl::settle{{}}); }});')
+            # Run in a function, for the local struct that print_expr needs, and
+            # because a lambda in a top-level statement crashes clang-repl 23.
+            printed = in_function(self._fresh(), 'struct cpp_repl_tag; '
+                                  f'repl::print_expr((({line}), repl::printer<cpp_repl_tag>{{}}));')
             output, result = self._send(printed, echo=False)
             if result != 'error':
                 if VOID_MARK in output:

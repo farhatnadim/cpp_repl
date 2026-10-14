@@ -246,68 +246,48 @@ void show(const T &x)
   Show<T>::show(x);
 }
 
-// cpp-repl sends a bare expression EXPR as
-//   repl::print_expr([]() -> decltype(auto) { return ((EXPR), repl::settle{}); })
-// The comma settles the value inside the full expression, while the
-// temporaries it refers to still live. Eigen's `R * Eigen::Vector3d(1, 0, 0)`
-// refers to its temporary vector: returned as it is, it would be evaluated
-// after the vector is gone. A void EXPR takes the built-in comma instead, and
-// the lambda returns a settle.
-struct settle {};
+// cpp-repl sends a bare expression EXPR, in a function of its own, as
+//   struct cpp_repl_tag; repl::print_expr(((EXPR), repl::printer<cpp_repl_tag>{}));
+// The comma operator below shows the value inside the full expression, while
+// the temporaries it refers to still live: `std::vector<int>{1, 2, 3}[0]`
+// refers into its temporary vector, and Eigen's `R * Eigen::Vector3d(1, 0, 0)`
+// to its temporary vector. A void EXPR takes the built-in comma instead, and
+// print_expr receives the printer. The local struct gives every input a
+// printer type of its own, so that the operator is instantiated for each.
+template <class Tag>
+struct printer {};
 
-namespace detail {
+struct shown {};   // what the comma operator returns once it has shown a value
 
-// A type whose .eval() gives a value of another type, as an expression
-// template's does. The second requirement is checked only when the first
-// holds, which an `if constexpr (a && b)` would not do.
-template <class T>
-concept expression_template = requires (const T &x) {
-  x.eval();
-  requires !std::is_same_v<std::remove_cvref_t<decltype(x.eval())>, T>;
-};
-
-}  // namespace detail
-
-// An expression template as its value, a temporary as a value of its own,
-// and an lvalue as itself.
-template <class T>
-decltype(auto) operator,(T &&x, settle)
-{
-  using U = std::remove_cvref_t<T>;
-  if constexpr (detail::expression_template<U>)
-    return x.eval();
-  else if constexpr (std::is_lvalue_reference_v<T>)
-    return static_cast<T>(x);
-  else
-    return U(std::move(x));
-}
-
-// Shows the value of a bare expression, or just runs it when it is void. A
-// void expression ends its output with '\x1e', which tells cpp-repl to save
+// A void expression ends its output with '\x1e', which tells cpp-repl to save
 // it as a plain statement in %save-cpp. So does an expression that returns a
 // stream, as `std::cout << 42` does.
 inline constexpr char void_mark = '\x1e';
 
-template <class F>
-void print_expr(F f)
+template <class T, class Tag>
+shown operator,(T &&value, printer<Tag>)
 {
-  using R = decltype(f());
-  using V = std::remove_cvref_t<R>;
-  if constexpr (std::is_void_v<R> || std::is_same_v<V, settle> || std::is_base_of_v<std::ios_base, V>) {
-    f();
+  using V = std::remove_cvref_t<T>;
+  if constexpr (std::is_base_of_v<std::ios_base, V>) {
     std::cout << void_mark << std::flush;
+  } else if constexpr (!requires { Show<V>::generic; } || detail::is_basic<V>) {
+    Show<V>::show(value);
+  } else if constexpr (requires (std::ostream &os) { os << value; }) {
+    // Checked here, once per input, rather than in Put<V>, which is
+    // instantiated once: an operator<< typed after the first print counts.
+    std::cout << value << std::endl;
   } else {
-    decltype(auto) value = f();
-    if constexpr (!requires { Show<V>::generic; } || detail::is_basic<V>) {
-      Show<V>::show(value);
-    } else if constexpr (requires (std::ostream &os) { os << value; }) {
-      // Checked here, once per input, rather than in Put<V>, which is
-      // instantiated once: an operator<< typed after the first print counts.
-      std::cout << value << std::endl;
-    } else {
-      Show<V>::show(value);
-    }
+    Show<V>::show(value);
   }
+  return {};
+}
+
+inline void print_expr(shown) {}
+
+template <class Tag>
+void print_expr(printer<Tag>)
+{
+  std::cout << void_mark << std::flush;
 }
 
 // keep(x) makes the compiler assume x is used, so that a computation timed

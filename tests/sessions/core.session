@@ -113,8 +113,17 @@ undo: a + b
 [undo: restored 49 inputs]
 c++> b
 2
-c++> struct Tracked { bool alive = true; ~Tracked() { alive = false; } };
-c++> struct View { const Tracked &t; bool eval() const { return t.alive; } };
+c++> std::vector<int>{1, 2, 3}[0]
+1
+c++> std::string("hello, world, long enough for the heap").front()
+'h'
+c++> int alive = 0;
+c++> struct Tracked { Tracked() { ++alive; } ~Tracked() { --alive; } };
+c++> struct View { const Tracked &t; };
+c++> std::ostream &operator<<(std::ostream &os, const View &) { return os << "alive: " << alive; }
 c++> View look(const Tracked &t) { return {t}; }
 c++> look(Tracked{})
-true
+alive: 1
+c++> #include <atomic>
+c++> std::atomic<int>{5}
+5

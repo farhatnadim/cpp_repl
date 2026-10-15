@@ -414,6 +414,7 @@ class Options:
     cwd: Path | None = None
     diagnostics: str = 'full'   # or 'brief': see diagnostics.py
     stop_on_error: bool = False
+    timeout: float | None = None   # seconds an input may take, compiling included
 
 
 class Config:

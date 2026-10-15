@@ -143,14 +143,15 @@ class Backend:
             self.in_trace = False
         return self.in_trace
 
-    def run(self, line, echo=None):
-        """Send one input. Returns (output, alive)."""
+    def run(self, line, echo=None, deadline=None):
+        """Send one input. Returns (output, alive). With a deadline in
+        seconds, raises BackendError when it passes."""
         try:
             self._write(line)
             token = self._mark()
         except (BrokenPipeError, OSError):
             return '', False
-        return self.collect(token, echo)
+        return self.collect(token, echo, deadline)
 
     def _find(self, token):
         """Where token starts in the buffer, skipping an echo of the %lib

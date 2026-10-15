@@ -22,13 +22,14 @@ FAKE = Path(__file__).resolve().parent / 'fake_clang_repl.py'
 CPP_REPL = Path(__file__).resolve().parent.parent / 'bin' / 'cpp-repl'
 
 
-def make(tmp_path, monkeypatch, batch=True, stop_on_error=False, **env):
+def make(tmp_path, monkeypatch, batch=True, stop_on_error=False, timeout=None, **env):
     for name in ('FAKE_PROMPT', 'FAKE_SPLIT', 'FAKE_MARKER', 'FAKE_ECHO', 'FAKE_HANG_START'):
         monkeypatch.delenv(name, raising=False)
     for name, value in env.items():
         monkeypatch.setenv(name, value)
     monkeypatch.setattr(backend_module, 'STUCK_GRACE', 0.5)
-    cfg = Config(Options(cwd=tmp_path, no_config=True, clang_repl=str(FAKE), stop_on_error=stop_on_error))
+    cfg = Config(Options(cwd=tmp_path, no_config=True, clang_repl=str(FAKE), stop_on_error=stop_on_error,
+                         timeout=timeout))
     stream = io.StringIO()
     s = Session(cfg, tmp_path, batch=batch, out=Output(stream))
     return s, stream
@@ -163,6 +164,20 @@ def test_exit_status(tmp_path, monkeypatch, made, inputs, status, failures):
     made.append(s)
     s.run_inputs(inputs, echo=False)
     assert (s.exit_status(), s.failures) == (status, failures)
+
+
+@pytest.mark.parametrize('batch', [True, False])
+def test_an_input_past_its_timeout_is_stopped(tmp_path, monkeypatch, made, batch):
+    s, stream = make(tmp_path, monkeypatch, batch=batch, timeout=0.5)
+    made.append(s)
+    assert s.run_input('int a = 1;')
+    first = s.backend.proc.pid
+    assert s.run_input('hang();')               # the session goes on, without it
+    assert '[that input ran past 0.5 s: restored 1 input]' in stream.getvalue()
+    assert s.backend.proc.pid != first
+    assert s.run_input('say("alive");')
+    assert stream.getvalue().endswith('alive\n')
+    assert (s.exit_status(), [e.text for e in s.journal]) == (124, ['int a = 1;', 'say("alive");'])
 
 
 @pytest.mark.parametrize('stop', [False, True])

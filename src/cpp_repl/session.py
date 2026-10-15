@@ -94,6 +94,7 @@ class Session:
         self.out = out or OUT
         self.journal = []
         self.failures = 0
+        self.timeouts = 0      # inputs stopped at --timeout
         self.ended = None      # the exit status a program's end stands for (see _status)
         self.tainted = False   # an input failed to compile in this clang-repl
         self.spare = None
@@ -189,14 +190,19 @@ class Session:
 
     def _send(self, line, echo=True):
         """Run one line. Returns (output, result), result being 'ok', 'error',
-        'link', 'dead' or 'interrupted'."""
+        'link', 'dead', 'interrupted' or 'timeout'."""
         self.diagnostics.start()
         try:
-            output, alive = self.backend.run(line, echo=self._show if echo else None)
+            output, alive = self.backend.run(line, echo=self._show if echo else None,
+                                             deadline=self.cfg.options.timeout)
         except KeyboardInterrupt:
             self.backend.kill()
             self._show_end()
             return '', 'interrupted'
+        except BackendError:
+            self.backend.kill()
+            self._show_end()
+            return '', 'timeout'
         if echo:
             self._show_end()
         if not alive:
@@ -236,6 +242,9 @@ class Session:
             self.restore(self.journal, how)
         elif result == 'interrupted':
             self.restore(self.journal, 'interrupted')
+        if result == 'timeout':
+            self.timeouts += 1
+            self.restore(self.journal, f'that input ran past {self.cfg.options.timeout:g} s')
         if self.batch:
             return result not in ('dead', 'interrupted')
         return False
@@ -251,9 +260,10 @@ class Session:
 
     def exit_status(self):
         """What cpp-repl exits with after running files: the status of the
-        program's end, if it crashed or called exit() with one; else 1 if an
+        program's end, if it crashed or called exit() with one; else 124, as
+        timeout(1) reports it, if an input ran past --timeout; else 1 if an
         input failed; else 0."""
-        return self.ended or (1 if self.failures else 0)
+        return self.ended or (124 if self.timeouts else 1 if self.failures else 0)
 
     def _fresh(self):
         self.functions += 1

@@ -326,6 +326,14 @@ def test_the_exit_status_is_the_program_s(tmp_path, end, status):
     assert 'before' in result.stdout and 'after' not in result.stdout
 
 
+def test_an_endless_loop_stops_at_the_timeout(tmp_path):
+    (tmp_path / 'p.repl').write_text('int n = 0;\nwhile (true) { ++n; }\nstd::puts("after");\n')
+    result = run_cpp_repl(['--no-config', '--batch', '--no-color', '--timeout', '3', 'p.repl'], tmp_path)
+    assert result.returncode == 124, result.stdout + result.stderr
+    assert '[that input ran past 3 s: restored 1 input]' in result.stdout
+    assert result.stdout.endswith('after\n')
+
+
 def test_emit_and_flags(tmp_path):
     (tmp_path / 'p.cpp').write_text('int main() { int a = 1; return a; }\n')
     assert run_cpp_repl(['--emit', 'p.cpp'], tmp_path).stdout == 'int a = 1;\na;\n'

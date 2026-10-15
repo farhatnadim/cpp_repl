@@ -37,7 +37,8 @@ its own (see the README). Inside the REPL, %help lists the commands.
 Exit status after running files: 0 when every input ran; 1 when an input
 failed to compile or link; when the program crashed or called exit(N), what a
 shell reports for it: 128 + the signal (139 for SIGSEGV, 134 for abort()), or
-N. 2 when cpp-repl cannot start, 130 after Ctrl-C.
+N; else 124 when an input ran past --timeout. 2 when cpp-repl cannot start,
+130 after Ctrl-C.
 """
 
 _WITH_VALUE = ('-I', '-isystem', '-iquote', '-idirafter', '-D', '-U')
@@ -93,6 +94,8 @@ def make_parser():
                         help='run the files and exit (exit status: see below)')
     parser.add_argument('--stop-on-error', action='store_true',
                         help='stop running files at the first input that fails')
+    parser.add_argument('--timeout', type=float, metavar='SECONDS',
+                        help='stop an input that takes longer, compiling included, and go on without it')
     parser.add_argument('--emit', action='store_true',
                         help='print the inputs the files turn into, without running them')
     parser.add_argument('--cwd', type=Path, help='working directory of the session')
@@ -123,7 +126,7 @@ def options_from(args, flags, colour, interactive=False):
                    flags=flags, libs=args.lib, native=args.native, no_std=args.no_std,
                    clang_repl=args.clang_repl, colour=colour, cwd=(args.cwd or Path.cwd()).resolve(),
                    diagnostics=args.diagnostics or ('full' if interactive else 'brief'),
-                   stop_on_error=args.stop_on_error)
+                   stop_on_error=args.stop_on_error, timeout=args.timeout)
 
 
 def _fail(message):

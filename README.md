@@ -152,6 +152,9 @@ A C++ source becomes inputs like this:
 `abort()`). It exits with 1 if an input failed to compile or link.
 `--stop-on-error` stops at the first input that fails, as the rest usually
 depends on it.
+`--timeout SECONDS` stops an input that takes longer, compiling included,
+and rebuilds the session without it. The run goes on, and exits with 124 at
+the end, as `timeout` does.
 
 Each input reaches clang at its own line and column, so an error names the
 place in the file, and so do `__FILE__` and `__LINE__`. An input typed at the

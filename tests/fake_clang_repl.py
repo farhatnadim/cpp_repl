@@ -10,6 +10,7 @@ It reads one input per line and answers:
   say("TEXT")          TEXT and a newline       say_raw("TEXT")   TEXT alone
   crash()              dies of SIGSEGV          hang()            never answers
   link_fail()          a JIT link error         too_many()        clang's "too many errors", then a loop
+  limit()              clang's "too many errors" for a limit asked with -ferror-limit, then the next input
   taint()              a parse error after which this process cannot link stale(), as clang-repl
                        keeps a failed input's template instantiations without their code
   stale()              "linked", or a JIT link error in a process that has seen taint()
@@ -115,6 +116,10 @@ def main():
             while True:
                 out('error: still stuck\n')
                 time.sleep(0.01)
+        if 'limit()' in line:
+            out(f"input_line_{n}:1:1: error: use of undeclared identifier 'limit'\n"
+                'fatal error: too many errors emitted, stopping now [-ferror-limit=]\nerror: Parsing failed.\n')
+            continue
         if 'error_here' in line:
             out(f'input_line_{n}:1:1: error: use of undeclared identifier \'error_here\'\nerror: Parsing failed.\n')
             continue

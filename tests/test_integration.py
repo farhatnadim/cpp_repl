@@ -292,6 +292,19 @@ def test_emit_and_flags(tmp_path):
     assert '-O2' in cflags and '-DX=1' in cflags and 'prelude' in cflags
 
 
+def test_an_error_limit_cuts_an_input_short_and_the_run_goes_on(tmp_path):
+    """-ferror-limit=1 stops clang at the first error of an input; the next
+    input still runs."""
+    (tmp_path / 'p.repl').write_text('int a = "s"; int b = "t"; int c = "u";\n'
+                                     'std::puts("alive");\n')
+    result = run_cpp_repl(['--no-config', '-ferror-limit=1', '--batch', '--no-color', 'p.repl'], tmp_path)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert result.stdout.count('error: cannot initialize') == 1
+    assert 'too many errors emitted' in result.stdout
+    assert result.stdout.endswith('alive\n')
+    assert 'stuck' not in result.stdout
+
+
 def test_a_prelude_that_fails_to_compile_stops_the_start(tmp_path):
     (tmp_path / 'bad.h').write_text('int broken = ;\n')
     (tmp_path / 'bad.toml').write_text('prelude = ["bad.h"]\n')

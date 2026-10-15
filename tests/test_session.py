@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from cpp_repl import backend as backend_module
 from cpp_repl import session as session_module
 from cpp_repl.config import Config, Options
 from cpp_repl.session import Output, Session, SessionError
@@ -23,6 +24,7 @@ def make(tmp_path, monkeypatch, batch=True, **env):
         monkeypatch.delenv(name, raising=False)
     for name, value in env.items():
         monkeypatch.setenv(name, value)
+    monkeypatch.setattr(backend_module, 'STUCK_GRACE', 0.5)
     cfg = Config(Options(cwd=tmp_path, no_config=True, clang_repl=str(FAKE)))
     stream = io.StringIO()
     s = Session(cfg, tmp_path, batch=batch, out=Output(stream))
@@ -102,6 +104,19 @@ def test_recovery_from_the_journal(tmp_path, monkeypatch, made, text, reason):
     assert f'[{reason}: restored 2 inputs]' in stream.getvalue()
     assert s.backend.proc.pid != first
     assert [e.text for e in s.journal] == ['int a = 1;', 'int b = 2;']
+    assert s.run_input('say("alive");')
+    assert stream.getvalue().endswith('alive\n')
+
+
+def test_an_error_limit_asked_for_is_no_hang(tmp_path, monkeypatch, made):
+    """With -ferror-limit=N, clang prints "too many errors emitted" and
+    clang-repl goes on to the next input. Only a clang-repl that then
+    answers nothing is stuck."""
+    s, stream = make(tmp_path, monkeypatch)
+    made.append(s)
+    first = s.backend.proc.pid
+    assert s.run_input('limit();')
+    assert s.failures == 1 and s.backend.proc.pid == first
     assert s.run_input('say("alive");')
     assert stream.getvalue().endswith('alive\n')
 

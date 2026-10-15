@@ -25,7 +25,10 @@ _ANY_ERROR = re.compile(r'^error: ', re.M)
 # carries on without the rest of it.
 _STARTUP_ERROR = re.compile(r'^(?:.*?:\d+:\d+: )?(?:fatal )?error: ', re.M)
 _NOISE = re.compile(r'In file included from <<< inputs >>>:\d+:\s*$')
+# Clang's line when an input reaches -ferror-limit. clang-repl 18 can loop
+# forever after it; a newer one, or a limit asked for, answers the marker.
 _STUCK = b'too many errors emitted'
+STUCK_GRACE = 3   # seconds the marker gets after that line
 _ANSI = re.compile(r'\x1b\[[0-9;?]*[A-Za-z]')
 
 # LLVM's crash handler: a trace starts with one of these lines and goes on
@@ -164,6 +167,7 @@ class Backend:
         it passes."""
         tok, pieces, first = token.encode(), [], [True]
         until = time.monotonic() + deadline if deadline else None
+        stuck_by = None   # when to give up on the marker after the error limit
 
         def emit(data):
             if first[0] and data:
@@ -198,19 +202,23 @@ class Backend:
                 if newline >= 0:
                     emit(self.buffer[:newline + 1])
                     self.buffer = self.buffer[newline + 1:]
-            if until is not None:
-                left = until - time.monotonic()
+            waits = [t for t in (until, stuck_by) if t is not None]
+            if waits:
+                left = min(waits) - time.monotonic()
                 if left <= 0 or not select.select([self.fd], [], [], left)[0]:
+                    if stuck_by is not None and time.monotonic() >= stuck_by:
+                        self.stuck = True
+                        self.kill()
+                        stuck_by = None   # read what is left, to the end
+                        continue
                     raise BackendError(f'clang-repl gave no answer within {deadline:.0f} s')
             chunk = os.read(self.fd, 65536)
             if not chunk:
                 emit(self.buffer)
                 self.buffer = b''
                 return ''.join(pieces), False
-            if _STUCK in chunk:
-                # clang-repl 18 can loop forever after this; nothing more will come.
-                self.stuck = True
-                self.kill()
+            if _STUCK in chunk and stuck_by is None:
+                stuck_by = time.monotonic() + STUCK_GRACE
             self.buffer += chunk
 
     def kill(self):

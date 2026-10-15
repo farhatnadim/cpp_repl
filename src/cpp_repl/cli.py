@@ -134,6 +134,13 @@ def _fail(message):
     return 2
 
 
+def _fileno(stream):
+    try:
+        return stream.fileno()
+    except (AttributeError, OSError, ValueError):
+        return None
+
+
 def _stdin_line(more):
     line = sys.stdin.readline()
     if not line:
@@ -195,8 +202,12 @@ def _run(argv):
             hint = 'For highlighting as you type: pip install prompt_toolkit\n'
         OUT.write(f'cpp-repl: {cfg.describe()}, in {cwd}\n{notes}{hint}'
                   '%help lists the commands; Ctrl-D quits. Starting clang-repl...\n')
+    # The code reads cpp-repl's own stdin, as the compiled program would,
+    # unless the inputs themselves come through it.
+    piped = not interactive and not args.batch and not args.files
     try:
-        session = Session(cfg, cwd, batch=not interactive, painter=painter)
+        session = Session(cfg, cwd, batch=not interactive, painter=painter,
+                          program_input=None if piped else _fileno(sys.stdin))
     except KeyboardInterrupt:
         OUT.write('\n')
         return 130

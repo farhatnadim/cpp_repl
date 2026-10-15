@@ -28,10 +28,12 @@ SESSIONS = sorted((ROOT / 'tests' / 'sessions').glob('*.session'))
 pytestmark = [pytest.mark.backend, needs_clang_repl]
 
 
-def run_cpp_repl(args, cwd, timeout=600):
+def run_cpp_repl(args, cwd, timeout=600, stdin=None):
+    """cpp-repl's result; stdin is the text it reads, or none."""
     env = dict(os.environ, NO_COLOR='1', CPP_REPL_CLANG_REPL=CLANG_REPL)
-    return subprocess.run([sys.executable, str(CPP_REPL), *args], cwd=cwd, capture_output=True,
-                          text=True, timeout=timeout, env=env, stdin=subprocess.DEVNULL)
+    return subprocess.run([sys.executable, str(CPP_REPL), *args], cwd=cwd, capture_output=True, text=True,
+                          timeout=timeout, env=env, input=stdin,
+                          stdin=subprocess.DEVNULL if stdin is None else None)
 
 
 # -- golden sessions ----------------------------------------------------------
@@ -332,6 +334,36 @@ def test_an_endless_loop_stops_at_the_timeout(tmp_path):
     assert result.returncode == 124, result.stdout + result.stderr
     assert '[that input ran past 3 s: restored 1 input]' in result.stdout
     assert result.stdout.endswith('after\n')
+
+
+def test_a_program_reads_cpp_repl_s_stdin(tmp_path):
+    """cpp-repl --batch prog.cpp < input: the code reads the input, through
+    std::cin and C's stdin, as the compiled program would."""
+    (tmp_path / 'p.cpp').write_text('''\
+#include <cstdio>
+#include <iostream>
+#include <string>
+int main()
+{
+  int n = 0;
+  std::cin >> n;
+  std::string word;
+  std::cin >> word;
+  int m = 0;
+  std::scanf("%d", &m);
+  std::printf("%d %s %d\\n", n, word.c_str(), m);
+}
+''')
+    result = run_cpp_repl(['--no-config', '--batch', '--no-color', 'p.cpp'], tmp_path, stdin='41 hello 7\n')
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout.endswith('41 hello 7\n')
+
+
+def test_piped_inputs_leave_the_code_end_of_file(tmp_path):
+    result = run_cpp_repl(['--no-config', '--no-color'], tmp_path, timeout=120,
+                          stdin='int k = 5;\nstd::cin >> k;\nstd::cin.eof()\n')
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout.endswith('true\n')
 
 
 def test_emit_and_flags(tmp_path):

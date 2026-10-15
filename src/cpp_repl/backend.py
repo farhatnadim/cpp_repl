@@ -75,13 +75,16 @@ class BackendError(Exception):
 class Backend:
     """A clang-repl process. The constructor sends the configuration's
     prologue and a marker; collect(backend.ready) waits for it, and
-    calibrate() then learns what this clang-repl prints besides output."""
+    calibrate() then learns what this clang-repl prints besides output.
+    The code it runs reads its own input from the file descriptor
+    program_input, which the process inherits."""
 
-    def __init__(self, cfg, cwd):
+    def __init__(self, cfg, cwd, program_input=None):
         _no_core_dumps()
+        fds = () if program_input is None else (program_input,)
         self.proc = subprocess.Popen(cfg.argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                      stderr=subprocess.STDOUT, cwd=cwd, env=cfg.env,
-                                     start_new_session=True)
+                                     start_new_session=True, pass_fds=fds)
         self.fd = self.proc.stdout.fileno()
         self.buffer = b''
         self.nonce = secrets.token_hex(4)
@@ -95,7 +98,7 @@ class Backend:
         self.last_prefix = b''
         self.knows_errors = True   # whether outcome() recognises this clang-repl's errors
         try:
-            for line in cfg.prologue:
+            for line in cfg.prologue + [f'repl::take_stdin({fd});' for fd in fds]:
                 self._write(line)
             self.ready = self._mark()
         except (BrokenPipeError, OSError):

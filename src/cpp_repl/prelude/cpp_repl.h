@@ -43,8 +43,27 @@
 #if defined(__linux__)
 #include <sys/prctl.h>   // cpp-repl's first input turns core dumps off
 #endif
+#if __has_include(<ext/stdio_sync_filebuf.h>)
+#include <ext/stdio_sync_filebuf.h>   // libstdc++'s std::cin buffer, for take_stdin()
+#endif
 
 namespace repl {
+
+// clang-repl reads the session's inputs from its stdin, so code typed at the
+// prompt reads its own input from fd: take_stdin(fd), which every session runs
+// first, points stdin and std::cin there. (clang-repl keeps the FILE it reads
+// from, and so does the std::cin of before.)
+inline void take_stdin(int fd)
+{
+  FILE *in = fdopen(fd, "r");
+  if (!in)
+    return;
+  stdin = in;
+#if __has_include(<ext/stdio_sync_filebuf.h>)
+  static __gnu_cxx::stdio_sync_filebuf<char> buffer(in);
+  std::cin.rdbuf(&buffer);
+#endif
+}
 
 // The name of T as the compiler spells it.
 template <class T>

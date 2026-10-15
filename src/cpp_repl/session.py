@@ -1,5 +1,6 @@
 """The session: the journal, recovery, commands and saving."""
 
+import os
 import re
 import shlex
 import shutil
@@ -89,9 +90,18 @@ _INCLUDE_NAME = re.compile(r'\s*#\s*include\s*["<]([^">]*)[">]')
 
 
 class Session:
-    def __init__(self, cfg, cwd, batch, painter=None, out=None):
+    """program_input is the file descriptor whose input the code reads, as
+    stdin and std::cin: by default, none (the code reads end-of-file)."""
+
+    def __init__(self, cfg, cwd, batch, painter=None, out=None, program_input=None):
         self.cfg, self.cwd, self.batch, self.painter = cfg, cwd, batch, painter
         self.out = out or OUT
+        try:
+            self.program_input = os.dup(program_input) if program_input is not None else None
+        except OSError:
+            self.program_input = None
+        if self.program_input is None:
+            self.program_input = os.open(os.devnull, os.O_RDONLY)
         self.journal = []
         self.failures = 0
         self.timeouts = 0      # inputs stopped at --timeout
@@ -109,14 +119,17 @@ class Session:
             self._note(f'[clang-repl {cfg.version_text} reports errors in a way cpp-repl does not '
                        'recognise: a failed input may be journaled]')
         if not batch:
-            self.spare = Backend(cfg, cwd)
+            self.spare = self._backend()
+
+    def _backend(self):
+        return Backend(self.cfg, self.cwd, self.program_input)
 
     def _start(self, backend=None):
         """A backend that has loaded the libraries: the one given if it got
         there, else a new one."""
         output = ''
         for candidate in (backend, None):
-            b = candidate or Backend(self.cfg, self.cwd)
+            b = candidate or self._backend()
             try:
                 output, alive = b.collect(b.ready, deadline=STARTUP_DEADLINE)
                 if alive and outcome(output) == 'ok' and not _STARTUP_ERROR.search(plain(output)):
@@ -133,6 +146,9 @@ class Session:
             self.spare.kill()   # nothing in it to keep
             self.spare.proc.wait()
         self.backend.close()
+        if self.program_input is not None:
+            os.close(self.program_input)
+            self.program_input = None
         shutil.rmtree(self.inputs_dir, ignore_errors=True)
 
     def _note(self, text):
@@ -170,7 +186,7 @@ class Session:
                 kept.append(entry)
             self.backend, self.journal = backend, kept
             if not self.batch:
-                self.spare = Backend(self.cfg, self.cwd)
+                self.spare = self._backend()
         finally:
             signal.signal(signal.SIGINT, previous)
         self._note(f'[{reason}: restored {len(kept)} input{"s" if len(kept) != 1 else ""}{then}]')

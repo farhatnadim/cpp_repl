@@ -152,6 +152,10 @@ A C++ source becomes inputs like this:
 `abort()`). It exits with 1 if an input failed to compile or link.
 `--stop-on-error` stops at the first input that fails, as the rest usually
 depends on it.
+The code reads cpp-repl's stdin, as the compiled program would:
+`cpp-repl --batch prog.cpp < input.txt`. At the prompt it reads the terminal,
+and when the inputs themselves come through stdin, it reads end-of-file.
+
 `--timeout SECONDS` stops an input that takes longer, compiling included,
 and rebuilds the session without it. The run goes on, and exits with 124 at
 the end, as `timeout` does.
@@ -392,8 +396,9 @@ Everything is in [bench/](bench/README.md).
   library function: `int index = 3;` fails.
 - **Rebuilding replays the journal,** file writes and other side effects
   included.
-- **Typed code can't read stdin,** because the front end uses it to talk to
-  clang-repl.
+- **Code that reads file descriptor 0 itself,** with `read(0, ...)` or
+  `/dev/stdin`, reads what cpp-repl sends clang-repl. `stdin` and `std::cin`
+  read the program's input.
 - **An input with a backslash line splice outside a directive goes as one
   line,** and so does `%timeit`'s. A multi-line raw string literal in it
   becomes an ordinary escaped literal, and its errors name `input_line_N`.

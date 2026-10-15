@@ -3,6 +3,7 @@ command line. No clang-repl needed."""
 
 import json
 import os
+import time
 from pathlib import Path
 
 import pytest
@@ -296,3 +297,24 @@ def test_docker_builds_only_its_own_images(image, expected, tmp_path, monkeypatc
     assert docker.run_in_docker(['--docker', '--image', image], args, options) == 2
     err = capsys.readouterr().err
     assert f'there is no image {image}' in err and expected in err
+
+
+def test_the_inputs_of_ended_sessions_go(tmp_path, monkeypatch):
+    """A session replays its inputs from its directory for as long as it
+    runs: one on this machine goes when its process has gone, any other
+    after a week."""
+    from cpp_repl import config
+    monkeypatch.setattr(config, '_alive', lambda pid: pid == os.getpid())
+    host, month_ago = os.uname().nodename, time.time() - 30 * 86400
+    dirs = {f'{host}-{os.getpid()}-1': month_ago,   # this process: kept, however old
+            f'{host}-12345-1': None,                 # ended: gone at once
+            'abc123def456-7-1': None,                # a container's, recent: kept
+            'abc123def456-8-1': month_ago,           # a container's, a month old: gone
+            '1234-5678': month_ago}                  # an older cpp-repl's name, a month old: gone
+    for name, mtime in dirs.items():
+        (tmp_path / name).mkdir()
+        if mtime:
+            os.utime(tmp_path / name, (mtime, mtime))
+    config._prune(tmp_path, days=7, ended=config.session_ended)
+    assert sorted(p.name for p in tmp_path.iterdir()) == sorted([f'{host}-{os.getpid()}-1', 'abc123def456-7-1'])
+    assert config.session_dir_name().startswith(f'{host}-{os.getpid()}-')

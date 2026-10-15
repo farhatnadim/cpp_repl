@@ -356,17 +356,45 @@ def state_dir():
     return Path(base) / 'cpp-repl'
 
 
-def _prune(directory, days):
-    """Remove the files and directories in directory older than days."""
+def _prune(directory, days, ended=lambda p: None):
+    """Remove the files and directories in directory older than days, and
+    those that ended(p) says are done with; ended(p) False keeps p."""
     cutoff = time.time() - days * 86400
     if not directory.is_dir():
         return
     for p in directory.iterdir():
         try:
-            if p.lstat().st_mtime < cutoff:
+            done = ended(p)
+            if done or (done is None and p.lstat().st_mtime < cutoff):
                 shutil.rmtree(p) if p.is_dir() and not p.is_symlink() else p.unlink()
         except OSError:
             pass
+
+
+def session_dir_name():
+    """The name of a session's directory of inputs: this machine, this
+    process and the time, so that another session can tell when it ended."""
+    return f'{os.uname().nodename}-{os.getpid()}-{time.time_ns()}'
+
+
+def _alive(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        pass
+    return True
+
+
+def session_ended(p):
+    """For a session directory on this machine, whether its process has
+    gone; None for any other, such as a container's, whose process cannot
+    be seen from here."""
+    parts = p.name.rsplit('-', 2)
+    if len(parts) != 3 or parts[0] != os.uname().nodename or not parts[1].isdigit():
+        return None
+    return not _alive(int(parts[1]))
 
 
 @dataclass
@@ -472,7 +500,8 @@ class Config:
             for d in (self.home, self.tmp, self.inputs):
                 d.mkdir(parents=True, exist_ok=True)
             _prune(self.tmp, days=7)
-            _prune(self.inputs, days=1)
+            # A live session replays its inputs from here, however old it is.
+            _prune(self.inputs, days=7, ended=session_ended)
             self.clang_repl = find_clang_repl(options.clang_repl)
             self.version, self.version_text = clang_repl_version(self.clang_repl)
             brief = BRIEF_FLAGS if options.diagnostics == 'brief' else ()

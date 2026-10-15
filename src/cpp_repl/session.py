@@ -1,6 +1,5 @@
 """The session: the journal, recovery, commands and saving."""
 
-import os
 import re
 import shlex
 import shutil
@@ -13,6 +12,7 @@ from functools import partial
 from pathlib import Path
 
 from .backend import _ANY_ERROR, _STARTUP_ERROR, Backend, BackendError, outcome, plain
+from .config import session_dir_name
 from .diagnostics import Diagnostics
 from .lexer import (Origin, _open_end, _unsplice, in_function, is_definition, join, lex, located,
                     split_statements, trailing_expression, transform)
@@ -98,7 +98,7 @@ class Session:
         self.spare = None
         self.files = 0
         self.functions = 0   # functions made to run inputs in: cpp_repl_1, ...
-        self.inputs_dir = cfg.inputs / f'{os.getpid()}-{time.time_ns()}'
+        self.inputs_dir = cfg.inputs / session_dir_name()
         self.prelude_names = PRELUDE_NAMES | {h.name for h in cfg.preludes}
         self.sources = set()   # what the inputs' origins name
         self.diagnostics = Diagnostics(cfg.options.diagnostics == 'brief', self.sources)

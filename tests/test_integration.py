@@ -285,6 +285,36 @@ int main()
     assert 'warning' not in result.stdout + result.stderr
 
 
+def test_an_error_names_its_line_in_the_file(tmp_path):
+    """Each input reaches clang at its own line and column: errors, __FILE__
+    and __LINE__ name the file. Brief diagnostics, the default with --batch,
+    keep to the code's own lines."""
+    (tmp_path / 'p.cpp').write_text('''\
+#include <cstdio>
+#include <vector>
+int main()
+{
+  std::vector<int> v{3, 1, 2};
+  for (int x : v) {
+    int y = "s";
+  }
+  std::sort(v.begin(), v.end(), [](int a) { return a; });
+  std::printf("%s:%d\\n", __FILE__, __LINE__);
+}
+''')
+    result = run_cpp_repl(['--no-config', '--batch', '--no-color', 'p.cpp'], tmp_path)
+    out = result.stdout
+    assert result.returncode == 1, out + result.stderr
+    assert "p.cpp:7:9: error: cannot initialize a variable of type 'int'" in out
+    assert '\n    7 |     int y = "s";\n' in out
+    assert 'p.cpp:9:33: note: candidate function not viable' in out
+    assert out.endswith('p.cpp:10\n')
+    assert 'In file included from' not in out and 'cpp_repl_' not in out and 'input_line' not in out
+    assert len(out.splitlines()) < 40
+    full = run_cpp_repl(['--no-config', '--batch', '--no-color', '--diagnostics', 'full', 'p.cpp'], tmp_path)
+    assert len(full.stdout.splitlines()) > 2 * len(out.splitlines())
+
+
 def test_emit_and_flags(tmp_path):
     (tmp_path / 'p.cpp').write_text('int main() { int a = 1; return a; }\n')
     assert run_cpp_repl(['--emit', 'p.cpp'], tmp_path).stdout == 'int a = 1;\na;\n'
@@ -297,7 +327,8 @@ def test_an_error_limit_cuts_an_input_short_and_the_run_goes_on(tmp_path):
     input still runs."""
     (tmp_path / 'p.repl').write_text('int a = "s"; int b = "t"; int c = "u";\n'
                                      'std::puts("alive");\n')
-    result = run_cpp_repl(['--no-config', '-ferror-limit=1', '--batch', '--no-color', 'p.repl'], tmp_path)
+    result = run_cpp_repl(['--no-config', '-ferror-limit=1', '--diagnostics', 'full', '--batch', '--no-color',
+                           'p.repl'], tmp_path)
     assert result.returncode == 1, result.stdout + result.stderr
     assert result.stdout.count('error: cannot initialize') == 1
     assert 'too many errors emitted' in result.stdout

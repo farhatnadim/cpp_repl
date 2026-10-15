@@ -11,9 +11,10 @@ from pathlib import Path
 
 from . import __version__
 from .config import Config, ConfigError, Options, builtin_profiles
+from .lexer import Origin
 from .painter import Painter
 from .session import OUT, Session, SessionError
-from .sources import BlockReader, inputs_from_file
+from .sources import BlockReader, Input, inputs_from_file
 
 DESCRIPTION = """\
 A C++ REPL on top of clang-repl. It reads whole blocks, prints the value of a
@@ -88,6 +89,10 @@ def make_parser():
     parser.add_argument('--emit', action='store_true',
                         help='print the inputs the files turn into, without running them')
     parser.add_argument('--cwd', type=Path, help='working directory of the session')
+    parser.add_argument('--diagnostics', choices=('brief', 'full'),
+                        help="how much of clang's diagnostics to show: brief (each input's first error, "
+                             'source lines only from the code being run; the default with --batch or '
+                             'input piped in) or full (the default at the prompt)')
     parser.add_argument('--no-color', action='store_true', help='plain text (NO_COLOR=1 does the same)')
     parser.add_argument('--cflags', action='store_true',
                         help='print the compiler flags that build a %%save-cpp file, and exit')
@@ -105,11 +110,12 @@ def make_parser():
     return parser
 
 
-def options_from(args, flags, colour):
+def options_from(args, flags, colour, interactive=False):
     return Options(files=list(args.files), profiles=args.profile, configs=args.config,
                    no_config=args.no_config, compile_commands=args.compile_commands or args.build_dir,
                    flags=flags, libs=args.lib, native=args.native, no_std=args.no_std,
-                   clang_repl=args.clang_repl, colour=colour, cwd=(args.cwd or Path.cwd()).resolve())
+                   clang_repl=args.clang_repl, colour=colour, cwd=(args.cwd or Path.cwd()).resolve(),
+                   diagnostics=args.diagnostics or ('full' if interactive else 'brief'))
 
 
 def _fail(message):
@@ -157,7 +163,7 @@ def _run(argv):
 
     interactive = not args.batch and sys.stdin.isatty()
     colour = sys.stdout.isatty() and not args.no_color and not os.environ.get('NO_COLOR')
-    options = options_from(args, flags, colour)
+    options = options_from(args, flags, colour, interactive)
     try:
         cfg = Config(options, backend=not (args.cflags or args.libs))
     except ConfigError as e:
@@ -202,7 +208,7 @@ def _run(argv):
             inputs = []
             while True:
                 try:
-                    inputs.append(reader.read())
+                    inputs.append(Input(reader.read(), Origin('<stdin>', reader.line, 0, 0)))
                 except EOFError:
                     break
             session.run_inputs(inputs, echo=True)

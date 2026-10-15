@@ -3,6 +3,7 @@ tests/fake_clang_repl.py: no compiler needed."""
 
 import io
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -13,7 +14,9 @@ import pytest
 from cpp_repl import backend as backend_module
 from cpp_repl import session as session_module
 from cpp_repl.config import Config, Options
+from cpp_repl.diagnostics import Diagnostics
 from cpp_repl.session import Output, Session, SessionError
+from cpp_repl.sources import inputs_from_file
 
 FAKE = Path(__file__).resolve().parent / 'fake_clang_repl.py'
 CPP_REPL = Path(__file__).resolve().parent.parent / 'bin' / 'cpp-repl'
@@ -222,10 +225,59 @@ def test_inputs_through_a_file(tmp_path, monkeypatch, made):
     sent = s.journal[-1].sent[0]
     assert sent.startswith('#include "') and sent.endswith('input_1.h"')
     path = Path(sent[len('#include "'):-1])
-    assert path.read_text() == '#ifdef X\nint x;\n#endif\n'
+    assert path.read_text() == '#line 1 "<input>"\n#ifdef X\nint x;\n#endif\n'
     s.close()
     made.remove(s)
     assert not path.exists()
+
+
+def test_inputs_from_a_file_sit_at_their_lines(tmp_path, monkeypatch, made):
+    s, stream = make(tmp_path, monkeypatch)
+    made.append(s)
+    (tmp_path / 'p.cpp').write_text('int main()\n{\n  say("one");\n  if (1) {\n    say("two");\n  }\n  42\n}\n')
+    assert s.run_inputs(inputs_from_file(tmp_path / 'p.cpp'), echo=False)
+    assert stream.getvalue() == 'one\ntwo\n42\n'
+    sent = [Path(e.sent[0][len('#include "'):-1]).read_text() for e in s.journal]
+    name = str(tmp_path / 'p.cpp')
+    assert sent[0] == f'#line 3 "{name}"\n  say("one");\n'
+    assert sent[1].endswith(f'\n#line 4 "{name}"\n  if (1) {{\n    say("two");\n  }}\n }} '
+                            '_Pragma("clang diagnostic pop") cpp_repl_1();\n')
+    assert f'repl::print_expr(((\n#line 7 "{name}"\n  42), repl::printer' in sent[2]
+    assert s.sources == {name}
+
+
+def test_brief_diagnostics():
+    names = {'p.cpp'}
+    brief = Diagnostics(brief=True, names=names)
+    lines = [
+        'In file included from /x/y.h:3:',
+        "p.cpp:4:5: error: cannot initialize a variable of type 'int' with an lvalue of type 'const char[2]'",
+        '    4 |   int x = "s";',
+        '      |       ^   ~~~',
+        "/usr/include/c++/13/bits/../bits/stl_algo.h:9:2: note: candidate function not viable",
+        '    9 |   void f(int);',
+        '      |   ^',
+        "p.cpp:4:5: error: cannot initialize a variable of type 'int' with an lvalue of type 'const char[2]'",
+        '    4 |   int x = "s";',
+        'fatal error: too many errors emitted, stopping now [-ferror-limit=]',
+        'error: Parsing failed.',
+        '  12 | a table the program printed',
+    ]
+    shown = brief.feed(''.join(line + '\n' for line in lines)).split('\n')
+    assert shown == [lines[1], lines[2], lines[3], lines[4].replace('/bits/../bits/', '/bits/')
+                     if Path('/usr/include/c++/13/bits/stl_algo.h').exists() else lines[4],
+                     'error: Parsing failed.', lines[-1], '']
+    full = Diagnostics(brief=False, names=names)
+    shown = full.feed(''.join(line + '\n' for line in lines)).split('\n')
+    assert shown == lines[:7] + lines[9:] + ['']   # the copy of the error goes, with its source line
+    brief.start()
+    symbols = ''.join(f'_Z{len(name)}{name}v, ' for name in ('a', 'b', 'c', 'd'))
+    linked = brief.feed(f'JIT session error: Symbols not found: [ _ZN4repl3putI1QEEvRSoRKT_, {symbols}_Z1fv ]\n'
+                        'error: Failed to materialize symbols: { (main, { __stmts__1 }) }\n')
+    if shutil.which('c++filt'):
+        assert linked == 'JIT session error: Symbols not found: [ a(), b(), c(), and 3 more ]\n'
+    else:
+        assert linked == 'JIT session error: Symbols not found: [ _Z1av, _Z1bv, _Z1cv, and 3 more ]\n'
 
 
 def test_a_reader_that_goes_away(tmp_path):

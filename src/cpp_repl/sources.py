@@ -4,7 +4,7 @@ import re
 import textwrap
 from pathlib import Path
 
-from .lexer import _CONDITIONAL, _is, _match, completeness, lex, split_statements
+from .lexer import _CONDITIONAL, Origin, _is, _match, completeness, lex, located, split_statements
 
 CPP_SUFFIXES = {'.cpp', '.cc', '.cxx', '.c++', '.C', '.h', '.hh', '.hpp', '.hxx', '.h++'}
 
@@ -14,27 +14,44 @@ PRELUDE_NAMES = frozenset({'cpp_repl.h', 'cpp_repl_std.h', 'cpp_repl_usd.h', 'cp
                            'cpp_repl_glm.h', 'usd_repl.h'})
 
 
+class Input(str):
+    """The text of one input, and its origin (see lexer.Origin): where in a
+    file it starts, or None when that is not known. An input typed at the
+    prompt is a plain str."""
+
+    def __new__(cls, text, origin=None):
+        self = super().__new__(cls, text)
+        self.origin = origin
+        return self
+
+
 class BlockReader:
     """Groups lines into complete inputs. next_line(more) returns the next line
-    (more: a block is in progress) and raises EOFError at the end."""
+    (more: a block is in progress) and raises EOFError at the end. line is the
+    number of the line the last input started on, from 1."""
 
     def __init__(self, next_line):
         self.next_line = next_line
         self.pending = None
+        self.count = 0   # lines read
+        self.line = 0
 
     def _next(self, more):
+        """(the next line, its number), or (None, None) at the end."""
         if self.pending is not None:
-            line, self.pending = self.pending, None
-            return line
+            (line, number), self.pending = self.pending, None
+            return line, number
         try:
-            return self.next_line(more)
+            line = self.next_line(more)
         except EOFError:
-            return None
+            return None, None
+        self.count += 1
+        return line, self.count
 
     def read(self):
         lines, extendable = [], False
         while True:
-            line = self._next(bool(lines))
+            line, number = self._next(bool(lines))
             if line is None:
                 if lines:
                     return '\n'.join(lines)
@@ -43,10 +60,12 @@ class BlockReader:
                 extendable = False
                 if not re.match(r'\s*(?:else|catch)\b', line):
                     if line.strip():
-                        self.pending = line
+                        self.pending = (line, number)
                     return '\n'.join(lines)
             elif not lines and not line.strip():
                 continue
+            if not lines:
+                self.line = number
             lines.append(line)
             state = completeness('\n'.join(lines))
             if state == 'complete':
@@ -54,7 +73,8 @@ class BlockReader:
             extendable = state == 'extendable'
 
 
-def inputs_from_repl(text):
+def inputs_from_repl(text, path=None):
+    """A .repl file's inputs, each with its origin in path when one is given."""
     lines = iter(text.splitlines())
 
     def next_line(more):
@@ -66,9 +86,10 @@ def inputs_from_repl(text):
     reader, inputs = BlockReader(next_line), []
     while True:
         try:
-            inputs.append(reader.read())
+            block = reader.read()
         except EOFError:
             return inputs
+        inputs.append(Input(block, Origin(path, reader.line, 0, 0) if path else None))
 
 
 def _item_end(tokens, i):
@@ -107,11 +128,23 @@ def _main(item):
 
 
 def _source(text, toks):
-    """The source text of toks as written: its lines, comments and
-    indentation, dedented."""
+    """(the source text of toks as written: its lines, comments and
+    indentation, dedented; how many columns dedenting took off its lines)."""
     start, end = toks[0].start, toks[-1].start + len(toks[-1].text)
     before = text[text.rfind('\n', 0, start) + 1:start]
-    return textwrap.dedent((before if before.isspace() else '') + text[start:end]).strip()
+    whole = (before if before.isspace() else '') + text[start:end]
+    dedented = textwrap.dedent(whole)
+    # The first line holds a token, so it lost what every line lost.
+    return dedented.strip(), len(whole.split('\n')[0]) - len(dedented.split('\n')[0])
+
+
+def _input(text, toks, origin, suffix=''):
+    """The input for toks, with its origin when the text's is known."""
+    source, indent = _source(text, toks)
+    if origin is None:
+        return Input(source + suffix)
+    where = located(origin, text, toks[0].start)
+    return Input(source + suffix, where._replace(indent=where.indent + indent))
 
 
 _TYPE_WORDS = {'int', 'char', 'const', 'void', 'unsigned', 'signed', 'auto', 'wchar_t'}
@@ -158,7 +191,9 @@ def _constant(toks):
                or (t.kind == 'ident' and t.text in _CONSTANT) for t in toks)
 
 
-def _cpp_items(text, program='main'):
+def _cpp_items(text, program='main', origin=None):
+    """The inputs of a stretch of a C++ source with no directive at file
+    scope; origin is where text starts, or None."""
     tokens, _ = lex(text)
     items, i = [], 0
     while i < len(tokens):
@@ -169,32 +204,37 @@ def _cpp_items(text, program='main'):
         item = tokens[i:end + 1]
         main = _main(item)
         if main is None:
-            items.append(_source(text, item))
+            items.append(_input(text, item, origin))
         else:
             params, body = main
             # A #pragma just before main() applies at file scope.
             name = next(t.start for t in item if t.kind == 'ident' and t.text == 'main')
-            items.extend(t.text.strip() for t in item if t.kind == 'directive' and t.start < name)
-            items.extend(_main_inputs(params, program))
+            items.extend(Input(t.text.strip()) for t in item if t.kind == 'directive' and t.start < name)
+            items.extend(Input(line) for line in _main_inputs(params, program))
             stmts = [toks for toks, _ in split_statements(body)]
             ret = stmts.pop() if stmts and _is(stmts[-1], 0, 'return', 'ident') else None
-            items.extend(_source(text, toks) for toks in stmts)
+            items.extend(_input(text, toks, origin) for toks in stmts)
             if ret is not None:
                 # `return 0;` means nothing at the prompt, but `return run();` still runs run().
                 expr = ret[1:-1] if _is(ret, len(ret) - 1, ';') else ret[1:]
                 if expr and not _constant(expr):
-                    items.append(_source(text, expr) + ';')
+                    items.append(_input(text, expr, origin, ';'))
         i = end + 1
     return items
 
 
 def split_directives(text):
-    """[(kind, text)] in order: 'directive' for a preprocessor line at file
-    scope, 'region' for a conditional block at file scope (#if ... #endif,
-    everything inside it included), and 'code' for the code between them,
-    which keeps its #pragma lines. A directive continued with a backslash is
-    joined into one line."""
+    """[(kind, text, offset)] in order, offset being where the part starts in
+    text: 'directive' for a preprocessor line at file scope, 'region' for a
+    conditional block at file scope (#if ... #endif, everything inside it
+    included), and 'code' for the code between them, which keeps its #pragma
+    lines. A directive continued with a backslash is joined into one line."""
     parts, code = [], []
+    lines = text.split('\n')
+    starts = [0]   # where each line starts in text
+    for line in lines:
+        starts.append(starts[-1] + len(line) + 1)
+    code_start = 0
 
     def at_file_scope():
         tokens, open_comment = lex('\n'.join(code))
@@ -203,10 +243,9 @@ def split_directives(text):
 
     def flush():
         if code:
-            parts.append(('code', '\n'.join(code)))
+            parts.append(('code', '\n'.join(code), code_start))
             code.clear()
 
-    lines = text.split('\n')
     i = 0
     while i < len(lines):
         line = lines[i]
@@ -214,7 +253,7 @@ def split_directives(text):
             flush()
             m = _CONDITIONAL.match(line)
             if m and m.group(1) in ('if', 'ifdef', 'ifndef'):
-                region, depth = [], 0
+                region, depth, first = [], 0, i
                 while i < len(lines):
                     m = _CONDITIONAL.match(lines[i])
                     if m and m.group(1) in ('if', 'ifdef', 'ifndef'):
@@ -225,14 +264,16 @@ def split_directives(text):
                     i += 1
                     if depth == 0:
                         break
-                parts.append(('region', '\n'.join(region)))
+                parts.append(('region', '\n'.join(region), starts[first]))
                 continue
-            directive = line.strip()
+            directive, first = line.strip(), starts[i] + len(line) - len(line.lstrip())
             while directive.endswith('\\') and i + 1 < len(lines):
                 i += 1
                 directive = directive[:-1].rstrip() + ' ' + lines[i].strip()
-            parts.append(('directive', directive))
+            parts.append(('directive', directive, first))
         else:
+            if not code:
+                code_start = starts[i]
             code.append(line)
         i += 1
     flush()
@@ -262,24 +303,28 @@ def _include(line, base, skip):
     return line
 
 
-def inputs_from_cpp(text, base=None, program='main', skip=PRELUDE_NAMES):
+def inputs_from_cpp(text, base=None, program='main', skip=PRELUDE_NAMES, path=None):
     """A C++ source as REPL inputs: preprocessor lines, #if regions and
     file-scope declarations and definitions as they are, then main()'s body
     one statement at a time. base is the source's directory, for its quoted
-    includes."""
+    includes; path, when given, is the source as the inputs' origins name it."""
+    whole = Origin(path, 1, 0, 0) if path else None
     inputs = []
-    for kind, chunk in split_directives(text):
+    for kind, chunk, at in split_directives(text):
+        origin = located(whole, text, at) if whole else None
         if kind == 'code':
-            inputs.extend(_cpp_items(chunk, program))
+            inputs.extend(_cpp_items(chunk, program, origin))
         elif kind == 'directive':
             if re.match(r'#\s*pragma\s+once\b', chunk):
                 continue
             line = _include(chunk, base, skip)
             if line is not None:
-                inputs.append(line)
+                inputs.append(Input(line, origin))
         else:
-            lines = (_include(line, base, skip) for line in chunk.split('\n'))
-            inputs.append('\n'.join(line for line in lines if line is not None))
+            lines = [_include(line, base, skip) for line in chunk.split('\n')]
+            # A line left out would move the lines after it.
+            inputs.append(Input('\n'.join(line for line in lines if line is not None),
+                                origin if None not in lines else None))
     return inputs
 
 
@@ -288,8 +333,9 @@ def is_cpp(path):
 
 
 def inputs_from_file(path, skip=PRELUDE_NAMES):
+    """A C++ source's or a .repl file's inputs, with their origins in it."""
     path = Path(path)
     text = path.read_text()
     if is_cpp(path):
-        return inputs_from_cpp(text, path.resolve().parent, path.name, skip)
-    return inputs_from_repl(text)
+        return inputs_from_cpp(text, path.resolve().parent, path.name, skip, path=str(path))
+    return inputs_from_repl(text, path=str(path))

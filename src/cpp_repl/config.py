@@ -23,6 +23,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from types import SimpleNamespace
 
+from .diagnostics import BRIEF_FLAGS
+
 PACKAGE = Path(__file__).resolve().parent
 PRELUDE_DIR = PACKAGE / 'prelude'
 CORE_PRELUDE = PRELUDE_DIR / 'cpp_repl.h'
@@ -382,6 +384,7 @@ class Options:
     clang_repl: str | None = None
     colour: bool = False
     cwd: Path | None = None
+    diagnostics: str = 'full'   # or 'brief': see diagnostics.py
 
 
 class Config:
@@ -472,7 +475,8 @@ class Config:
             _prune(self.inputs, days=1)
             self.clang_repl = find_clang_repl(options.clang_repl)
             self.version, self.version_text = clang_repl_version(self.clang_repl)
-            self.argv = ([self.clang_repl] + ['--Xcc=' + a for a in self.compiler_flags]
+            brief = BRIEF_FLAGS if options.diagnostics == 'brief' else ()
+            self.argv = ([self.clang_repl] + ['--Xcc=' + a for a in (*brief, *self.compiler_flags)]
                          + [a for h in self.preludes for a in ('--Xcc=-include', '--Xcc=' + str(h))]
                          + (['--Xcc=-fcolor-diagnostics'] if options.colour else []))
         self.env = dict(os.environ, HOME=str(self.home), TMPDIR=str(self.tmp))

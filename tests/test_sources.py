@@ -2,6 +2,7 @@
 
 import textwrap
 
+from cpp_repl.lexer import Origin
 from cpp_repl.sources import (BlockReader, inputs_from_cpp, inputs_from_file, inputs_from_repl,
                               split_directives)
 
@@ -91,15 +92,45 @@ def test_pragmas_stay_with_their_code():
 
 def test_split_directives():
     assert split_directives('#include <a>\n#define X \\\n  1\nint x;\n#ifdef Y\nint y;\n#endif\nint z;') == [
-        ('directive', '#include <a>'),
-        ('directive', '#define X 1'),
-        ('code', 'int x;'),
-        ('region', '#ifdef Y\nint y;\n#endif'),
-        ('code', 'int z;'),
+        ('directive', '#include <a>', 0),
+        ('directive', '#define X 1', 13),
+        ('code', 'int x;', 29),
+        ('region', '#ifdef Y\nint y;\n#endif', 36),
+        ('code', 'int z;', 59),
     ]
     # A directive inside a block is code.
     assert split_directives('void f() {\n#ifdef Y\n  y();\n#endif\n}') == \
-        [('code', 'void f() {\n#ifdef Y\n  y();\n#endif\n}')]
+        [('code', 'void f() {\n#ifdef Y\n  y();\n#endif\n}', 0)]
+    assert split_directives('int a;\n  #include <b>\n') == [('code', 'int a;', 0), ('directive', '#include <b>', 9),
+                                                            ('code', '', 22)]
+
+
+def test_inputs_know_where_they_start():
+    """An input's origin: its first character's line and column in the file,
+    and the columns dedenting took off its later lines."""
+    src = cpp('''
+        #include <cstdio>
+        int twice(int x) { return 2 * x; }
+        int main()
+        {
+          int a = 1; int b = twice(a);
+          for (int i = 0; i < b; ++i) {
+            std::printf("%d\\n", i);
+          }
+          return twice(b);
+        }
+        ''')
+    origins = [(text, text.origin) for text in inputs_from_cpp(src, path='p.cpp')]
+    assert origins == [
+        ('#include <cstdio>', Origin('p.cpp', 1, 0, 0)),
+        ('int twice(int x) { return 2 * x; }', Origin('p.cpp', 2, 0, 0)),
+        ('int a = 1;', Origin('p.cpp', 5, 2, 2)),
+        ('int b = twice(a);', Origin('p.cpp', 5, 13, 0)),
+        ('for (int i = 0; i < b; ++i) {\n  std::printf("%d\\n", i);\n}', Origin('p.cpp', 6, 2, 2)),
+        ('twice(b);', Origin('p.cpp', 9, 9, 0)),
+    ]
+    repl = inputs_from_repl('int a = 1;\n\nif (a) {\n  f();\n}\na\n', path='s.repl')
+    assert [(text, text.origin.line) for text in repl] == [('int a = 1;', 1), ('if (a) {\n  f();\n}', 3), ('a', 6)]
 
 
 def test_quoted_includes_next_to_the_source_become_absolute(tmp_path):

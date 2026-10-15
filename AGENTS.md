@@ -51,6 +51,7 @@ the rule above.
 | `src/cpp_repl/config.py` | flags, profiles, `cpp-repl.toml`, `compile_commands.json`, the clang-repl binary |
 | `src/cpp_repl/backend.py` | one clang-repl process and the end-of-output marker protocol |
 | `src/cpp_repl/session.py` | the journal, recovery, commands, `%save-cpp` |
+| `src/cpp_repl/diagnostics.py` | what is shown of clang's diagnostics: brief or full |
 | `src/cpp_repl/ui.py`, `painter.py` | prompt_toolkit or readline input; colour |
 | `src/cpp_repl/prelude/` | `cpp_repl.h`, the C++ every session starts from |
 | `src/cpp_repl/profiles/` | one Python module and one header per library |

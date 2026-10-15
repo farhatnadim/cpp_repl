@@ -33,6 +33,31 @@ CONTINUES = {'=', ',', '<<', '&&', '||', '+', '-', '/', '%', '|', '^', '?', ':',
 # an #include, which keeps the lines a preprocessor directive needs.
 Send = namedtuple('Send', 'text kind file')
 
+# Where an input starts in its source: the path, the line (from 1) and column
+# (from 0) of its first character, and how many columns its later lines lost
+# when the input was dedented. Code sent with an origin goes through a file in
+# which every character sits at its source's line and column, after a #line
+# directive: clang then reports diagnostics, __FILE__ and __LINE__ in the
+# source's own terms.
+Origin = namedtuple('Origin', 'path line col indent')
+
+
+def located(origin, text, offset):
+    """The origin of what starts at offset in text, an input from origin."""
+    line = text.count('\n', 0, offset)
+    col = offset - (text.rfind('\n', 0, offset) + 1)
+    return origin._replace(line=origin.line + line, col=(origin.col if line == 0 else origin.indent) + col)
+
+
+def _place(s, start, end, origin):
+    """s[start:end], part of an input from origin, as lines in which every
+    character sits at its line and column in the source."""
+    o = located(origin, s, start)
+    name = str(o.path).replace('\\', '\\\\').replace('"', '\\"')
+    first, *rest = s[start:end].split('\n')
+    return (f'#line {o.line} "{name}"\n' + ' ' * o.col + first
+            + ''.join('\n' + ' ' * o.indent + line for line in rest))
+
 _PRAGMA = re.compile(r'#\s*pragma\b\s*(.*)\Z', re.S)
 # Pragmas that apply to the statement after them.
 _STATEMENT_PRAGMA = re.compile(r'#\s*pragma\s+(omp|clang\s+loop|unroll|nounroll|GCC\s+(unroll|ivdep)|ivdep|simd|loop)\b')
@@ -398,16 +423,27 @@ def in_function(name, body):
     return f'{_RETURN_WARNING_OFF} void {name}() {{ {body} }} {_RETURN_WARNING_ON} {name}();'
 
 
-def transform(text, wrap=True, fresh=fresh_name):
+def _end(toks):
+    return toks[-1].start + len(toks[-1].text)
+
+
+def transform(text, wrap=True, fresh=fresh_name, origin=None, statement=False):
     """What to send to clang-repl for one input, as a Send whose kind is 'pp',
     'stmt', 'expr' or 'empty'. A statement that cannot run at top level (see
     needs_function) runs as the body of a new function named fresh();
     wrap=False leaves every statement as it is, for code that goes inside a
     function anyway. A block of preprocessor lines (an #if region), or code
-    holding a directive other than a #pragma, goes through a file."""
+    holding a directive other than a #pragma, goes through a file. With
+    statement set, a bare expression is sent as a statement.
+
+    With an origin (see Origin), code and #if regions go through a file in
+    which they sit at their source's lines and columns. An input with a line
+    splice outside a directive goes as one line, as without an origin."""
     s = _unsplice(text).strip()
+    if origin is not None:
+        origin = located(origin, text, len(text) - len(text.lstrip())) if s == text.strip() else None
     if _CONDITIONAL.match(s):
-        return Send(s, 'pp', True)   # an #if region
+        return Send(_place(s, 0, len(s), origin) if origin else s, 'pp', True)   # an #if region
     tokens, _ = lex(s)
     if tokens and all(t.kind == 'directive' for t in tokens):
         return Send(s, 'pp', len(tokens) > 1)
@@ -417,14 +453,27 @@ def transform(text, wrap=True, fresh=fresh_name):
     if not stmts:
         return Send('', 'empty', False)
     lines = needs_lines(tokens)
-    if not lines and len(stmts) == 1 and _open_end(*stmts[0]):
-        return Send(join(stmts[0][0]), 'expr', False)
+    if not statement and not lines and len(stmts) == 1 and _open_end(*stmts[0]):
+        toks = stmts[0][0]
+        if origin:
+            # The caller writes the expression into a call: its first line
+            # has to start after the #line directive.
+            return Send('\n' + _place(s, toks[0].start, _end(toks), origin), 'expr', True)
+        return Send(join(toks), 'expr', False)
     parts = []
     for toks, control in stmts:
-        line = join(toks, lines)
-        complete = control or _is(toks, len(toks) - 1, ';')
-        parts.append(in_function(fresh(), line) if wrap and complete and needs_function(toks, control) else line)
-    return Send(' '.join(parts), 'stmt', lines)
+        semicolon = statement and _open_end(toks, control)
+        if origin:
+            line = _place(s, toks[0].start, _end(toks), origin) + (';' if semicolon else '')
+        else:
+            line = join(toks, lines) + (';' if semicolon else '')
+        complete = control or semicolon or _is(toks, len(toks) - 1, ';')
+        if wrap and complete and needs_function(toks, control):
+            # Placed, the function's head and tail keep lines of their own,
+            # out of the source lines a diagnostic shows.
+            line = in_function(fresh(), f'\n{line}\n' if origin else line)
+        parts.append(line)
+    return Send(('\n' if origin else ' ').join(parts), 'stmt', lines or origin is not None)
 
 
 def _definition(tokens):
@@ -473,12 +522,15 @@ def _open_end(toks, control):
 
 def trailing_expression(text):
     """For several statements ending in a bare expression, as a pasted block
-    might: (the statements, the expression), so that the expression's value
-    can be printed, as a notebook cell prints its last value. None otherwise."""
+    might: (the statements, the expression, where the expression starts in
+    text), so that the expression's value can be printed, as a notebook cell
+    prints its last value. None otherwise. The place is None when a line
+    splice moved it."""
     s = _unsplice(text).strip()
     tokens, _ = lex(s)
     stmts = split_statements(tokens)
     if len(stmts) < 2 or not _open_end(*stmts[-1]):
         return None
-    toks = stmts[-1][0]
-    return s[:toks[0].start].rstrip(), s[toks[0].start:]
+    start = stmts[-1][0][0].start
+    lead = len(text) - len(text.lstrip())
+    return s[:start].rstrip(), s[start:], lead + start if s == text.strip() else None

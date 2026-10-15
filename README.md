@@ -20,6 +20,9 @@ would inside `main()`, and:
 - **It runs at native speed.** With `-O3 --native`, Eigen typed at the prompt
   multiplies matrices as fast as clang++-compiled Eigen, and as fast as NumPy
   (see [Speed](#speed)). `%timeit` times a statement as IPython does.
+- **Errors point at your lines.** An error in a file you run names its line
+  and column, `prog.cpp:12:5`, as clang++ would. `--batch` keeps errors brief,
+  for a coding agent that fixes the code and runs it again.
 - **It points at your project.** It takes `compile_commands.json`, a
   `cpp-repl.toml`, compiler flags and shared libraries.
 - **It works with every clang-repl from 18 to 24.** It works around what each
@@ -143,6 +146,21 @@ A C++ source becomes inputs like this:
 - Quoted includes next to the source are found. A `#pragma` stays with the
   statement after it. `CPP_REPL` is defined, so a source can tell where it
   runs.
+
+Each input reaches clang at its own line and column, so an error names the
+place in the file, and so do `__FILE__` and `__LINE__`. An input typed at the
+prompt is `<input>`, and input piped in is `<stdin>`.
+
+**Brief diagnostics.** With `--batch`, or with input piped in, cpp-repl shows
+what fixing the code needs:
+- each input's first error, with its notes;
+- source lines and carets only under a diagnostic in your code;
+- no include chains, and template backtraces of two levels;
+- for a link failure, the first three missing symbols, demangled.
+
+A wrong `std::sort` comparator costs 23 lines instead of 241.
+`--diagnostics full` shows everything clang prints, as at the prompt, and
+`--diagnostics brief` makes the prompt brief.
 
 `%save-cpp FILE` writes the session as a program:
 - includes and definitions at file scope;
@@ -367,9 +385,9 @@ Everything is in [bench/](bench/README.md).
   included.
 - **Typed code can't read stdin,** because the front end uses it to talk to
   clang-repl.
-- **A multi-line raw string literal becomes an ordinary escaped literal.**
-  Inputs are sent one line each, except `#if` regions, which go through a
-  file.
+- **An input with a backslash line splice outside a directive goes as one
+  line,** and so does `%timeit`'s. A multi-line raw string literal in it
+  becomes an ordinary escaped literal, and its errors name `input_line_N`.
 - **Startup takes about 1.3 s,** or 1.0 s with `--no-std`, which leaves out
   the standard library prelude. A profile adds its headers: Eigen about
   0.5 s, OpenUSD about 3 s. Docker adds about 0.2 s.
@@ -384,9 +402,11 @@ Everything is in [bench/](bench/README.md).
 - **[`lexer.py`](src/cpp_repl/lexer.py)** finds where inputs and statements
   end. It decides what clang-repl gets:
   - control flow and lambda statements inside a function of their own;
-  - `#pragma` as `_Pragma`;
-  - an `#if` region through a temporary file and an `#include`;
+  - each input through a temporary file and an `#include`, after a `#line`
+    directive, at its source's lines and columns;
   - a bare expression through `repl::print_expr`.
+- **[`diagnostics.py`](src/cpp_repl/diagnostics.py)** filters what clang
+  prints: brief or full, and in both without clang-repl's repeated errors.
 - **[`backend.py`](src/cpp_repl/backend.py)** runs clang-repl over a pipe.
   - **Marker:** after each input it sends `%lib` of a path that cannot exist.
     The error clang-repl prints marks where the input's output ends, and adds

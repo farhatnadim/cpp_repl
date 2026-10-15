@@ -13,11 +13,14 @@ from functools import partial
 from pathlib import Path
 
 from .backend import _ANY_ERROR, _STARTUP_ERROR, Backend, BackendError, outcome, plain
-from .lexer import (_open_end, _unsplice, in_function, is_definition, join, lex, split_statements,
-                    trailing_expression, transform)
-from .sources import PRELUDE_NAMES, inputs_from_file, split_directives
+from .diagnostics import Diagnostics
+from .lexer import (Origin, _open_end, _unsplice, in_function, is_definition, join, lex, located,
+                    split_statements, trailing_expression, transform)
+from .sources import PRELUDE_NAMES, Input, inputs_from_file, split_directives
 
 STARTUP_DEADLINE = 300   # seconds; a large prelude on a cold disk takes a while
+# Where an input typed at the prompt starts, as diagnostics name it.
+TYPED = Origin('<input>', 1, 0, 0)
 
 HELP = """\
 Type C++ as you would inside main(). Enter runs the input once its brackets
@@ -97,6 +100,8 @@ class Session:
         self.functions = 0   # functions made to run inputs in: cpp_repl_1, ...
         self.inputs_dir = cfg.inputs / f'{os.getpid()}-{time.time_ns()}'
         self.prelude_names = PRELUDE_NAMES | {h.name for h in cfg.preludes}
+        self.sources = set()   # what the inputs' origins name
+        self.diagnostics = Diagnostics(cfg.options.diagnostics == 'brief', self.sources)
         self.backend = self._start()
         if not self.backend.knows_errors:
             self._note(f'[clang-repl {cfg.version_text} reports errors in a way cpp-repl does not '
@@ -171,7 +176,9 @@ class Session:
     # -- running ----------------------------------------------------------
 
     def _show(self, text):
-        """Write backend output, painted when colour is on."""
+        """Write backend output, its diagnostics filtered, painted when colour
+        is on."""
+        text = self.diagnostics.feed(text)
         self.out.write(self.painter.feed(text) if self.painter else text)
 
     def _show_end(self):
@@ -182,6 +189,7 @@ class Session:
     def _send(self, line, echo=True):
         """Run one line. Returns (output, result), result being 'ok', 'error',
         'link', 'dead' or 'interrupted'."""
+        self.diagnostics.start()
         try:
             output, alive = self.backend.run(line, echo=self._show if echo else None)
         except KeyboardInterrupt:
@@ -240,41 +248,51 @@ class Session:
         return f'#include "{path}"'
 
     def run_input(self, text):
-        """Run one complete input. Returns False when the session should stop."""
+        """Run one complete input: an Input, which says where it comes from,
+        or a str typed at the prompt. Returns False when the session should
+        stop."""
         stripped = text.strip()
         if not stripped:
             return True
         if stripped.startswith('%'):
             return self.command(stripped)
+        origin = getattr(text, 'origin', TYPED)
         parts = split_directives(text)
         if len(parts) > 1:   # a pasted block of #include lines and code
-            return all(self.run_input(part) for _, part in parts)
+            return all(self.run_input(Input(part, located(origin, text, at) if origin else None))
+                       for _, part, at in parts)
         split = trailing_expression(text)
         if split:
-            return all(self.run_input(part) for part in split)
-        send = transform(text, fresh=self._fresh)
+            statements, expression, at = split
+            known = origin and at is not None
+            return all(self.run_input(Input(part, located(origin, text, start) if known else None))
+                       for part, start in ((statements, len(text) - len(text.lstrip())), (expression, at)))
+        if origin:
+            self.sources.add(str(origin.path))
+        send = transform(text, fresh=self._fresh, origin=origin)
         if send.kind == 'empty':
             return True
-        line = self._file(send.text) if send.file else send.text
         kind = send.kind
         again = partial(self.run_input, text)
         if kind == 'expr':
             # Run in a function, for the local struct that print_expr needs, and
             # because a lambda in a top-level statement crashes clang-repl 23.
             printed = in_function(self._fresh(), 'struct cpp_repl_tag; '
-                                  f'repl::print_expr((({line}), repl::printer<cpp_repl_tag>{{}}));')
-            output, result = self._send(printed, echo=False)
+                                  f'repl::print_expr((({send.text}), repl::printer<cpp_repl_tag>{{}}));')
+            line = self._file(printed) if send.file else printed
+            output, result = self._send(line, echo=False)
             if result != 'error':
                 if VOID_MARK in output:
                     kind, output = 'void', output.replace(VOID_MARK, '')
                 if not (result == 'link' and self.tainted):   # else it runs again, with a note
                     self._show(output)
                 self._show_end()
-                return self._after(text, [printed], output, result, kind, again=again) or not self.batch
+                return self._after(text, [line], output, result, kind, again=again) or not self.batch
             # Not something print_expr takes. The attempt failed to compile,
             # which can leave stale instantiations behind like any error.
             self.tainted = True
-            line, kind = transform(line + ';', fresh=self._fresh).text, 'stmt'
+            send, kind = transform(text, fresh=self._fresh, origin=origin, statement=True), 'stmt'
+        line = self._file(send.text) if send.file else send.text
         output, result = self._send(line)
         return self._after(text, [line], output, result, kind, again=again) or not self.batch
 
@@ -360,6 +378,7 @@ class Session:
                  'preludes:    ' + ('\n             '.join(str(h) for h in cfg.preludes))]
         if cfg.libs:
             lines.append('libraries:   ' + '\n             '.join(str(lib) for lib in cfg.libs))
+        lines.append(f'diagnostics: {cfg.options.diagnostics}')
         if cfg.compile_commands:
             lines.append(f'from:        {cfg.compile_commands}')
         for t in cfg.tomls:

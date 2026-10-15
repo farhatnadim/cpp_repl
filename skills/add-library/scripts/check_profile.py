@@ -134,7 +134,9 @@ class Checker:
             self.cpp_repl = shlex.split(args.cpp_repl)
         else:
             self.cpp_repl = [sys.executable, str(CPP_REPL_BIN)]
-        self.common = ['--no-color'] + ([] if args.with_project_config else ['--no-config'])
+        # Full diagnostics: the hints read clang's own text, mangled symbols included.
+        self.common = ['--no-color', '--diagnostics', 'full']
+        self.common += [] if args.with_project_config else ['--no-config']
         if args.clang_repl:
             self.common += ['--clang-repl', args.clang_repl]
         if args.docker:

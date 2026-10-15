@@ -5,8 +5,8 @@ import pytest
 
 import itertools
 
-from cpp_repl.lexer import (completeness, in_function, is_definition, lex, needs_function, needs_lines,
-                            open_conditionals, split_statements, trailing_expression, transform)
+from cpp_repl.lexer import (Origin, completeness, in_function, is_definition, lex, located, needs_function,
+                            needs_lines, open_conditionals, split_statements, trailing_expression, transform)
 
 
 def fresh():
@@ -156,10 +156,45 @@ def test_is_definition(text, definition):
 
 
 def test_trailing_expression():
-    assert trailing_expression('int a = 1;\na') == ('int a = 1;', 'a')
+    assert trailing_expression('int a = 1;\na') == ('int a = 1;', 'a', 11)
     assert trailing_expression('int a = 1;\na + 1;') is None
     assert trailing_expression('a') is None
-    assert trailing_expression('int a = 1;\nstd::vector<int>{a, 2}') == ('int a = 1;', 'std::vector<int>{a, 2}')
+    assert trailing_expression('  int a = 1;\nstd::vector<int>{a, 2}') == ('int a = 1;', 'std::vector<int>{a, 2}', 13)
+    assert trailing_expression('int a = \\\n 1;\na')[2] is None   # a line splice moved it
+
+
+ORIGIN = Origin('prog.cpp', 7, 2, 2)   # line 7, column 2; later lines lost 2 columns to dedenting
+
+
+def test_an_input_sits_at_its_source_lines_and_columns():
+    send = transform('int a = 1;', origin=ORIGIN)
+    assert send == ('#line 7 "prog.cpp"\n  int a = 1;', 'stmt', True)
+    send = transform('int a = 1; for (;;) {\n  f();\n}', fresh=fresh(), origin=ORIGIN)
+    assert send.text == ('#line 7 "prog.cpp"\n  int a = 1;\n' + in_function(
+        'f1', '\n#line 7 "prog.cpp"\n             for (;;) {\n    f();\n  }\n'))
+
+
+def test_a_placed_expression_and_its_statement():
+    send = transform('v.size()', origin=ORIGIN)
+    assert send == ('\n#line 7 "prog.cpp"\n  v.size()', 'expr', True)
+    send = transform('v.size()  // a comment', origin=ORIGIN, statement=True)
+    assert send.text == '#line 7 "prog.cpp"\n  v.size();'
+
+
+def test_what_keeps_no_place():
+    region = '#ifdef X\nint x;\n#endif'
+    assert transform(region, origin=ORIGIN).text == '#line 7 "prog.cpp"\n  ' + region.replace('\n', '\n  ')
+    assert transform('#include <vector>', origin=ORIGIN) == ('#include <vector>', 'pp', False)
+    send = transform('int a = \\\n  1;', origin=ORIGIN)   # a line splice: one line, as without an origin
+    assert send == ('int a = 1;', 'stmt', False)
+    assert transform('x', statement=True).text == 'x;'
+
+
+def test_located():
+    text = 'int a;\n  int b;'
+    assert located(ORIGIN, text, 0) == ORIGIN
+    assert located(ORIGIN, text, 4) == Origin('prog.cpp', 7, 6, 2)
+    assert located(ORIGIN, text, 9) == Origin('prog.cpp', 8, 4, 2)
 
 
 def test_open_conditionals():

@@ -16,6 +16,7 @@ It reads one input per line and answers:
   stale()              "linked", or a JIT link error in a process that has seen taint()
   syntax error         anything with 'error_here' in it fails to parse
   ...repl::print_expr(((N), ...))...   prints N; with void_call() for N, the void mark
+  #include "FILE"      FILE's lines but #line directives, joined into one, and answered as above
 anything else is silently accepted.
 
 Environment: FAKE_PROMPT is printed before each input is read (as clang-repl
@@ -78,6 +79,10 @@ def main():
         if line.startswith('#error'):
             out(f'input_line_{n}:1:2: error: {line[7:]}\n    1 | {line}\n      |  ^\nerror: Parsing failed.\n')
             continue
+        m = re.fullmatch(r'#include "(.*)"', line)
+        if m and os.path.isfile(m.group(1)):
+            with open(m.group(1)) as f:
+                line = ' '.join(text for text in f.read().split('\n') if not text.startswith('#line '))
         m = re.match(r'printf\("(.*)\\n"\);', line)
         if m:
             out(m.group(1) + '\n')
@@ -125,7 +130,7 @@ def main():
             continue
         m = re.search(r'repl::print_expr\(\(\((.*)\), repl::printer<cpp_repl_tag>\{\}\)\);', line)
         if m:
-            expr = m.group(1)
+            expr = m.group(1).strip()
             if expr == 'void_call()':
                 out('\x1e')
             elif re.fullmatch(r'-?\d+', expr):

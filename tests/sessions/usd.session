@@ -22,6 +22,10 @@ usd> stage->GetPrimAtPath(SdfPath("/World"))
 def /World
   authored properties: none
   children: Ball
+usd> sphere.GetPrim().GetPrimStack()
+[@tmp.usda@</World/Ball>]
+usd> sphere.GetPrim().GetPrimStack()[0]
+@tmp.usda@</World/Ball>
 usd> std::vector<UsdPrim>{stage->GetPrimAtPath(SdfPath("/World")), sphere.GetPrim()}
 [/World, /World/Ball]
 usd> tree(stage)

@@ -75,7 +75,7 @@ check_profile.py reports the same three cases as warnings:
 | Your own type prints as `<T>` | An `operator<<` next to the type. cpp-repl finds it even when it is typed after the first print. |
 | A library type prints as `<T>` | `Put<T>`, the one-line form. Add `Show<T>` when several lines read better: matrices, tables, trees. |
 | A library's `operator<<` floods the screen | Both `Show<T>` and `Put<T>`. `Show` covers a bare value and `Put` covers an item in a container: both outrank the library's `operator<<`. |
-| A handle or smart pointer prints as `1`, `0` or an address (OpenUSD's `SdfPrimSpecHandle` in `GetPrimStack()`) | Its conversion to `bool` or to a pointer is what prints. Write both `Show<T>` and `Put<T>`: a bare value takes the `operator<<` that the conversion makes valid before it reaches `Put<T>`. |
+| A handle or smart pointer prints as `1`, `0` or an address | Its conversion to `bool` or to a pointer is what prints. Write both `Show<T>` and `Put<T>`: a bare value takes the `operator<<` that the conversion makes valid before it reaches `Put<T>`. The usd profile's printers for `SdfHandle<S>` (`GetPrimStack()`) are an example. |
 | A family of types (every matrix, every `cv::Mat_<T>`) | One constrained partial specialisation, such as `template <class T> requires std::is_base_of_v<cv::Mat, T> struct Show<T>`. |
 | An expression type (`A * B` gives an expression object) | Constrain on its base or its own type, and evaluate it first: `.eval()`, `cv::Mat(expr)`. |
 | An enum prints as `Type(2)` | `Put<E>` with a `switch` that writes each enumerator as it is typed (`spdlog::level::warn`). A library's display names can differ: spdlog's is "warning". |

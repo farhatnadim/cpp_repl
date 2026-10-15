@@ -281,6 +281,28 @@ struct Show<T> {
   static void show(const T &x) { usd::show_attribute(x.GetAttr()); }
 };
 
+// A spec handle (SdfPrimSpecHandle, SdfAttributeSpecHandle, ...) shows its
+// layer and path: @tmp.usda@</World>. It converts to bool, which makes
+// `os << handle` valid and print 1, so a bare value needs Show as well as Put.
+template <class S>
+struct Put<SdfHandle<S>> {
+  static void put(std::ostream &os, const SdfHandle<S> &spec)
+  {
+    if (!spec)
+      os << "expired spec";
+    else
+      os << '@' << spec->GetLayer()->GetDisplayName() << "@<" << spec->GetPath() << '>';
+  }
+};
+template <class S>
+struct Show<SdfHandle<S>> {
+  static void show(const SdfHandle<S> &spec)
+  {
+    Put<SdfHandle<S>>::put(std::cout, spec);
+    std::cout << std::endl;
+  }
+};
+
 // The prim hierarchy, one line per prim: specifier, type, name.
 inline void tree(const UsdPrim &prim, int depth = 0)
 {

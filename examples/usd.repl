@@ -7,5 +7,6 @@ ball.GetRadiusAttr().Set(2.0);
 ball.GetRadiusAttr().Set(3.0, UsdTimeCode(24));
 ball.GetRadiusAttr()
 ball
+ball.GetPrim().GetPrimStack()
 tree(stage)
 stage

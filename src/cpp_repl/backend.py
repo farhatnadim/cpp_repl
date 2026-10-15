@@ -20,6 +20,10 @@ _PARSE_FAILED = re.compile(r'^error: Parsing failed\.|^fatal error: ', re.M)
 _LINK_FAILED = re.compile(r'^JIT session error: |^error: Failed to materialize symbols'
                           r'|^error: Duplicate definition of symbol', re.M)
 _ANY_ERROR = re.compile(r'^error: ', re.M)
+# At startup, an error anywhere: a prelude that fails to compile shows as
+# "/x/prelude.h:3:1: error: ..." or "...: fatal error: ...", and clang-repl
+# carries on without the rest of it.
+_STARTUP_ERROR = re.compile(r'^(?:.*?:\d+:\d+: )?(?:fatal )?error: ', re.M)
 _NOISE = re.compile(r'In file included from <<< inputs >>>:\d+:\s*$')
 _STUCK = b'too many errors emitted'
 _ANSI = re.compile(r'\x1b\[[0-9;?]*[A-Za-z]')

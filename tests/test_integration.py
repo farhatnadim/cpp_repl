@@ -238,6 +238,16 @@ def test_emit_and_flags(tmp_path):
     assert '-O2' in cflags and '-DX=1' in cflags and 'prelude' in cflags
 
 
+def test_a_prelude_that_fails_to_compile_stops_the_start(tmp_path):
+    (tmp_path / 'bad.h').write_text('int broken = ;\n')
+    (tmp_path / 'bad.toml').write_text('prelude = ["bad.h"]\n')
+    (tmp_path / 'empty.repl').write_text('')
+    result = run_cpp_repl(['--no-config', '-c', 'bad.toml', '--batch', 'empty.repl'], tmp_path)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert 'clang-repl failed to start' in result.stderr
+    assert 'bad.h:1:' in result.stderr and 'error: expected expression' in result.stderr
+
+
 def test_completion_reads_every_included_header(tmp_path):
     from cpp_repl.ui import completion_words, included_headers
     cfg = Config(Options(cwd=tmp_path, no_config=True, clang_repl=CLANG_REPL))

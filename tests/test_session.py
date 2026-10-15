@@ -191,6 +191,11 @@ def test_a_backend_that_never_answers(tmp_path, monkeypatch):
         make(tmp_path, monkeypatch, FAKE_HANG_START='1')
 
 
+def test_a_prelude_that_fails_to_compile_stops_the_start(tmp_path, monkeypatch):
+    with pytest.raises(SessionError, match="failed to start:\n.*'missing.h' file not found"):
+        make(tmp_path, monkeypatch, FAKE_START_ERROR='1')
+
+
 def test_inputs_through_a_file(tmp_path, monkeypatch, made):
     s, stream = make(tmp_path, monkeypatch)
     made.append(s)

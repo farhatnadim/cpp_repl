@@ -12,7 +12,7 @@ from datetime import date
 from functools import partial
 from pathlib import Path
 
-from .backend import _ANY_ERROR, Backend, BackendError, outcome, plain
+from .backend import _ANY_ERROR, _STARTUP_ERROR, Backend, BackendError, outcome, plain
 from .lexer import (_open_end, _unsplice, in_function, is_definition, join, lex, split_statements,
                     trailing_expression, transform)
 from .sources import PRELUDE_NAMES, inputs_from_file, split_directives
@@ -112,7 +112,7 @@ class Session:
             b = candidate or Backend(self.cfg, self.cwd)
             try:
                 output, alive = b.collect(b.ready, deadline=STARTUP_DEADLINE)
-                if alive and outcome(output) == 'ok' and not _ANY_ERROR.search(plain(output)):
+                if alive and outcome(output) == 'ok' and not _STARTUP_ERROR.search(plain(output)):
                     if b.calibrate(deadline=60):
                         return b
                     output = b.how_it_ended()

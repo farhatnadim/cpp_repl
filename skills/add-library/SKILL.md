@@ -1,6 +1,6 @@
 ---
 name: add-library
-description: Add a C++ library to cpp-repl (the C++ REPL on clang-repl) so that it works at the prompt. It finds the library's headers and shared libraries, writes a profile (a TOML file and a prelude header) in the user's project, makes the library's main types print readably, and proves it all with a checked example session. Use this whenever someone wants to try, explore, prototype with or learn a C++ library interactively (OpenCV, fmt, spdlog, Boost, glm, PCL, yaml-cpp, Armadillo, their own project's library), asks for a cpp-repl or clang-repl profile, or pastes a cpp-repl error after loading a library, such as "Symbols not found", "file not found" or "clang-repl failed to start".
+description: Add a C++ library to cpp-repl (the C++ REPL on clang-repl) so that it works at the prompt. It finds the library's headers and shared libraries, writes a profile (a TOML file and a prelude header) in the user's project, makes the library's main types print readably, and proves it all with a checked example session. Use this whenever someone wants to try, explore, prototype with or learn a C++ library interactively (OpenCV, OpenUSD, fmt, spdlog, Boost, glm, PCL, yaml-cpp, Armadillo, their own project's library), asks for a cpp-repl or clang-repl profile, or pastes a cpp-repl error after loading a library, such as "Symbols not found", "file not found", "clang-repl failed to start", or a built-in profile (-p usd, -p eigen, -p glm) that cannot find its install.
 argument-hint: <library> [cmake package | pkg-config module | include dir]
 allowed-tools:
   - Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/probe_library.py" *)
@@ -54,7 +54,21 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/probe_library.py" env
   needs no profile of its own. Run
   `cpp-repl -p NAME --batch "${CLAUDE_SKILL_DIR}/../../examples/NAME.repl"`:
   it shows how the library's values print, and fails with an install hint
-  when the library is missing. Then tell the user `cpp-repl -p NAME` and stop.
+  when the library is missing.
+  - **Install not found:** when `project.compile_commands` lists a build that
+    uses the library, add `--build-dir` with that build. The usd profile
+    reads `USD_ROOT` from the `CMakeCache.txt` beside it.
+  - **Hand back** the command that worked, and stop. Tell the user that
+    `cpp-repl -p NAME prog.cpp` runs a program's `main()` one statement at a
+    time and keeps the prompt open, so the project's own examples load as they
+    are.
+  - **Every session in this project:** a `cpp-repl.toml` at the project root
+    holding `profiles = ["NAME"]`, plus `compile_commands = "build"` when the
+    build supplies the install, makes a plain `cpp-repl` do the same. Offer
+    it, and write it when the user asks.
+  - **The profile's own files**, in `src/cpp_repl/profiles/NAME/` under
+    `cpp_repl.checkout`, belong to cpp-repl. Printers for its types go in a
+    prelude layered over it, as add-printer describes.
 - **The project already builds against the library:** look for a
   `compile_commands.json` in `project.compile_commands` whose entries use the
   library. If one does, the profile can point at it with

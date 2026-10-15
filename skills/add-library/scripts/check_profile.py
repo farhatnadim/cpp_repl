@@ -47,7 +47,10 @@ IMPLICIT = ('/usr/include', '/usr/local/include')
 # A failing output's text, the troubleshooting.md row that explains it, and
 # what to do first. {T} is the profile, {0} the first group of the match.
 HINTS = [
-    (r'Symbols not found: \[\s*([^\s,\]]+)', 'symbols-not-found',
+    (r'Symbols not found: \[[^\]]*?(_ZN4repl\w*)', 'stale-template',
+     'no library is missing: an earlier input that failed to compile instantiated a printer, and clang-repl '
+     'kept it without its code. Fix that input, then run again'),
+    (r'Symbols not found: \[(?![^\]]*_ZN4repl)\s*([^\s,\]]+)', 'symbols-not-found',
      "a library is missing from libs: probe_library.py symbol '{0}' --config {T} names the one that defines it"),
     (r'Failed to materialize symbols', 'materialize',
      'an earlier input failed to link and left the backend unreliable: fix the first failure only'),

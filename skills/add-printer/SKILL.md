@@ -1,6 +1,6 @@
 ---
 name: add-printer
-description: Make a C++ type print well in cpp-repl, the C++ REPL on clang-repl, when it is typed as a bare expression - a readable display on its own and a one-line form inside containers. Use this when a value at the cpp-repl prompt prints as <TypeName>, prints far too much (every pixel of an image, every element of a matrix), spreads across lines inside a std::vector, or when a cpp-repl profile's types need printers (the add-library skill sends you here). Works for library types and the user's own types.
+description: Make a C++ type print well in cpp-repl, the C++ REPL on clang-repl, when it is typed as a bare expression - a readable display on its own and a one-line form inside containers. Use this when a value at the cpp-repl prompt prints as <TypeName>, as a bare 1 or an address, prints far too much (every pixel of an image, every element of a matrix), spreads across lines inside a std::vector, or when a cpp-repl profile's types need printers (the add-library skill sends you here). Works for library types, the user's own types, and the types of a built-in profile such as -p usd.
 allowed-tools:
   - Bash(python3 "${CLAUDE_SKILL_DIR}/../add-library/scripts/check_profile.py" *)
   - Bash(cpp-repl *)
@@ -31,6 +31,23 @@ Printers go in the profile's prelude header (`.cpp-repl/<lib>_repl.h`), inside
 user's own types without a profile go in a prelude listed in their project's
 `cpp-repl.toml` (`prelude = ["tools/repl_prelude.h"]`).
 
+**A built-in profile's types** (`-p usd`, `-p eigen`, `-p glm`): the profile's
+header belongs to cpp-repl, in `src/cpp_repl/profiles/NAME/` of the plugin's
+checkout, so leave it as it is. Write the printers in a header of the user's,
+such as `.cpp-repl/usd_more_repl.h`, and layer it over the profile with a TOML:
+
+```toml
+# .cpp-repl/usd_more.toml, loaded with cpp-repl -c .cpp-repl/usd_more.toml
+profiles = ["usd"]
+prelude = ["usd_more_repl.h"]
+compile_commands = "../build"   # when the project's build supplies the install
+```
+
+A built-in profile's prelude is included before a TOML's, so the new header
+sees the library's types. Its own `#include`s name what it uses. When the
+printer would serve every user of the profile, offer it to cpp-repl as well,
+as a pull request to its header.
+
 There are two reasons the prelude is the place:
 - A specialisation has to come before the first use of the type it names. At
   the prompt, after `x` has printed once, a new `Show<X>` fails with "explicit
@@ -58,6 +75,7 @@ check_profile.py reports the same three cases as warnings:
 | Your own type prints as `<T>` | An `operator<<` next to the type. cpp-repl finds it even when it is typed after the first print. |
 | A library type prints as `<T>` | `Put<T>`, the one-line form. Add `Show<T>` when several lines read better: matrices, tables, trees. |
 | A library's `operator<<` floods the screen | Both `Show<T>` and `Put<T>`. `Show` covers a bare value and `Put` covers an item in a container: both outrank the library's `operator<<`. |
+| A handle or smart pointer prints as `1`, `0` or an address (OpenUSD's `SdfPrimSpecHandle` in `GetPrimStack()`) | Its conversion to `bool` or to a pointer is what prints. Write both `Show<T>` and `Put<T>`: a bare value takes the `operator<<` that the conversion makes valid before it reaches `Put<T>`. |
 | A family of types (every matrix, every `cv::Mat_<T>`) | One constrained partial specialisation, such as `template <class T> requires std::is_base_of_v<cv::Mat, T> struct Show<T>`. |
 | An expression type (`A * B` gives an expression object) | Constrain on its base or its own type, and evaluate it first: `.eval()`, `cv::Mat(expr)`. |
 | An enum prints as `Type(2)` | `Put<E>` with a `switch` that writes each enumerator as it is typed (`spdlog::level::warn`). A library's display names can differ: spdlog's is "warning". |

@@ -254,7 +254,11 @@ def test_hints():
     anchors = [h['anchor'] for h in hints]
     assert anchors == ['symbols-not-found', 'materialize']
     assert "symbol '_ZN2cv12GaussianBlurE' --config .cpp-repl/x.toml" in hints[0]['advice']
-    dso = check_profile.hints_for('/usr/bin/ld: /usr/lib/x86_64-linux-gnu/libfmt.so.9: error adding symbols: '
+    # A printer instantiated by an input that failed to compile: no library is missing.
+    stale = check_profile.hints_for('JIT session error: Symbols not found: [ _ZN9__gnu_cxxeqIPK1QE, '
+                                    '_ZN4repl3putI1QEEvRSoRKT_ ]', 'x.toml')
+    assert [h['anchor'] for h in stale] == ['stale-template']
+    dso =check_profile.hints_for('/usr/bin/ld: /usr/lib/x86_64-linux-gnu/libfmt.so.9: error adding symbols: '
                                   'DSO missing from command line', 'x.toml')
     assert dso[0]['anchor'] == 'dso-missing' and 'libfmt.so.9' in dso[0]['advice']
 

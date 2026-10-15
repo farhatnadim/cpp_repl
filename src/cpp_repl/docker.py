@@ -43,6 +43,7 @@ def mounts(cfg, extra, files):
         if a in ('-I', '-isystem', '-iquote', '-idirafter'):
             candidates.append(Path(flags[i + 1]))
     candidates += [lib.parent for lib in cfg.libs] + [h.parent for h in cfg.preludes] + cfg.mounts
+    candidates += cfg.link_dirs
     if cfg.compile_commands:
         candidates.append(cfg.compile_commands.parent)
     candidates += [Path(f).resolve().parent for f in files]
@@ -75,7 +76,7 @@ def _without(argv, with_value, alone):
 def docker_command(argv, args, options):
     """The docker run command line for this cpp-repl command line."""
     image = args.image or os.environ.get('CPP_REPL_IMAGE') or DEFAULT_IMAGE
-    cfg = Config(options, backend=False)   # profiles and flags resolved here, for the mounts
+    cfg = Config(options, backend=False, links=False)   # profiles and flags resolved here, for the mounts
     cwd = options.cwd
     state = state_dir()
     home = state / 'docker-home'

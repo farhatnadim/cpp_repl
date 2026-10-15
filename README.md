@@ -214,10 +214,14 @@ cpp-repl -p eigen -O3 --native
 
 Compiler flags go to clang as they are: `-I DIR`, `-isystem DIR`,
 `-D NAME=VALUE`, `-U NAME`, `-O3`, `-std=c++23`, `-march=...`, `-f...`,
-`-W...`, `-pthread`. Shared libraries load with `--lib`.
+`-W...`, `-pthread`. Shared libraries load with `--lib PATH`, or with
+`-l NAME` and `-L DIR`, found as the linker finds them: in the `-L`
+directories, `$LIBRARY_PATH`, the usual places, then the loader's cache. A
+linker script, such as glibc's `libm.so`, is followed to the library it
+names.
 
 ```sh
-cpp-repl -I include -DFAST=1 --lib build/libmylib.so -O2
+cpp-repl -I include -DFAST=1 -L build -l mylib -O2
 cpp-repl --compile-commands build      # flags as your build compiles: -I, -D, -std, -m
 ```
 

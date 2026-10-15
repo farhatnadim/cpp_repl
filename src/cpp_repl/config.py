@@ -8,6 +8,7 @@ highest precedence comes first; for defines and other flags the last one
 wins, so it comes last. -std and -O take the highest precedence's value.
 """
 
+import functools
 import importlib
 import json
 import os
@@ -17,6 +18,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import sysconfig
 import time
 import tomllib
 from dataclasses import dataclass, field
@@ -286,6 +288,99 @@ def find_project_file(start):
 
 
 # ---------------------------------------------------------------------------
+# Libraries named with -l.
+# ---------------------------------------------------------------------------
+
+def _usual_library_dirs():
+    """Where the linker looks when no -L directory has a library."""
+    arch = sysconfig.get_config_var('MULTIARCH')
+    dirs = [f'/usr/local/lib/{arch}', f'/lib/{arch}', f'/usr/lib/{arch}'] if arch else []
+    return [Path(d) for d in dirs + ['/usr/local/lib', '/lib64', '/usr/lib64', '/lib', '/usr/lib']]
+
+
+@functools.lru_cache(maxsize=None)
+def _loader_cache():
+    """{name: path} from the dynamic loader's cache (ldconfig -p), for this
+    machine's word size: the libraries of directories that ld.so.conf adds."""
+    tool = shutil.which('ldconfig') or next((p for p in ('/sbin/ldconfig', '/usr/sbin/ldconfig')
+                                             if os.path.exists(p)), None)
+    if not tool:
+        return {}
+    try:
+        out = subprocess.run([tool, '-p'], capture_output=True, text=True, timeout=30).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return {}
+    wide, found = sys.maxsize > 2 ** 32, {}
+    for name, tags, path in re.findall(r'^\s+lib(\S+?)\.so[\d.]* \(([^)]*)\) => (\S+)$', out, re.M):
+        if wide == ('64' in tags):
+            found.setdefault(name, Path(path))
+    return found
+
+
+def _is_elf(path):
+    try:
+        with open(path, 'rb') as f:
+            return f.read(4) == b'\x7fELF'
+    except OSError:
+        return False
+
+
+def _script_members(path):
+    """What a linker script names in INPUT() and GROUP()."""
+    try:
+        text = re.sub(r'/\*.*?\*/', ' ', Path(path).read_text(errors='replace'), flags=re.S)
+    except OSError:
+        return []
+    members = []
+    for body in re.findall(r'\b(?:INPUT|GROUP)\s*\(((?:[^()]|\([^()]*\))*)\)', text):
+        members += re.split(r'[\s,]+', re.sub(r'AS_NEEDED\s*\(([^()]*)\)', r'\1', body).strip())
+    return [m for m in members if m]
+
+
+def _shared_object(path, dirs):
+    """path, or for a linker script such as glibc's libm.so, the first shared
+    object it names: clang-repl loads shared objects only."""
+    if _is_elf(path):
+        return path
+    for member in _script_members(path):
+        if member.startswith('-l'):
+            return find_library(member[2:], dirs)
+        for candidate in [Path(member)] if member.startswith('/') else [path.parent / member,
+                                                                         *(d / member for d in dirs)]:
+            if candidate.suffix != '.a' and '.so' in candidate.name and _is_elf(candidate):
+                return candidate
+    return None
+
+
+def find_library(name, dirs=()):
+    """The shared library that -l name stands for, as the linker finds it:
+    lib<name>.so in dirs (the -L directories), then $LIBRARY_PATH and the
+    usual directories, then the loader's cache; or else lib<name>.so.N."""
+    search = [Path(d) for d in dirs]
+    search += [Path(d) for d in os.environ.get('LIBRARY_PATH', '').split(os.pathsep) if d]
+    search += _usual_library_dirs()
+    static = None
+    for d in search:
+        dev = d / f'lib{name}.so'
+        found = _shared_object(dev, search) if dev.exists() else None
+        if not found:
+            versions = sorted(d.glob(f'lib{name}.so.*'), reverse=True,
+                              key=lambda p: [int(n) for n in re.findall(r'\d+', p.name[len(name) + 6:])])
+            found = next((v for v in versions if _is_elf(v)), None)
+        if found:
+            return found
+        if not static and (d / f'lib{name}.a').exists():
+            static = d / f'lib{name}.a'
+    if name in _loader_cache():
+        return _loader_cache()[name]
+    if static:
+        raise ConfigError(f'-l{name}: there is only {static}, a static archive, and clang-repl loads shared '
+                          'libraries')
+    raise ConfigError(f'no library for -l{name}: no lib{name}.so in the -L directories, $LIBRARY_PATH, the '
+                      "usual places or the loader's cache. Add -L DIR, or give its path with --lib")
+
+
+# ---------------------------------------------------------------------------
 # The clang-repl binary.
 # ---------------------------------------------------------------------------
 
@@ -415,6 +510,8 @@ class Options:
     diagnostics: str = 'full'   # or 'brief': see diagnostics.py
     stop_on_error: bool = False
     timeout: float | None = None   # seconds an input may take, compiling included
+    link_names: list = field(default_factory=list)   # -l NAME
+    link_dirs: list = field(default_factory=list)    # -L DIR
     quiet: bool = False             # leave out the echo of each input run from a file
     json: bool = False              # a JSON object per input in place of the transcript
 
@@ -422,9 +519,11 @@ class Options:
 class Config:
     """Everything one session needs: the backend's command line, environment
     and first inputs, the prompt, and what the profiles add. With backend
-    False, no clang-repl is looked for (cpp-repl --docker, --cflags)."""
+    False, no clang-repl is looked for (cpp-repl --docker, --cflags); with
+    links False, no -l library either (cpp-repl --docker, whose image
+    looks for them)."""
 
-    def __init__(self, options, backend=True):
+    def __init__(self, options, backend=True, links=True):
         self.options = options
         # Paths on the command line are relative to where cpp-repl runs, like
         # the files, -c, --lib and --compile-commands; --cwd is the session's
@@ -484,6 +583,9 @@ class Config:
                 raise ConfigError(f'no prelude header {h}')
         libs = [Path(lib) for p in self.profiles + tomls for lib in p.libs]
         libs += [Path(lib).expanduser().resolve() for lib in options.libs]
+        self.link_dirs = [(self.here / Path(d).expanduser()).resolve() for d in options.link_dirs]
+        if links:
+            libs += [find_library(name, self.link_dirs) for name in options.link_names]
         self.libs = list(dict.fromkeys(libs))
         for lib in self.libs:
             if not lib.is_file():
@@ -564,6 +666,10 @@ class Config:
         args += [a for _, flag in parse_flags(o.flags, self.here) for a in flag]
         for lib in o.libs:
             args += ['--lib', absolute(lib)]
+        for d in self.link_dirs:
+            args += ['-L', str(d)]
+        for name in o.link_names:
+            args += ['-l', name]
         return shlex.join(args)
 
     def describe(self):

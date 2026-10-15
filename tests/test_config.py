@@ -3,15 +3,16 @@ command line. No clang-repl needed."""
 
 import json
 import os
+import sys
 import time
 from pathlib import Path
 
 import pytest
 
-from cpp_repl.cli import split_compiler_flags
+from cpp_repl.cli import make_parser, split_compiler_flags
 from cpp_repl.config import (CORE_PRELUDE, PRELUDE_DIR, STD_PRELUDE, Config, ConfigError, Options,
-                             compile_command_flags, compile_commands_entry, floor_std, merge_flags,
-                             parse_flags, read_toml)
+                             compile_command_flags, compile_commands_entry, find_library, floor_std,
+                             merge_flags, parse_flags, read_toml)
 
 
 def test_parse_flags(tmp_path):
@@ -318,3 +319,37 @@ def test_the_inputs_of_ended_sessions_go(tmp_path, monkeypatch):
     config._prune(tmp_path, days=7, ended=config.session_ended)
     assert sorted(p.name for p in tmp_path.iterdir()) == sorted([f'{host}-{os.getpid()}-1', 'abc123def456-7-1'])
     assert config.session_dir_name().startswith(f'{host}-{os.getpid()}-')
+
+
+def test_libraries_named_with_l(tmp_path, monkeypatch):
+    """-l NAME is found as the linker finds it, in the -L directories first;
+    a linker script is followed to the shared object it names."""
+    monkeypatch.delenv('LIBRARY_PATH', raising=False)
+    elf = b'\x7fELF' + bytes(60)
+    lib = tmp_path / 'lib'
+    lib.mkdir()
+    (lib / 'libfoo.so').write_bytes(elf)
+    (lib / 'libbar.so').write_text('/* GNU ld script */\nINPUT ( libbar.so.2 )\n')
+    (lib / 'libbar.so.2').write_bytes(elf)
+    (lib / 'libqux.so.1').write_bytes(elf)
+    (lib / 'libqux.so.10').write_bytes(elf)
+    (lib / 'libbaz.a').write_bytes(b'!<arch>\n')
+    monkeypatch.chdir(tmp_path)
+    flags, rest = split_compiler_flags(['-L', 'lib', '-lfoo', '-l', 'bar', '-lqux', '-I', 'inc'])
+    args = make_parser().parse_args(rest)
+    cfg = Config(Options(cwd=tmp_path, no_config=True, link_names=args.link_names, link_dirs=args.link_dirs),
+                 backend=False)
+    assert flags == ['-I', 'inc']
+    assert cfg.libs == [lib / 'libfoo.so', lib / 'libbar.so.2', lib / 'libqux.so.10']
+    assert cfg.link_flags()[-1] == str(lib / 'libqux.so.10')
+    assert '-L ' + str(lib) + ' -l foo -l bar -l qux' in cfg.command()
+    with pytest.raises(ConfigError, match='only .*libbaz.a, a static archive'):
+        Config(Options(cwd=tmp_path, no_config=True, link_names=['baz'], link_dirs=['lib']), backend=False)
+    with pytest.raises(ConfigError, match='no library for -lnothere'):
+        Config(Options(cwd=tmp_path, no_config=True, link_names=['nothere'], link_dirs=['lib']), backend=False)
+
+
+@pytest.mark.skipif(not sys.platform.startswith('linux'), reason='glibc')
+def test_a_system_library_named_with_l():
+    """glibc's libm.so is a linker script: -lm is libm.so.6."""
+    assert find_library('m').name.startswith('libm.so.')

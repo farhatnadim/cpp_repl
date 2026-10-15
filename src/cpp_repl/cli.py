@@ -83,6 +83,11 @@ def make_parser():
     parser.add_argument('--build-dir', metavar='DIR', help='the same as --compile-commands DIR')
     parser.add_argument('--lib', action='append', default=[], metavar='PATH',
                         help='load a shared library before the first input; repeatable')
+    parser.add_argument('-l', dest='link_names', action='append', default=[], metavar='NAME',
+                        help='load libNAME.so, found as the linker finds it: in the -L directories, '
+                             "$LIBRARY_PATH, the usual places, then the loader's cache; repeatable")
+    parser.add_argument('-L', dest='link_dirs', action='append', default=[], metavar='DIR',
+                        help='a directory to look in for -l libraries; repeatable')
     parser.add_argument('--native', action='store_true',
                         help='compile for this CPU (-march=native), so that AVX and FMA are used')
     parser.add_argument('--no-std', action='store_true',
@@ -131,7 +136,8 @@ def options_from(args, flags, colour, interactive=False):
                    flags=flags, libs=args.lib, native=args.native, no_std=args.no_std,
                    clang_repl=args.clang_repl, colour=colour, cwd=(args.cwd or Path.cwd()).resolve(),
                    diagnostics=args.diagnostics or ('full' if interactive else 'brief'),
-                   stop_on_error=args.stop_on_error, timeout=args.timeout, quiet=args.quiet, json=args.json)
+                   stop_on_error=args.stop_on_error, timeout=args.timeout, quiet=args.quiet, json=args.json,
+                   link_names=args.link_names, link_dirs=args.link_dirs)
 
 
 def _fail(message):

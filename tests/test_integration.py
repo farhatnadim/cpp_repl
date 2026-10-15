@@ -378,6 +378,23 @@ def test_quiet_and_json(tmp_path):
     assert records[1]['output'] == 'hi\n' and records[-1] == {'exit': 1, 'inputs': 3, 'failures': 1}
 
 
+def test_a_library_named_with_l(tmp_path):
+    """-L DIR -l NAME loads libNAME.so, and --libs links a saved program with it."""
+    clangxx = sibling_clangxx()
+    if not clangxx:
+        pytest.skip('no clang++ next to clang-repl')
+    (tmp_path / 'answer.cpp').write_text('int answer() { return 42; }\n')
+    (tmp_path / 'lib').mkdir()
+    build = subprocess.run([clangxx, '-shared', '-fPIC', 'answer.cpp', '-o', 'lib/libanswer.so'], cwd=tmp_path,
+                           capture_output=True, text=True)
+    assert build.returncode == 0, build.stderr
+    (tmp_path / 'p.repl').write_text('int answer();\nanswer()\n')
+    result = run_cpp_repl(['--no-config', '--batch', '-q', '-L', 'lib', '-lanswer', 'p.repl'], tmp_path)
+    assert (result.returncode, result.stdout) == (0, '42\n'), result.stdout + result.stderr
+    libs = run_cpp_repl(['--no-config', '-L', 'lib', '-l', 'answer', '--libs'], tmp_path).stdout
+    assert str(tmp_path / 'lib' / 'libanswer.so') in libs
+
+
 def test_emit_and_flags(tmp_path):
     (tmp_path / 'p.cpp').write_text('int main() { int a = 1; return a; }\n')
     assert run_cpp_repl(['--emit', 'p.cpp'], tmp_path).stdout == 'int a = 1;\na;\n'

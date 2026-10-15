@@ -15,10 +15,15 @@ from ...config import ConfigError, Profile
 
 HERE = Path(__file__).resolve().parent
 
-# Loaded into every backend before the first input. Each library pulls in its
-# own dependencies (sdf, tf, vt, gf, ...) through its RUNPATH.
-LIBS = ['usd', 'usdGeom', 'usdShade', 'usdLux', 'usdSkel', 'usdPhysics', 'usdVol', 'usdMedia',
-        'usdRender', 'usdUtils', 'usdUI', 'usdProc', 'usdSemantics', 'kind']
+# Loaded into every backend before the first input, dependencies first; the
+# ones an install lacks are skipped. The REPL would find the base libraries
+# (arch to pcp) through usd's RUNPATH, but a %save-cpp program calls into them
+# directly (SdfPath, TfToken, VtValue, ArchGetDemangled, and with Python support
+# the python library's converters), and its native link needs each one on the
+# command line.
+LIBS = ['arch', 'python', 'tf', 'gf', 'js', 'trace', 'work', 'plug', 'vt', 'ts', 'ar', 'kind', 'sdf',
+        'sdr', 'pcp', 'usd', 'usdGeom', 'usdShade', 'usdLux', 'usdSkel', 'usdPhysics', 'usdVol',
+        'usdMedia', 'usdRender', 'usdUtils', 'usdUI', 'usdProc', 'usdSemantics']
 
 CANDIDATES = ['~/USD', '~/OpenUSD', '~/OpenUSDBuild', '/usr/local/USD', '/opt/USD', '/opt/OpenUSD']
 
@@ -47,7 +52,12 @@ def find_root(ctx):
         cache = Path(ctx.compile_commands).parent / 'CMakeCache.txt'
         if cache.is_file():
             m = re.search(r'^USD_ROOT:PATH=(.*)$', cache.read_text(errors='replace'), re.M)
-            if m and _is_root(m.group(1).strip()):
+            if m:
+                # The build's own OpenUSD, or nothing: another install found
+                # below would not match what the build compiles against.
+                if not _is_root(m.group(1).strip()):
+                    raise ConfigError(f'{cache} has USD_ROOT={m.group(1).strip()}, which holds no '
+                                      'include/pxr/pxr.h')
                 return Path(m.group(1).strip())
     for name in ('USD_ROOT', 'PXR_ROOT'):
         value = ctx.env.get(name)

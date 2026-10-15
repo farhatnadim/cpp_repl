@@ -201,6 +201,33 @@ def test_save_cpp_builds_and_prints_the_same(session, tmp_path):
     assert subprocess.run([str(exe)], capture_output=True, text=True).stdout == in_repl
 
 
+def test_a_usd_session_saved_as_cpp_links(tmp_path):
+    """--libs names the OpenUSD libraries a saved program calls into directly:
+    SdfPath::GetName lives in sdf, which usd only pulls in at run time."""
+    try:
+        Config(Options(profiles=['usd'], no_config=True), backend=False)
+    except ConfigError as e:
+        pytest.skip(str(e))
+    clangxx = sibling_clangxx()
+    if not clangxx:
+        pytest.skip('no clang++ next to clang-repl')
+    (tmp_path / 'usd.repl').write_text('auto stage = UsdStage::CreateInMemory();\n'
+                                       'auto xf = UsdGeomXform::Define(stage, SdfPath("/World"));\n'
+                                       'xf.GetPrim().GetPath().GetName()\n'
+                                       '%save-cpp saved.cpp\n')
+    usd = ['-p', 'usd', '--no-config']
+    repl = run_cpp_repl([*usd, '--batch', '--no-color', 'usd.repl'], tmp_path)
+    if 'clang-repl failed to start' in repl.stderr:
+        pytest.skip('the usd profile does not start with this clang-repl')
+    assert repl.returncode == 0, repl.stdout + repl.stderr
+    cflags = shlex.split(run_cpp_repl([*usd, '--cflags'], tmp_path).stdout)
+    libs = shlex.split(run_cpp_repl([*usd, '--libs'], tmp_path).stdout)
+    build = subprocess.run([clangxx, *cflags, 'saved.cpp', *libs, '-o', 'saved'], cwd=tmp_path,
+                           capture_output=True, text=True)
+    assert build.returncode == 0, build.stderr
+    assert subprocess.run([str(tmp_path / 'saved')], capture_output=True, text=True).stdout == '"World"\n'
+
+
 def test_a_program_runs_and_keeps_its_variables(tmp_path):
     (tmp_path / 'helper.h').write_text('inline int helper() { return 20; }\n')
     (tmp_path / 'prog.cpp').write_text('''\

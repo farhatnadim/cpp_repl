@@ -160,6 +160,31 @@ def test_glm_profile_root_prefix(tmp_path, monkeypatch):
     assert ['-isystem', str(tmp_path / 'include')] == cfg.profiles[0].flags
 
 
+def test_usd_profile_takes_the_install_of_the_build(tmp_path, monkeypatch):
+    """The OpenUSD named by the CMakeCache.txt beside compile_commands.json,
+    or an error: another install found elsewhere would not match the build.
+    Its base libraries come first, so a %save-cpp program links."""
+    root = tmp_path / 'usd'
+    (root / 'include' / 'pxr').mkdir(parents=True)
+    (root / 'include' / 'pxr' / 'pxr.h').write_text('#define PXR_MINOR_VERSION 26\n')
+    (root / 'lib').mkdir()
+    for name in ('usd', 'sdf', 'arch'):
+        (root / 'lib' / f'libusd_{name}.so').write_bytes(b'')
+    build = tmp_path / 'build'
+    build.mkdir()
+    (build / 'compile_commands.json').write_text(json.dumps(
+        [{'directory': str(build), 'file': 'a.cpp', 'command': 'c++ -c a.cpp'}]))
+    (build / 'CMakeCache.txt').write_text(f'USD_ROOT:PATH={root}\n')
+    monkeypatch.delenv('USD_ROOT', raising=False)
+    options = Options(cwd=tmp_path, no_config=True, profiles=['usd'], compile_commands=str(build))
+    cfg = Config(options, backend=False)
+    assert [lib.name for lib in cfg.libs] == ['libusd_arch.so', 'libusd_sdf.so', 'libusd_usd.so']
+    (build / 'CMakeCache.txt').write_text(f'USD_ROOT:PATH={tmp_path / "gone"}\n')
+    monkeypatch.setenv('USD_ROOT', str(root))
+    with pytest.raises(ConfigError, match='CMakeCache.txt has USD_ROOT=.*gone'):
+        Config(options, backend=False)
+
+
 def test_split_compiler_flags():
     flags, rest = split_compiler_flags(['-p', 'eigen', '-O3', '-I', 'inc', '-march=native', 'a.cpp',
                                         '-DX', '--batch', '-isystem', '/x', '-pthread', '--lib', 'l.so'])

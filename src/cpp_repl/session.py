@@ -9,6 +9,7 @@ import sys
 import time
 from collections import namedtuple
 from datetime import date
+from functools import partial
 from pathlib import Path
 
 from .backend import _ANY_ERROR, Backend, BackendError, outcome, plain
@@ -90,6 +91,7 @@ class Session:
         self.out = out or OUT
         self.journal = []
         self.failures = 0
+        self.tainted = False   # an input failed to compile in this clang-repl
         self.spare = None
         self.files = 0
         self.functions = 0   # functions made to run inputs in: cpp_repl_1, ...
@@ -132,13 +134,15 @@ class Session:
 
     # -- restoring --------------------------------------------------------
 
-    def restore(self, journal, reason):
-        """Replace the backend with a fresh one that has replayed journal."""
+    def restore(self, journal, reason, then=''):
+        """Replace the backend with a fresh one that has replayed journal.
+        then ends the note that says so."""
         self.backend.kill()
         previous = signal.signal(signal.SIGINT, signal.SIG_IGN)
         try:
             backend = self._start(self.spare)
             self.spare = None
+            self.tainted = False
             kept = []
             for entry in journal:
                 ok = True
@@ -149,6 +153,7 @@ class Session:
                         break
                 if not ok:
                     self._note(f'replay stopped at: {entry.text.splitlines()[0]}')
+                    self.tainted = alive
                     if not alive:
                         backend = self._start()
                         for e in kept:
@@ -161,7 +166,7 @@ class Session:
                 self.spare = Backend(self.cfg, self.cwd)
         finally:
             signal.signal(signal.SIGINT, previous)
-        self._note(f'[{reason}: restored {len(kept)} input{"s" if len(kept) != 1 else ""}]')
+        self._note(f'[{reason}: restored {len(kept)} input{"s" if len(kept) != 1 else ""}{then}]')
 
     # -- running ----------------------------------------------------------
 
@@ -189,23 +194,36 @@ class Session:
             return output, 'dead'
         return output, outcome(output)
 
-    def _after(self, text, sent, output, result, kind='stmt', journal=True):
-        """Journal or recover after an input ran. Returns True if it worked."""
+    def _after(self, text, sent, output, result, kind='stmt', journal=True, again=None):
+        """Journal or recover after an input ran. Returns True if it worked,
+        or in batch mode if the session can go on. again(), when given, runs
+        the input once more."""
         if result == 'ok':
             if journal:
                 self.journal.append(Entry(text, sent, kind))
             return True
+        if result == 'link' and again and self.tainted:
+            # clang-repl keeps the template instantiations of an input that
+            # failed to compile, without their code, so a later input that
+            # needs one cannot link. It never ran: run it in a fresh clang-repl.
+            self.restore(self.journal, 'that input failed to link after an earlier error',
+                         then='; running it again')
+            return again()
         self.failures += 1
-        if self.batch:
+        if result == 'error':
+            self.tainted = True
+        if result == 'link':
+            # A failed link leaves clang-repl failing every later input.
+            self.restore(self.journal, 'that input failed to link')
+        elif self.batch:
             if result == 'dead':
                 self._note(f'[{self.backend.how_it_ended()}]')
-            return result not in ('dead', 'interrupted')
-        if result == 'dead':
+        elif result == 'dead':
             self.restore(self.journal, self.backend.how_it_ended())
         elif result == 'interrupted':
             self.restore(self.journal, 'interrupted')
-        elif result == 'link':
-            self.restore(self.journal, 'that input failed to link')
+        if self.batch:
+            return result not in ('dead', 'interrupted')
         return False
 
     def _fresh(self):
@@ -239,6 +257,7 @@ class Session:
             return True
         line = self._file(send.text) if send.file else send.text
         kind = send.kind
+        again = partial(self.run_input, text)
         if kind == 'expr':
             # Run in a function, for the local struct that print_expr needs, and
             # because a lambda in a top-level statement crashes clang-repl 23.
@@ -248,12 +267,16 @@ class Session:
             if result != 'error':
                 if VOID_MARK in output:
                     kind, output = 'void', output.replace(VOID_MARK, '')
-                self._show(output)
+                if not (result == 'link' and self.tainted):   # else it runs again, with a note
+                    self._show(output)
                 self._show_end()
-                return self._after(text, [printed], output, result, kind) or not self.batch
-            line, kind = transform(line + ';', fresh=self._fresh).text, 'stmt'   # not something print_expr takes
+                return self._after(text, [printed], output, result, kind, again=again) or not self.batch
+            # Not something print_expr takes. The attempt failed to compile,
+            # which can leave stale instantiations behind like any error.
+            self.tainted = True
+            line, kind = transform(line + ';', fresh=self._fresh).text, 'stmt'
         output, result = self._send(line)
-        return self._after(text, [line], output, result, kind) or not self.batch
+        return self._after(text, [line], output, result, kind, again=again) or not self.batch
 
     def run_inputs(self, inputs, echo):
         for text in inputs:

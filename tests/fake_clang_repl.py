@@ -10,6 +10,9 @@ It reads one input per line and answers:
   say("TEXT")          TEXT and a newline       say_raw("TEXT")   TEXT alone
   crash()              dies of SIGSEGV          hang()            never answers
   link_fail()          a JIT link error         too_many()        clang's "too many errors", then a loop
+  taint()              a parse error after which this process cannot link stale(), as clang-repl
+                       keeps a failed input's template instantiations without their code
+  stale()              "linked", or a JIT link error in a process that has seen taint()
   syntax error         anything with 'error_here' in it fails to parse
   ...repl::print_expr(((N), ...))...   prints N; with void_call() for N, the void mark
 anything else is silently accepted.
@@ -17,7 +20,9 @@ anything else is silently accepted.
 Environment: FAKE_PROMPT is printed before each input is read (as clang-repl
 built without libedit does); FAKE_ECHO=1 echoes each input back; FAKE_SPLIT=1
 writes output one byte at a time; FAKE_MARKER is a format for the %lib error
-({path}); FAKE_HANG_START=1 never answers at all.
+({path}); FAKE_HANG_START=1 never answers at all; FAKE_START_ERROR=1 starts
+with the error clang-repl prints for a prelude that does not compile, and
+carries on as clang-repl does.
 """
 
 import os
@@ -49,7 +54,10 @@ def main():
     if os.environ.get('FAKE_HANG_START') == '1':
         while True:
             time.sleep(1)
+    if os.environ.get('FAKE_START_ERROR') == '1':
+        out("<built-in>:1:10: fatal error: 'missing.h' file not found\n")
     n = 0
+    tainted = False
     while True:
         out(PROMPT)
         line = sys.stdin.readline()
@@ -89,6 +97,18 @@ def main():
         if 'link_fail()' in line:
             out('JIT session error: Symbols not found: [ _Z9link_failv ]\n'
                 'error: Failed to materialize symbols: { (main, { __stmts__1 }) }\n')
+            continue
+        if 'taint()' in line:
+            tainted = True
+            out(f"input_line_{n}:1:1: error: no matching function for call to 'taint'\n"
+                'error: Parsing failed.\n')
+            continue
+        if 'stale()' in line:
+            if tainted:
+                out('JIT session error: Symbols not found: [ _ZN4repl3putI1QEEvRSoRKT_ ]\n'
+                    'error: Failed to materialize symbols: { (main, { __stmts__1 }) }\n')
+            else:
+                out('linked\n')
             continue
         if 'too_many()' in line:
             out('fatal error: too many errors emitted, stopping now [-ferror-limit=]\n')

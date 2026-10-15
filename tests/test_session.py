@@ -102,6 +102,42 @@ def test_recovery_from_the_journal(tmp_path, monkeypatch, made, text, reason):
     assert stream.getvalue().endswith('alive\n')
 
 
+def test_batch_goes_on_after_a_link_failure(tmp_path, monkeypatch, made):
+    s, stream = make(tmp_path, monkeypatch)
+    made.append(s)
+    assert s.run_input('int a = 1;')
+    first = s.backend.proc.pid
+    assert s.run_input('link_fail();')      # batch mode counts the failure and goes on
+    assert '[that input failed to link: restored 1 input]' in stream.getvalue()
+    assert s.backend.proc.pid != first
+    assert s.run_input('say("alive");')
+    assert stream.getvalue().endswith('alive\n')
+    assert s.failures == 1
+
+
+@pytest.mark.parametrize('batch', [False, True])
+def test_an_input_kept_from_linking_by_an_earlier_error_runs_again(tmp_path, monkeypatch, made, batch):
+    s, stream = make(tmp_path, monkeypatch, batch=batch)
+    made.append(s)
+    assert s.run_input('int a = 1;')
+    assert s.run_input('taint();')
+    assert s.run_input('stale();')
+    assert ('[that input failed to link after an earlier error: restored 1 input; running it again]'
+            in stream.getvalue())
+    assert stream.getvalue().endswith('linked\n')
+    assert s.failures == 1                  # the input that failed to compile
+    assert [e.text for e in s.journal] == ['int a = 1;', 'stale();']
+
+
+def test_a_link_failure_with_no_earlier_error_runs_once(tmp_path, monkeypatch, made):
+    s, stream = make(tmp_path, monkeypatch, batch=False)
+    made.append(s)
+    assert s.run_input('link_fail();')
+    assert '[that input failed to link: restored 0 inputs]' in stream.getvalue()
+    assert 'running it again' not in stream.getvalue()
+    assert s.failures == 1
+
+
 def test_ctrl_c_stops_an_input(tmp_path, monkeypatch, made):
     s, stream = make(tmp_path, monkeypatch, batch=False)
     made.append(s)

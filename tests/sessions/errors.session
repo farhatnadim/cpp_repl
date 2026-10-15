@@ -17,3 +17,13 @@ c++> std::vector<int> w{1, 2
 ...> , 3};
 c++> w
 [1, 2, 3]
+c++> struct Q { int v; };
+c++> std::vector<Q> g(int n) { return std::vector<Q>(n); }
+c++> g()
+<any lines>
+error: Parsing failed.
+c++> g(2)
+<any lines>
+[<Q>, <Q>]
+c++> 1 + 1
+2

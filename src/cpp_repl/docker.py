@@ -2,7 +2,8 @@
 newest clang-repl.
 
 The image holds the toolchain only. The cpp_repl checkout (read-only), the
-working directory, the state directory, and every directory the
+session's working directory, the directory cpp-repl runs in (read-only, and
+the container's own), the state directory, and every directory the
 configuration reads that the image lacks (include directories, libraries,
 preludes, compile_commands.json, the files given) are mounted at their own
 paths, so that every path means the same inside the container and out.
@@ -90,12 +91,17 @@ def docker_command(argv, args, options):
     volumes = {cwd: 'rw'}
     volumes.setdefault(CHECKOUT.resolve(), 'ro')
     volumes.setdefault(state, 'rw')
+    # The container runs where this command runs, so that relative paths on
+    # the command line (files, -c, -I, --cwd) mean the same inside.
+    here = Path.cwd().resolve()
+    if not _inside(here, list(volumes)):
+        volumes[here] = 'ro'
     for m in mounts(cfg, args.mount, options.files):
         if not _inside(m, list(volumes)):
             volumes[m] = 'ro'
     for path, mode in volumes.items():
         cmd += ['-v', f'{path}:{path}' + (':ro' if mode == 'ro' else '')]
-    cmd += ['-w', str(cwd)]
+    cmd += ['-w', str(here)]
     inner = _without(argv, {'--image', '--mount', '--clang-repl'}, {'--docker', '--dry-run'})
     cmd += [image, 'python3', str(CHECKOUT / 'bin' / 'cpp-repl'), *inner]
     return image, cmd

@@ -95,19 +95,43 @@ def test_read_toml(tmp_path):
         read_toml(tmp_path / 'bad.toml')
 
 
-def test_config_without_a_backend(tmp_path):
+def test_config_without_a_backend(tmp_path, monkeypatch):
     (tmp_path / 'cpp-repl.toml').write_text('defines = ["FROM_TOML=1"]\nflags = ["-O1", "-std=c++17"]\n')
     sub = tmp_path / 'sub'
     sub.mkdir()
+    monkeypatch.chdir(tmp_path)   # -I inc is relative to where cpp-repl runs, not to --cwd
     cfg = Config(Options(cwd=sub, flags=['-O2', '-DFROM_CLI', '-I', 'inc']), backend=False)
     assert cfg.std == '-std=c++20' and any('raised' in n for n in cfg.notes)
     assert cfg.opt == '-O2' and cfg.opt_level == 2
-    assert cfg.compiler_flags == ['-std=c++20', '-O2', '-I', str(sub / 'inc'), '-DFROM_TOML=1',
+    assert cfg.compiler_flags == ['-std=c++20', '-O2', '-I', str(tmp_path / 'inc'), '-DFROM_TOML=1',
                                   '-DFROM_CLI', '-iquote', str(PRELUDE_DIR), '-DCPP_REPL=1']
     assert cfg.preludes == [CORE_PRELUDE, STD_PRELUDE]
     assert cfg.prompt == 'c++> ' and cfg.more == '...> '
     assert cfg.prologue[-1] == 'setvbuf(stdout, nullptr, _IONBF, 0);'
     assert Config(Options(cwd=sub, no_config=True, no_std=True), backend=False).preludes == [CORE_PRELUDE]
+
+
+def test_relative_paths(tmp_path, monkeypatch):
+    """A TOML's paths are relative to the TOML, its flags too; the command
+    line's to where cpp-repl runs. command() makes them all absolute, for the
+    build line in a %save-cpp file."""
+    proj = tmp_path / 'proj'
+    (proj / 'build').mkdir(parents=True)
+    (proj / 'build' / 'compile_commands.json').write_text(json.dumps(
+        [{'directory': str(proj / 'build'), 'file': 'a.cpp', 'command': 'c++ -c a.cpp'}]))
+    (proj / 'x.toml').write_text('flags = ["-isystem", "vendor/include"]\n')
+    (proj / 'libx.so').write_bytes(b'')
+    monkeypatch.chdir(proj)
+    options = Options(cwd=tmp_path, no_config=True, configs=['x.toml'], compile_commands='build',
+                      flags=['-I', 'inc'], libs=['libx.so'])
+    cfg = Config(options, backend=False)
+    flags = cfg.compiler_flags
+    assert flags[flags.index('-isystem') + 1] == str(proj / 'vendor' / 'include')
+    assert flags[flags.index('-I') + 1] == str(proj / 'inc')
+    monkeypatch.chdir(tmp_path)
+    assert cfg.command() == (f'cpp-repl -c {proj / "x.toml"} --compile-commands '
+                             f'{proj / "build" / "compile_commands.json"} -I {proj / "inc"} '
+                             f'--lib {proj / "libx.so"}')
 
 
 def test_profiles_and_libraries_load_in_order(tmp_path):
@@ -230,3 +254,22 @@ def test_docker_command_from_the_checkout(monkeypatch):
     targets = [v.split(':')[1] for v in volumes]
     assert len(targets) == len(set(targets))
     assert f'{CHECKOUT}:{CHECKOUT}' in volumes
+
+
+def test_docker_runs_where_cpp_repl_runs(tmp_path, monkeypatch):
+    """With --cwd elsewhere, the container still starts in the directory
+    cpp-repl runs in, so that relative paths on the command line mean the
+    same inside."""
+    from types import SimpleNamespace
+
+    from cpp_repl.docker import docker_command
+    here, session = tmp_path / 'here', tmp_path / 'session'
+    here.mkdir()
+    session.mkdir()
+    monkeypatch.chdir(here)
+    monkeypatch.delenv('CPP_REPL_IMAGE', raising=False)
+    options = Options(cwd=session, no_config=True)
+    _, cmd = docker_command(['--docker', '--cwd', 'session'], SimpleNamespace(image=None, mount=[]), options)
+    volumes = [cmd[i + 1] for i, a in enumerate(cmd) if a == '-v']
+    assert f'{session}:{session}' in volumes and f'{here}:{here}:ro' in volumes
+    assert cmd[cmd.index('-w') + 1] == str(here)

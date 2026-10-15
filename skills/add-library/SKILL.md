@@ -122,7 +122,7 @@ Start from the templates in `${CLAUDE_SKILL_DIR}/templates/`.
 **`<lib>.toml`:** start from the draft, which already follows these rules.
 - **Third-party include directories as `flags = ["-isystem", "/abs/dir"]`.**
   `include` gives `-I`, which shows the library's own warnings. A relative
-  path in `flags` is read from the working directory, not from the TOML.
+  path in `flags`, as everywhere in the TOML, is relative to the TOML.
 - **Never `/usr/include` or `/usr/local/include`.** The compiler searches
   them already, and listing them breaks `#include_next` in the standard
   library.

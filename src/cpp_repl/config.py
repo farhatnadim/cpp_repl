@@ -53,6 +53,7 @@ class Profile:
     help: str = ''                                   # lines added to %help
     banner: str = ''                                 # what the startup line says about it
     mounts: list = field(default_factory=list)       # directories `cpp-repl --docker` mounts
+    base: Path | None = None                         # what relative paths in flags are relative to
 
 
 # ---------------------------------------------------------------------------
@@ -267,7 +268,7 @@ def read_toml(path):
     parse_flags(flags, base)   # fail early on a bad flag
     profile = Profile(name=str(path), flags=flags, profiles=strings('profiles'),
                       libs=[resolved(p) for p in strings('libs')],
-                      prelude=[resolved(p) for p in strings('prelude')], mounts=[base])
+                      prelude=[resolved(p) for p in strings('prelude')], mounts=[base], base=base)
     if 'compile_commands' in data:
         profile.compile_commands = resolved(data['compile_commands'])
     return profile
@@ -390,7 +391,11 @@ class Config:
 
     def __init__(self, options, backend=True):
         self.options = options
-        cwd = Path(options.cwd or Path.cwd())
+        # Paths on the command line are relative to where cpp-repl runs, like
+        # the files, -c, --lib and --compile-commands; --cwd is the session's
+        # own directory.
+        self.here = Path.cwd()
+        cwd = Path(options.cwd or self.here)
         self.notes = []
 
         # cpp-repl.toml files and profiles.
@@ -422,9 +427,9 @@ class Config:
         if self.compile_commands:
             entry = compile_commands_entry(self.compile_commands, options.files)
             layers.append(compile_command_flags(entry))
-        layers += [parse_flags(t.flags) for t in tomls]
+        layers += [parse_flags(t.flags, t.base) for t in tomls]
         cli = list(options.flags) + (['-march=native'] if options.native else [])
-        layers.append(parse_flags(cli, cwd))
+        layers.append(parse_flags(cli, self.here))
         flags, std, opt = merge_flags(layers)
         self.std, note = floor_std(std or DEFAULT_STD)
         if note:
@@ -502,22 +507,26 @@ class Config:
 
     def command(self):
         """A cpp-repl command line with this session's configuration, without
-        its files."""
+        its files. Its paths are absolute, so it works from any directory."""
         o = self.options
+
+        def absolute(p):
+            return str((self.here / Path(p).expanduser()).resolve())
+
         args = ['cpp-repl']
         for p in o.profiles:
-            args += ['-p', p]
+            args += ['-p', absolute(p) if p.endswith('.toml') or os.sep in p else p]
         for c in o.configs:
-            args += ['-c', str(c)]
+            args += ['-c', absolute(c)]
         if o.compile_commands:
-            args += ['--compile-commands', str(o.compile_commands)]
+            args += ['--compile-commands', str(self.compile_commands)]
         if o.no_std:
             args.append('--no-std')
         if o.native:
             args.append('--native')
-        args += o.flags
+        args += [a for _, flag in parse_flags(o.flags, self.here) for a in flag]
         for lib in o.libs:
-            args += ['--lib', str(lib)]
+            args += ['--lib', absolute(lib)]
         return shlex.join(args)
 
     def describe(self):

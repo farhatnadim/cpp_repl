@@ -415,6 +415,8 @@ class Options:
     diagnostics: str = 'full'   # or 'brief': see diagnostics.py
     stop_on_error: bool = False
     timeout: float | None = None   # seconds an input may take, compiling included
+    quiet: bool = False             # leave out the echo of each input run from a file
+    json: bool = False              # a JSON object per input in place of the transcript
 
 
 class Config:

@@ -13,7 +13,7 @@ from . import __version__
 from .config import Config, ConfigError, Options, builtin_profiles
 from .lexer import Origin
 from .painter import Painter
-from .session import OUT, Session, SessionError
+from .session import OUT, JsonOutput, Session, SessionError
 from .sources import BlockReader, Input, inputs_from_file
 
 DESCRIPTION = """\
@@ -103,6 +103,11 @@ def make_parser():
                         help="how much of clang's diagnostics to show: brief (each input's first error, "
                              'source lines only from the code being run; the default with --batch or '
                              'input piped in) or full (the default at the prompt)')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='leave out the echo of each input run from a file or stdin')
+    parser.add_argument('--json', action='store_true',
+                        help='write a JSON object per input in place of the transcript: its file, line, '
+                             'status, seconds, output and notes; a last line holds the exit status')
     parser.add_argument('--no-color', action='store_true', help='plain text (NO_COLOR=1 does the same)')
     parser.add_argument('--cflags', action='store_true',
                         help='print the compiler flags that build a %%save-cpp file, and exit')
@@ -126,7 +131,7 @@ def options_from(args, flags, colour, interactive=False):
                    flags=flags, libs=args.lib, native=args.native, no_std=args.no_std,
                    clang_repl=args.clang_repl, colour=colour, cwd=(args.cwd or Path.cwd()).resolve(),
                    diagnostics=args.diagnostics or ('full' if interactive else 'brief'),
-                   stop_on_error=args.stop_on_error, timeout=args.timeout)
+                   stop_on_error=args.stop_on_error, timeout=args.timeout, quiet=args.quiet, json=args.json)
 
 
 def _fail(message):
@@ -180,7 +185,7 @@ def _run(argv):
         return 0
 
     interactive = not args.batch and sys.stdin.isatty()
-    colour = sys.stdout.isatty() and not args.no_color and not os.environ.get('NO_COLOR')
+    colour = sys.stdout.isatty() and not args.no_color and not args.json and not os.environ.get('NO_COLOR')
     options = options_from(args, flags, colour, interactive)
     try:
         cfg = Config(options, backend=not (args.cflags or args.libs))
@@ -205,8 +210,9 @@ def _run(argv):
     # The code reads cpp-repl's own stdin, as the compiled program would,
     # unless the inputs themselves come through it.
     piped = not interactive and not args.batch and not args.files
+    out = JsonOutput() if args.json else OUT
     try:
-        session = Session(cfg, cwd, batch=not interactive, painter=painter,
+        session = Session(cfg, cwd, batch=not interactive, painter=painter, out=out,
                           program_input=None if piped else _fileno(sys.stdin))
     except KeyboardInterrupt:
         OUT.write('\n')
@@ -217,6 +223,7 @@ def _run(argv):
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))
     signal.signal(signal.SIGHUP, lambda *_: sys.exit(1))
 
+    status = None
     try:
         for f in args.files:
             if not session.run_inputs(inputs_from_file(f, skip=session.prelude_names), echo=True):
@@ -236,5 +243,11 @@ def _run(argv):
             session.run_inputs(inputs, echo=True)
     except KeyboardInterrupt:
         OUT.write('\n')
-        return 130
-    return 0 if interactive else session.exit_status()
+        status = 130
+    except SystemExit as e:   # %quit, or a signal
+        status = e.code if isinstance(e.code, int) else int(e.code is not None)
+    if status is None:
+        status = 0 if interactive else session.exit_status()
+    if args.json:
+        out.finish(status, session)
+    return status

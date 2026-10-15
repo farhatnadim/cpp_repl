@@ -2,6 +2,7 @@
 tests/fake_clang_repl.py: no compiler needed."""
 
 import io
+import json
 import os
 import shutil
 import signal
@@ -15,7 +16,7 @@ from cpp_repl import backend as backend_module
 from cpp_repl import session as session_module
 from cpp_repl.config import Config, Options
 from cpp_repl.diagnostics import Diagnostics
-from cpp_repl.session import Output, Session, SessionError
+from cpp_repl.session import JsonOutput, Output, Session, SessionError
 from cpp_repl.sources import inputs_from_file
 
 FAKE = Path(__file__).resolve().parent / 'fake_clang_repl.py'
@@ -285,6 +286,40 @@ def test_inputs_from_a_file_sit_at_their_lines(tmp_path, monkeypatch, made):
                             '_Pragma("clang diagnostic pop") cpp_repl_1();\n')
     assert f'repl::print_expr(((\n#line 7 "{name}"\n  42), repl::printer' in sent[2]
     assert s.sources == {name}
+
+
+def test_json_output(tmp_path, monkeypatch, made):
+    for name in ('FAKE_PROMPT', 'FAKE_SPLIT', 'FAKE_MARKER', 'FAKE_ECHO', 'FAKE_HANG_START'):
+        monkeypatch.delenv(name, raising=False)
+    stream = io.StringIO()
+    cfg = Config(Options(cwd=tmp_path, no_config=True, clang_repl=str(FAKE), json=True))
+    s = Session(cfg, tmp_path, batch=True, out=JsonOutput(stream))
+    made.append(s)
+    (tmp_path / 'p.repl').write_text('say("one");\n\nerror_here;\n42\n')
+    s.run_inputs(inputs_from_file(tmp_path / 'p.repl'), echo=True)
+    s.out.finish(s.exit_status(), s)
+    records = [json.loads(line) for line in stream.getvalue().splitlines()]
+    name = str(tmp_path / 'p.repl')
+    assert [{k: v for k, v in r.items() if k != 'seconds'} for r in records] == [
+        {'input': 1, 'file': name, 'line': 1, 'status': 'ok', 'output': 'one\n'},
+        {'input': 2, 'file': name, 'line': 3, 'status': 'error', 'output': records[1]['output']},
+        {'input': 3, 'file': name, 'line': 4, 'status': 'ok', 'output': '42\n'},
+        {'exit': 1, 'inputs': 3, 'failures': 1},
+    ]
+    assert "undeclared identifier 'error_here'" in records[1]['output']
+
+
+def test_quiet_leaves_out_the_echo(tmp_path, monkeypatch):
+    for name in ('FAKE_PROMPT', 'FAKE_SPLIT', 'FAKE_MARKER', 'FAKE_ECHO', 'FAKE_HANG_START'):
+        monkeypatch.delenv(name, raising=False)
+    cfg = Config(Options(cwd=tmp_path, no_config=True, clang_repl=str(FAKE), quiet=True))
+    stream = io.StringIO()
+    s = Session(cfg, tmp_path, batch=True, out=Output(stream))
+    try:
+        s.run_inputs(['say("one");', 'say("two");'], echo=True)
+    finally:
+        s.close()
+    assert stream.getvalue() == 'one\ntwo\n'
 
 
 def test_brief_diagnostics():

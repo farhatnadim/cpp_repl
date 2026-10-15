@@ -7,6 +7,7 @@ them from what this clang-repl prints (check the diff, then put back any
 <any> lines it replaced)."""
 
 import io
+import json
 import os
 import re
 import shlex
@@ -364,6 +365,17 @@ def test_piped_inputs_leave_the_code_end_of_file(tmp_path):
                           stdin='int k = 5;\nstd::cin >> k;\nstd::cin.eof()\n')
     assert result.returncode == 0, result.stdout + result.stderr
     assert result.stdout.endswith('true\n')
+
+
+def test_quiet_and_json(tmp_path):
+    (tmp_path / 'p.cpp').write_text('#include <cstdio>\nint main()\n{\n  std::puts("hi");\n  int x = "s";\n}\n')
+    quiet = run_cpp_repl(['--no-config', '--batch', '--no-color', '-q', 'p.cpp'], tmp_path)
+    assert quiet.returncode == 1
+    assert quiet.stdout.startswith('hi\np.cpp:5:7: error: ') and 'c++>' not in quiet.stdout
+    result = run_cpp_repl(['--no-config', '--batch', '--json', 'p.cpp'], tmp_path)
+    records = [json.loads(line) for line in result.stdout.splitlines()]
+    assert [(r.get('line'), r.get('status')) for r in records[:-1]] == [(1, 'ok'), (4, 'ok'), (5, 'error')]
+    assert records[1]['output'] == 'hi\n' and records[-1] == {'exit': 1, 'inputs': 3, 'failures': 1}
 
 
 def test_emit_and_flags(tmp_path):

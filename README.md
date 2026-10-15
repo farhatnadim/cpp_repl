@@ -147,33 +147,13 @@ A C++ source becomes inputs like this:
   statement after it. `CPP_REPL` is defined, so a source can tell where it
   runs.
 
-`--batch` exits with the status the program would: 0, the `N` of its
-`exit(N)`, or 128 + the signal that killed it (139 for a segfault, 134 for
-`abort()`). It exits with 1 if an input failed to compile or link.
-`--stop-on-error` stops at the first input that fails, as the rest usually
-depends on it.
-The code reads cpp-repl's stdin, as the compiled program would:
-`cpp-repl --batch prog.cpp < input.txt`. At the prompt it reads the terminal,
-and when the inputs themselves come through stdin, it reads end-of-file.
-
-`--timeout SECONDS` stops an input that takes longer, compiling included,
-and rebuilds the session without it. The run goes on, and exits with 124 at
-the end, as `timeout` does.
-
 Each input reaches clang at its own line and column, so an error names the
 place in the file, and so do `__FILE__` and `__LINE__`. An input typed at the
 prompt is `<input>`, and input piped in is `<stdin>`.
 
-**Brief diagnostics.** With `--batch`, or with input piped in, cpp-repl shows
-what fixing the code needs:
-- each input's first error, with its notes;
-- source lines and carets only under a diagnostic in your code;
-- no include chains, and template backtraces of two levels;
-- for a link failure, the first three missing symbols, demangled.
-
-A wrong `std::sort` comparator costs 23 lines instead of 241.
-`--diagnostics full` shows everything clang prints, as at the prompt, and
-`--diagnostics brief` makes the prompt brief.
+The code reads cpp-repl's stdin, as the compiled program would:
+`cpp-repl --batch prog.cpp < input.txt`. At the prompt it reads the terminal,
+and when the inputs themselves come through stdin, it reads end-of-file.
 
 `%save-cpp FILE` writes the session as a program:
 - includes and definitions at file scope;
@@ -185,6 +165,37 @@ Build it with the session's own flags:
 ```sh
 clang++ $(cpp-repl -p eigen -O2 --cflags) saved.cpp $(cpp-repl -p eigen -O2 --libs)
 ```
+
+### In a script or a coding agent's loop
+
+```sh
+cpp-repl --batch -q --timeout 30 prog.cpp     # what prog prints, and its errors
+cpp-repl --batch --json prog.cpp              # a JSON object per input
+```
+
+- **Brief diagnostics.** With `--batch`, or with input piped in, cpp-repl
+  shows what fixing the code needs:
+  - each input's first error, with its notes;
+  - source lines and carets only under a diagnostic in your code;
+  - no include chains, and template backtraces of two levels;
+  - for a link failure, the first three missing symbols, demangled.
+
+  A wrong `std::sort` comparator costs 23 lines instead of 241.
+  `--diagnostics full` shows everything clang prints, as at the prompt.
+- **`-q`** leaves out the echo of each input, so that the output is the
+  program's own, with the errors where they arise.
+- **`--json`** writes a JSON object per input instead: `file`, `line`,
+  `status` (`ok`, `error`, `link`, `crash`, `exit`, `stuck`, `timeout`),
+  `seconds`, `output` and `notes`. The last line holds the exit status, the
+  number of inputs and the failures.
+- **The exit status is the program's:** 0, the `N` of its `exit(N)`, or
+  128 + the signal that killed it (139 for a segfault, 134 for `abort()`). It
+  is 1 if an input failed to compile or link.
+- **`--stop-on-error`** stops at the first input that fails, as the rest
+  usually depends on it.
+- **`--timeout SECONDS`** stops an input that takes longer, compiling
+  included, and rebuilds the session without it. The run goes on, and exits
+  with 124 at the end, as `timeout` does.
 
 ### Speed: -O and --native
 

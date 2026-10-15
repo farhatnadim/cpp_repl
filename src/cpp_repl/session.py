@@ -1,5 +1,6 @@
 """The session: the journal, recovery, commands and saving."""
 
+import json
 import os
 import re
 import shlex
@@ -69,7 +70,8 @@ class SessionError(Exception):
 
 class Output:
     """Where the session writes, and whether the cursor is at the start of a
-    line. The stream is sys.stdout unless one is given."""
+    line. The stream is sys.stdout unless one is given. begin(), failed()
+    and end() bracket each input run from a file, for JsonOutput."""
 
     def __init__(self, stream=None):
         self._stream = stream
@@ -85,6 +87,81 @@ class Output:
     def end_line(self):
         if not self.at_line_start:
             self.write('\n')
+
+    def note(self, text):
+        """A line of cpp-repl's own, about the input that ran."""
+        self.end_line()
+        self.write(text + '\n')
+
+    def begin(self, number, origin):
+        pass
+
+    def failed(self, status):
+        pass
+
+    def end(self):
+        pass
+
+
+class JsonOutput(Output):
+    """One JSON object per line for each input, in place of the transcript
+    (cpp-repl --json): {"input": N, "file": PATH, "line": N, "status": S,
+    "seconds": T, "output": TEXT, "notes": [TEXT, ...]}, where status is the
+    first of ok, error (it did not compile), link, crash, exit (the program
+    called exit()), stuck, timeout or interrupted. Anything written between
+    inputs is {"output": TEXT} or {"note": TEXT}, and the last line is
+    {"exit": STATUS, "inputs": N, "failures": N}."""
+
+    def __init__(self, stream=None):
+        super().__init__(stream)
+        self.records = []   # the inputs running: a %load runs inputs inside its own
+
+    def _emit(self, record):
+        stream = self._stream or sys.stdout
+        stream.write(json.dumps(record, ensure_ascii=False) + '\n')
+        stream.flush()
+
+    def write(self, text):
+        if not text:
+            return
+        if self.records:
+            self.records[-1]['output'] += text
+        else:
+            self._emit({'output': text})
+
+    def end_line(self):
+        pass
+
+    def note(self, text):
+        text = text[1:-1] if text.startswith('[') and text.endswith(']') else text
+        if self.records:
+            self.records[-1]['notes'].append(text)
+        else:
+            self._emit({'note': text})
+
+    def begin(self, number, origin):
+        self.records.append({'input': number, 'origin': origin, 'status': 'ok', 'output': '', 'notes': [],
+                             'start': time.monotonic()})
+
+    def failed(self, status):
+        if self.records and self.records[-1]['status'] == 'ok':
+            self.records[-1]['status'] = status
+
+    def end(self):
+        r = self.records.pop()
+        record = {'input': r['input']}
+        if r['origin']:
+            record.update(file=str(r['origin'].path), line=r['origin'].line)
+        record.update(status=r['status'], seconds=round(time.monotonic() - r['start'], 3), output=r['output'])
+        if r['notes']:
+            record['notes'] = r['notes']
+        self._emit(record)
+
+    def finish(self, status, session):
+        """End what is still running, as after %quit, then the last line."""
+        while self.records:
+            self.end()
+        self._emit({'exit': status, 'inputs': session.inputs_run, 'failures': session.failures})
 
 
 OUT = Output()
@@ -114,6 +191,8 @@ class Session:
             self.program_input = os.open(os.devnull, os.O_RDONLY)
         self.journal = []
         self.failures = 0
+        self.inputs_run = 0    # inputs run from files
+        self.echo = not (cfg.options.quiet or cfg.options.json)   # whether run_inputs shows each input
         self.timeouts = 0      # inputs stopped at --timeout
         self.ended = None      # the exit status a program's end stands for (see _status)
         self.tainted = False   # an input failed to compile in this clang-repl
@@ -163,8 +242,7 @@ class Session:
         shutil.rmtree(self.inputs_dir, ignore_errors=True)
 
     def _note(self, text):
-        self.out.end_line()
-        self.out.write((self.painter.note(text) if self.painter else text) + '\n')
+        self.out.note(self.painter.note(text) if self.painter else text)
 
     # -- restoring --------------------------------------------------------
 
@@ -263,6 +341,7 @@ class Session:
         if result == 'dead':
             how, status = self.backend.how_it_ended(), self._status()
             self.ended = self.ended or status
+        self.out.failed(self._label(result, status))
         if status != 0:   # exit(0) ends the program as it would end compiled
             self.failures += 1
         if result == 'error':
@@ -292,6 +371,14 @@ class Session:
             return None
         rc = self.backend.proc.wait()
         return 128 - rc if rc < 0 else rc
+
+    def _label(self, result, status):
+        """result as --json names it."""
+        if result != 'dead':
+            return result
+        if status is None:
+            return 'stuck'
+        return 'crash' if self.backend.proc.returncode < 0 else 'exit'
 
     def exit_status(self):
         """What cpp-repl exits with after running files: the status of the
@@ -366,16 +453,21 @@ class Session:
         """Run inputs in order. Returns False when the session should stop:
         with --stop-on-error, at the first input that fails."""
         for i, text in enumerate(inputs):
-            if echo:
-                self._echo_input(text)
-            failures = self.failures
-            if not self.run_input(text):
-                return False
-            if self.failures > failures and self.cfg.options.stop_on_error:
-                left = len(inputs) - i - 1
-                if left:
-                    self._note(f'[stopped at the first failure: {left} input{"s" if left != 1 else ""} not run]')
-                return False
+            self.inputs_run += 1
+            self.out.begin(self.inputs_run, getattr(text, 'origin', None))
+            try:
+                if echo and self.echo:
+                    self._echo_input(text)
+                failures = self.failures
+                if not self.run_input(text):
+                    return False
+                if self.failures > failures and self.cfg.options.stop_on_error:
+                    left = len(inputs) - i - 1
+                    if left:
+                        self._note(f'[stopped at the first failure: {left} input{"s" if left != 1 else ""} not run]')
+                    return False
+            finally:
+                self.out.end()
         return True
 
     def _echo_input(self, text):

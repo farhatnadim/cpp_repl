@@ -46,9 +46,9 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/check_profile.py" --config .cpp-repl/<lib>.
     --example .cpp-repl/<lib>.repl --docker --image cpp-repl-<project>:llvm23 --runs 1
 ```
 
-**Build the image before the first `--image` run.** Given a tag that does
-not exist, cpp-repl offers to build the stock image under that tag, which
-lacks the packages.
+**Build the image before the first `--image` run.** cpp-repl builds only its
+own `cpp-repl:llvmN` images. Given any other tag that does not exist, it stops
+with `there is no image X` and the command that builds it.
 
 Notes:
 - **One image per project.** When the project has several profiles, add each

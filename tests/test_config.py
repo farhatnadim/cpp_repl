@@ -273,3 +273,26 @@ def test_docker_runs_where_cpp_repl_runs(tmp_path, monkeypatch):
     volumes = [cmd[i + 1] for i, a in enumerate(cmd) if a == '-v']
     assert f'{session}:{session}' in volumes and f'{here}:{here}:ro' in volumes
     assert cmd[cmd.index('-w') + 1] == str(here)
+
+
+@pytest.mark.parametrize('image, expected', [
+    ('proj-opencv:llvm23', 'docker build -t proj-opencv:llvm23 DIR'),
+    ('cpp-repl:llvm-snapshot', 'docker-snapshot'),
+    ('cpp-repl:llvm19', '--target apt --build-arg LLVM_MAJOR=19 -t cpp-repl:llvm19'),
+])
+def test_docker_builds_only_its_own_images(image, expected, tmp_path, monkeypatch, capsys):
+    """A missing image: cpp-repl offers to build its own clang-repl images,
+    and leaves any other tag to whoever made its Dockerfile."""
+    import subprocess
+    from types import SimpleNamespace
+
+    from cpp_repl import docker
+    monkeypatch.setattr(docker.shutil, 'which', lambda name: '/usr/bin/docker')
+    monkeypatch.setattr(docker.subprocess, 'run',
+                        lambda *a, **k: subprocess.CompletedProcess(a, 1, stdout='', stderr=''))
+    monkeypatch.setattr(docker.os, 'execvp', lambda *a: pytest.fail('ran docker'))
+    args = SimpleNamespace(image=image, mount=[], dry_run=False)
+    options = Options(cwd=tmp_path, no_config=True)
+    assert docker.run_in_docker(['--docker', '--image', image], args, options) == 2
+    err = capsys.readouterr().err
+    assert f'there is no image {image}' in err and expected in err

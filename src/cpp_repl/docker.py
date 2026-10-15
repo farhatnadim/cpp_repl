@@ -11,6 +11,7 @@ paths, so that every path means the same inside the container and out.
 
 import hashlib
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -107,6 +108,16 @@ def docker_command(argv, args, options):
     return image, cmd
 
 
+def _how_to_build(image):
+    """The command that builds an image cpp-repl does not build itself."""
+    m = re.fullmatch(r'cpp-repl:bench-llvm(\d+)', image)
+    if m:
+        return f'make -C {CHECKOUT} docker-bench LLVM={m.group(1)}'
+    if image == 'cpp-repl:llvm-snapshot':
+        return f'make -C {CHECKOUT} docker-snapshot'
+    return f'docker build -t {image} DIR   (DIR holding its Dockerfile)'
+
+
 def run_in_docker(argv, args, options):
     image, cmd = docker_command(argv, args, options)
     if args.dry_run:
@@ -124,10 +135,15 @@ def run_in_docker(argv, args, options):
             sys.stderr.write(f'cpp-repl: {image} was built from an older docker/Dockerfile; '
                              'rebuild it with: make docker\n')
     else:
-        major = image.removeprefix('cpp-repl:llvm')
-        build = (['docker', 'build', '--target', 'apt']
-                 + (['--build-arg', f'LLVM_MAJOR={major}'] if major.isdigit() else [])
-                 + ['-t', image, str(CHECKOUT / 'docker')])
+        m = re.fullmatch(r'cpp-repl:llvm(\d+)', image)
+        if not m:
+            # Only cpp-repl's own clang-repl images are built here. Any other
+            # tag (a profile's derived image, the snapshot) holds more than
+            # that build would put in it.
+            sys.stderr.write(f'cpp-repl: there is no image {image}; build it first:\n  {_how_to_build(image)}\n')
+            return 2
+        build = ['docker', 'build', '--target', 'apt', '--build-arg', f'LLVM_MAJOR={m.group(1)}',
+                 '-t', image, str(CHECKOUT / 'docker')]
         if sys.stdin.isatty() and sys.stdout.isatty():
             answer = input(f'cpp-repl: there is no image {image}. Build it now (a few minutes)? [y/N] ')
             if answer.strip().lower() not in ('y', 'yes'):

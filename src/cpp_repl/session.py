@@ -190,11 +190,8 @@ class Session:
         if self.program_input is None:
             self.program_input = os.open(os.devnull, os.O_RDONLY)
         self.journal = []
-        self.failures = 0
-        self.inputs_run = 0    # inputs run from files
+        self.new_run()
         self.echo = not (cfg.options.quiet or cfg.options.json)   # whether run_inputs shows each input
-        self.timeouts = 0      # inputs stopped at --timeout
-        self.ended = None      # the exit status a program's end stands for (see _status)
         self.tainted = False   # an input failed to compile in this clang-repl
         self.spare = None
         self.files = 0
@@ -246,9 +243,18 @@ class Session:
 
     # -- restoring --------------------------------------------------------
 
-    def restore(self, journal, reason, then=''):
+    def new_run(self):
+        """Count afresh what a run of files reports: for each that
+        cpp-repl --serve runs."""
+        self.failures = 0
+        self.inputs_run = 0    # inputs run from files
+        self.timeouts = 0      # inputs stopped at --timeout
+        self.ends = 0          # inputs that ended clang-repl
+        self.ended = None      # the exit status a program's end stands for (see _status)
+
+    def restore(self, journal, reason, then='', note=True):
         """Replace the backend with a fresh one that has replayed journal.
-        then ends the note that says so."""
+        then ends the note that says so, unless note is False."""
         self.backend.kill()
         previous = signal.signal(signal.SIGINT, signal.SIG_IGN)
         try:
@@ -278,7 +284,8 @@ class Session:
                 self.spare = self._backend()
         finally:
             signal.signal(signal.SIGINT, previous)
-        self._note(f'[{reason}: restored {len(kept)} input{"s" if len(kept) != 1 else ""}{then}]')
+        if note:
+            self._note(f'[{reason}: restored {len(kept)} input{"s" if len(kept) != 1 else ""}{then}]')
 
     # -- running ----------------------------------------------------------
 
@@ -341,6 +348,7 @@ class Session:
         if result == 'dead':
             how, status = self.backend.how_it_ended(), self._status()
             self.ended = self.ended or status
+            self.ends += 1
         self.out.failed(self._label(result, status))
         if status != 0:   # exit(0) ends the program as it would end compiled
             self.failures += 1
@@ -450,16 +458,18 @@ class Session:
         return self._after(text, [line], output, result, kind, again=again) or not self.batch
 
     def run_inputs(self, inputs, echo):
-        """Run inputs in order. Returns False when the session should stop:
-        with --stop-on-error, at the first input that fails."""
+        """Run inputs in order. Returns False when the run should stop: once
+        the program crashed or exited, as it would compiled (a session at the
+        prompt goes on, rebuilt), and with --stop-on-error at the first input
+        that fails."""
         for i, text in enumerate(inputs):
             self.inputs_run += 1
             self.out.begin(self.inputs_run, getattr(text, 'origin', None))
             try:
                 if echo and self.echo:
                     self._echo_input(text)
-                failures = self.failures
-                if not self.run_input(text):
+                failures, ends = self.failures, self.ends
+                if not self.run_input(text) or self.ends > ends:
                     return False
                 if self.failures > failures and self.cfg.options.stop_on_error:
                     left = len(inputs) - i - 1

@@ -119,6 +119,13 @@ def make_parser():
     parser.add_argument('--libs', action='store_true',
                         help='print the linker flags for a %%save-cpp file, and exit')
     parser.add_argument('--version', action='version', version=f'cpp-repl {__version__}')
+    stay = parser.add_argument_group('A session that stays, for a coding agent\'s loop')
+    stay.add_argument('--serve', metavar='SOCKET',
+                      help='keep this session running, and run what cpp-repl --connect SOCKET sends')
+    stay.add_argument('--connect', metavar='SOCKET',
+                      help='run the files, or stdin, in the session of cpp-repl --serve SOCKET')
+    stay.add_argument('--fresh', action='store_true',
+                      help='with --connect: run in an empty session, which the server keeps warm')
     docker = parser.add_argument_group('Docker')
     docker.add_argument('--docker', action='store_true',
                         help='run in a Docker image with the newest clang-repl')
@@ -174,6 +181,10 @@ def _run(argv):
     flags, rest = split_compiler_flags(argv)
     args = make_parser().parse_args(rest)
 
+    if args.connect:
+        from .server import connect
+        return connect(args, _fail)
+
     if args.docker:
         from .docker import run_in_docker
         try:
@@ -190,7 +201,7 @@ def _run(argv):
                 print(text)
         return 0
 
-    interactive = not args.batch and sys.stdin.isatty()
+    interactive = not args.batch and not args.serve and sys.stdin.isatty()
     colour = sys.stdout.isatty() and not args.no_color and not args.json and not os.environ.get('NO_COLOR')
     options = options_from(args, flags, colour, interactive)
     try:
@@ -218,7 +229,9 @@ def _run(argv):
     piped = not interactive and not args.batch and not args.files
     out = JsonOutput() if args.json else OUT
     try:
-        session = Session(cfg, cwd, batch=not interactive, painter=painter, out=out,
+        # A server's session recovers from a crash and keeps a spare, as
+        # the prompt's does.
+        session = Session(cfg, cwd, batch=not interactive and not args.serve, painter=painter, out=out,
                           program_input=None if piped else _fileno(sys.stdin))
     except KeyboardInterrupt:
         OUT.write('\n')
@@ -231,6 +244,9 @@ def _run(argv):
             out.note(f'[{note}]')
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))
     signal.signal(signal.SIGHUP, lambda *_: sys.exit(1))
+    if args.serve:
+        from .server import serve
+        return serve(session, args.serve)
 
     status = None
     try:

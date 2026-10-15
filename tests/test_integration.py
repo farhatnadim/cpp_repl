@@ -14,6 +14,7 @@ import shlex
 import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -393,6 +394,31 @@ def test_a_library_named_with_l(tmp_path):
     assert (result.returncode, result.stdout) == (0, '42\n'), result.stdout + result.stderr
     libs = run_cpp_repl(['--no-config', '-L', 'lib', '-l', 'answer', '--libs'], tmp_path).stdout
     assert str(tmp_path / 'lib' / 'libanswer.so') in libs
+
+
+def test_a_session_that_stays_keeps_its_names(tmp_path):
+    env = dict(os.environ, NO_COLOR='1', CPP_REPL_CLANG_REPL=CLANG_REPL)
+    server = subprocess.Popen([sys.executable, str(CPP_REPL), '--no-config', '--serve', 'repl.sock'], cwd=tmp_path,
+                              env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
+    def client(*args, stdin=''):
+        return subprocess.run([sys.executable, str(CPP_REPL), '--connect', 'repl.sock', '-q', *args], cwd=tmp_path,
+                              env=env, input=stdin, capture_output=True, text=True, timeout=300)
+
+    try:
+        for _ in range(600):
+            if (tmp_path / 'repl.sock').exists():
+                break
+            time.sleep(0.1)
+        assert client(stdin='int a = 41;\n').returncode == 0
+        assert client(stdin='a + 1\n').stdout == '42\n'                  # the session goes on
+        fresh = client('--fresh', stdin='a + 1\n')
+        assert fresh.returncode == 1 and "undeclared identifier 'a'" in fresh.stdout
+        client(stdin='%quit\n')
+        assert server.wait(timeout=60) == 0
+    finally:
+        server.kill()
+        server.wait()
 
 
 def test_emit_and_flags(tmp_path):

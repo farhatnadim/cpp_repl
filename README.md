@@ -196,6 +196,19 @@ cpp-repl --batch --json prog.cpp              # a JSON object per input
 - **`--timeout SECONDS`** stops an input that takes longer, compiling
   included, and rebuilds the session without it. The run goes on, and exits
   with 124 at the end, as `timeout` does.
+- **A session that stays.** `cpp-repl --serve SOCKET` keeps a session
+  running, its profiles loaded. `cpp-repl --connect SOCKET [FILE...]` runs
+  files, or stdin, in it, and exits with the run's status. A run there takes
+  0.06 s, against 1.3 s for a new cpp-repl, or 4 s with `-p usd`. The
+  session's names carry over from run to run. `--fresh` starts a run from an
+  empty session instead, for a program run again after an edit; for now it
+  costs about one start-up. `%quit` stops the server.
+
+  ```sh
+  cpp-repl --serve repl.sock -p eigen &
+  cpp-repl --connect repl.sock -q --fresh prog.cpp
+  echo 'm.rows()' | cpp-repl --connect repl.sock
+  ```
 
 ### Speed: -O and --native
 

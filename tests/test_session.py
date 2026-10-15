@@ -8,6 +8,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -362,6 +363,36 @@ def test_batch_says_what_the_configuration_changed(tmp_path):
     out = subprocess.run([sys.executable, str(CPP_REPL), '--no-config', '-std=c++17', '--batch', 'p.repl'],
                          cwd=tmp_path, env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True).stdout
     assert out.startswith('[-std=c++17 raised to -std=c++20: the prelude needs C++20]\n')
+
+
+def test_a_session_that_stays(tmp_path):
+    """cpp-repl --serve SOCKET runs what cpp-repl --connect SOCKET sends, and
+    the client exits with the run's status; %quit stops the server."""
+    env = dict(os.environ, CPP_REPL_CLANG_REPL=str(FAKE), NO_COLOR='1')
+    server = subprocess.Popen([sys.executable, str(CPP_REPL), '--no-config', '--serve', 'repl.sock'], cwd=tmp_path,
+                              env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
+    def client(*args, stdin=''):
+        return subprocess.run([sys.executable, str(CPP_REPL), '--connect', 'repl.sock', *args], cwd=tmp_path,
+                              env=env, input=stdin, capture_output=True, text=True, timeout=60)
+
+    try:
+        for _ in range(200):
+            if (tmp_path / 'repl.sock').exists():
+                break
+            time.sleep(0.05)
+        (tmp_path / 'p.repl').write_text('say("one");\nerror_here;\n')
+        run = client('-q', 'p.repl')
+        assert run.returncode == 1 and run.stdout.startswith('one\n') and 'error_here' in run.stdout
+        records = [json.loads(line) for line in client('--json', '--fresh', stdin='42\n').stdout.splitlines()]
+        assert records[0]['output'] == '42\n' and records[-1] == {'exit': 0, 'inputs': 1, 'failures': 0}
+        assert client(stdin='%quit\n').returncode == 0
+        assert server.wait(timeout=30) == 0
+        assert not (tmp_path / 'repl.sock').exists()
+        assert client().returncode == 2   # nothing serves there now
+    finally:
+        server.kill()
+        server.wait()
 
 
 def test_a_reader_that_goes_away(tmp_path):

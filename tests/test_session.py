@@ -356,6 +356,14 @@ def test_brief_diagnostics():
         assert linked == 'JIT session error: Symbols not found: [ _Z1av, _Z1bv, _Z1cv, and 3 more ]\n'
 
 
+def test_batch_says_what_the_configuration_changed(tmp_path):
+    (tmp_path / 'p.repl').write_text('say("hi");\n')
+    env = dict(os.environ, CPP_REPL_CLANG_REPL=str(FAKE), NO_COLOR='1')
+    out = subprocess.run([sys.executable, str(CPP_REPL), '--no-config', '-std=c++17', '--batch', 'p.repl'],
+                         cwd=tmp_path, env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True).stdout
+    assert out.startswith('[-std=c++17 raised to -std=c++20: the prelude needs C++20]\n')
+
+
 def test_a_reader_that_goes_away(tmp_path):
     """cpp-repl --batch f | head: a quiet exit, with the status a shell
     reports for a C program that SIGPIPE stopped."""

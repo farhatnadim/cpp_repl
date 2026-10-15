@@ -353,3 +353,16 @@ def test_libraries_named_with_l(tmp_path, monkeypatch):
 def test_a_system_library_named_with_l():
     """glibc's libm.so is a linker script: -lm is libm.so.6."""
     assert find_library('m').name.startswith('libm.so.')
+
+
+def test_what_the_configuration_leaves_out_is_said(tmp_path):
+    build = tmp_path / 'build'
+    build.mkdir()
+    (build / 'compile_commands.json').write_text(json.dumps([{
+        'directory': str(build), 'file': 'a.cpp',
+        'command': 'c++ -include pch.h -Iinc -fsanitize=address -c a.cpp'}]))
+    cfg = Config(Options(cwd=tmp_path, no_config=True, compile_commands=str(build)), backend=False)
+    assert any("-include pch.h is left out" in n for n in cfg.notes)
+    assert not any(f.startswith('-fsanitize') for f in cfg.flags)   # the build's own, left out
+    with pytest.raises(ConfigError, match="-fsanitize=address: clang-repl's JIT cannot run sanitized code"):
+        Config(Options(cwd=tmp_path, no_config=True, flags=['-fsanitize=address']), backend=False)

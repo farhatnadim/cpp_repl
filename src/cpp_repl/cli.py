@@ -226,6 +226,9 @@ def _run(argv):
     except SessionError as e:
         return _fail(e)
     atexit.register(session.close)
+    if not interactive:   # the prompt's first line says these
+        for note in cfg.notes:
+            out.note(f'[{note}]')
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))
     signal.signal(signal.SIGHUP, lambda *_: sys.exit(1))
 

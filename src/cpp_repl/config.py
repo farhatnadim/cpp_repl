@@ -114,14 +114,19 @@ _SKIP_WITH_VALUE = {'-o', '-MF', '-MT', '-MQ', '-include', '-imacros', '-x', '-X
                     '--target', '-arch', '-isysroot', '--sysroot', '-main-file-name'}
 
 
-def compile_command_flags(entry):
-    """The flags worth keeping from one compile_commands.json entry."""
+def compile_command_flags(entry, notes=None):
+    """The flags worth keeping from one compile_commands.json entry. A
+    header the build includes into every source is left out, with a note
+    in notes."""
     args = entry.get('arguments') or shlex.split(entry['command'])
     base = Path(entry.get('directory') or '.')
     kept, i = [], 1
     while i < len(args):
         a = args[i]
         if a in _SKIP_WITH_VALUE:
+            if a in ('-include', '-imacros') and i + 1 < len(args) and notes is not None:
+                notes.append(f'compile_commands.json\'s {a} {args[i + 1]} is left out: a cpp-repl.toml\'s '
+                             'prelude includes a header in every session')
             i += 2
             continue
         if a in _INCLUDE_FLAGS or a in ('-D', '-U'):
@@ -560,11 +565,15 @@ class Config:
         layers = [parse_flags(p.flags) for p in self.profiles]
         if self.compile_commands:
             entry = compile_commands_entry(self.compile_commands, options.files)
-            layers.append(compile_command_flags(entry))
+            layers.append(compile_command_flags(entry, self.notes))
         layers += [parse_flags(t.flags, t.base) for t in tomls]
         cli = list(options.flags) + (['-march=native'] if options.native else [])
         layers.append(parse_flags(cli, self.here))
         flags, std, opt = merge_flags(layers)
+        sanitizers = [f for f in flags if f.startswith('-fsanitize=')]
+        if sanitizers:
+            raise ConfigError(f'{sanitizers[0]}: clang-repl\'s JIT cannot run sanitized code. Leave it out, or '
+                              'build the program with clang++ (%save-cpp writes the session as one)')
         self.std, note = floor_std(std or DEFAULT_STD)
         if note:
             self.notes.append(note)

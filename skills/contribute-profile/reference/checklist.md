@@ -32,5 +32,5 @@ Nothing else needs to change:
       `make test-docker` when the image exists.
 - [ ] `claude plugin validate .` passes. It warns about the root `CLAUDE.md`,
       which is expected.
-- [ ] The README row reads like the eigen and usd rows: what it adds, how
+- [ ] The README row reads like the other rows: what it adds, how
       values print, how the library is found.

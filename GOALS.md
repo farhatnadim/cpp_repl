@@ -19,6 +19,7 @@ from `openusd-tutorial/repl/usd-repl`.
 - [x] Benchmark: NumPy vs Eigen in the REPL vs native Eigen, results in `bench/README.md`
 - [x] README with a demo, install, profiles, the compat table and the benchmark summary
 - [x] Claude Code plugin: `add-library`, `add-printer` and `contribute-profile` skills, with probe and check scripts, tests and evals
+- [x] `glm` profile, made by `contribute-profile` as the worked example of a contributed profile
 - [ ] Run the eval suite under `claude plugin eval` (its sandbox needs user namespaces, which AppArmor blocks on this host; see `evals/README.md`)
 - [ ] Build and test the `src` image (written, not built: 30 to 60 minutes of all cores)
 - [ ] Report the clang-repl 23 top-level lambda crash upstream, unless it is reported already

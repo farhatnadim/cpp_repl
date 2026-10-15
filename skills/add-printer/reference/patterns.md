@@ -1,11 +1,11 @@
 # Printer patterns, worked through
 
 Each pattern comes from a profile that runs, and the paths point at its source:
-- Eigen and OpenUSD from cpp_repl's built-in profiles, in
+- Eigen, glm and OpenUSD from cpp_repl's built-in profiles, in
   `src/cpp_repl/profiles/` of the checkout (`../../../src/cpp_repl/profiles/`
   from this file);
-- OpenCV and glm from `examples/` next to this file, each with the `.repl`
-  session it was checked with.
+- OpenCV from `examples/` next to this file, with the `.repl` session it was
+  checked with.
 
 ## 1. A family of types, with expression templates: Eigen
 
@@ -130,7 +130,8 @@ struct Show<glm::mat<C, R, T, Q>> {   // "mat4x4", then 4 rows
 A one-line value needs only `Put`. The generic `Show` prints it, then a
 newline.
 
-Source: `examples/glm_repl.h`, checked with `examples/glm.repl`.
+Source: `profiles/glm/cpp_repl_glm.h`, checked with the checkout's
+`tests/sessions/glm.session`.
 
 ## 5. Enums by name
 

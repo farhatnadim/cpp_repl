@@ -1,8 +1,8 @@
 ---
-description: "glm, a header-only library with no operator<<: printers for vectors and matrices"
-tags: [library, header-only]
-max_turns: 80
-timeout_seconds: 1800
+description: "glm, which cpp-repl has built in: add-library hands back -p glm and writes no profile"
+tags: [library, built-in]
+max_turns: 30
+timeout_seconds: 900
 allowed_tools: [Read, Glob, Grep, Skill, Bash, Write, Edit]
 ---
 

@@ -239,7 +239,7 @@ plugin. Its skills add a library to cpp-repl for you:
 | --- | --- |
 | `/cpp-repl:add-library NAME` | Writes `.cpp-repl/NAME.toml`, a prelude with printers, and an example. Then checks them: the prelude compiles, the session starts, every input runs, the shared libraries are really used, and a `%save-cpp` of the example builds and prints the same. |
 | `/cpp-repl:add-printer` | Makes a type print well: a readable display on its own, and one line inside a list. |
-| `/cpp-repl:contribute-profile NAME` | In a clone of this repository, turns a working profile into a built-in `-p NAME`, with its tests. |
+| `/cpp-repl:contribute-profile NAME` | In a clone of this repository, turns a working profile into a built-in `-p NAME`, with its tests. The `glm` profile was made this way. |
 
 Asking in words works too, as in "let me try OpenCV in cpp-repl". The skill
 hands back one command:
@@ -423,7 +423,7 @@ make compat        # probe the host's clang-repl; make compat-docker for the ima
 make compat-table  # the "Why a front end" table from the probes
 make bench-quick   # a 3-minute benchmark run (make docker-bench first)
 claude plugin validate .                                 # the Claude Code plugin and its skills
-claude plugin eval . --case glm --runs 1 --ablation none   # one skill eval (real model calls)
+claude plugin eval . --case yaml-cpp --runs 1 --ablation none   # one skill eval (real model calls)
 ```
 
 The test suite passes on clang-repl 18.1.3, 23.1.2 and the 24 snapshot:

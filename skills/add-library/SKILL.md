@@ -50,8 +50,11 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/probe_library.py" env
   from `notes`.
 - **clang-repl 18:** it runs most libraries. Its JIT cannot assemble inline
   asm, though. If the library needs that, use Docker (step 7).
-- **Built-in profile:** if the library is in `cpp_repl.builtin_profiles`
-  (eigen, usd), tell the user `cpp-repl -p NAME` and stop.
+- **Built-in profile:** if the library is in `cpp_repl.builtin_profiles`, it
+  needs no profile of its own. Run
+  `cpp-repl -p NAME --batch "${CLAUDE_SKILL_DIR}/../../examples/NAME.repl"`:
+  it shows how the library's values print, and fails with an install hint
+  when the library is missing. Then tell the user `cpp-repl -p NAME` and stop.
 - **The project already builds against the library:** look for a
   `compile_commands.json` in `project.compile_commands` whose entries use the
   library. If one does, the profile can point at it with

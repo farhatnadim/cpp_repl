@@ -27,6 +27,10 @@ add-library made and checked:
 profiles find their libraries. The templates named below are in
 `${CLAUDE_SKILL_DIR}/templates/`.
 
+The glm profile, in `src/cpp_repl/profiles/glm/`, is a finished example that
+this skill made. Its commit, `profiles: add glm`, shows every file a
+contribution touches.
+
 ## 0. Before starting
 
 - **The working directory is a cpp_repl checkout:** `src/cpp_repl/profiles/`

@@ -13,7 +13,7 @@ them too.
 
 | Case | What it tests |
 | --- | --- |
-| `glm` | A header-only library with no `operator<<`: printers for vectors and matrices |
+| `glm-builtin` | A library cpp-repl has built in: add-library hands back `-p glm` and writes no profile |
 | `yaml-cpp` | One shared library beside a static one, and a generator expression in the CMake package |
 | `spdlog` | Compile definitions from the package, and `libfmt` as a dependency the native build needs |
 | `opencv` | A modular package: a few components, many shared libraries, and an `operator<<` that prints every pixel |
@@ -25,7 +25,7 @@ them too.
 
 ```
 claude plugin eval . --scaffold --trust-plugin --allow-tools Bash Write Edit --no-publish \
-    --model claude-sonnet-5-5 --case glm --runs 1 --ablation none
+    --model claude-sonnet-5-5 --case yaml-cpp --runs 1 --ablation none
 ```
 
 - **Flags:**
@@ -57,8 +57,8 @@ Until then, the same prompts can run headless with the plugin loaded from the
 checkout:
 
 ```
-bash evals/glm/scaffold.sh            # in an empty directory
-claude -p "$(sed '1,/^---$/d' evals/glm/prompt.md)" \
+bash evals/yaml-cpp/scaffold.sh       # in an empty directory
+claude -p "$(sed '1,/^---$/d' evals/yaml-cpp/prompt.md)" \
     --plugin-dir /path/to/cpp_repl --allowedTools Bash Read Write Edit Glob Grep Skill
 ```
 

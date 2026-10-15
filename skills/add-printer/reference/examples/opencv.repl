@@ -1,0 +1,12 @@
+cv::Mat I = cv::Mat::eye(3, 3, CV_32F);
+I
+cv::Mat big = cv::Mat::zeros(100, 100, CV_8UC3);
+big
+cv::Mat blurred;
+cv::GaussianBlur(I, blurred, cv::Size(3, 3), 0);
+blurred.at<float>(1, 1)
+cv::Point(3, 4)
+std::vector<cv::Mat>{I}
+I * 2
+cv::Mat_<float>(2, 2, 1.5f)
+std::vector<cv::Point>{{1, 2}, {3, 4}}

@@ -12,6 +12,10 @@ files and sessions. Profiles (`usd`, `eigen`) and project configuration
 (`cpp-repl.toml`, `compile_commands.json`) point it at a library. Docker images
 carry the newest clang-repl.
 
+The repository is also a Claude Code plugin (`.claude-plugin/`), whose skills
+add a library to cpp-repl: `add-library`, `add-printer` and
+`contribute-profile` in `skills/`.
+
 It began as a fork of `openusd-tutorial/repl/usd-repl` on 2026-10-13: commit
 2c41aad plus that tree's uncommitted `_source()` change. usd-repl lives on in
 openusd-tutorial. A fix to the shared lexer, sources or backend is worth porting
@@ -24,6 +28,19 @@ The workspace rule applies: the user writes the code, agents assist. On
 profiles, Docker images, tests and benchmark. The grant covered v0.1. Later
 features follow the workspace rule unless the user extends it. Fixing a bug
 found in review stays in scope.
+
+The plugin's skills are a standing grant, given on 2026-10-14, for whoever runs
+them:
+- An agent running `add-library` or `add-printer` writes the profile, prelude,
+  printers, example and check report those skills describe.
+- An agent running `contribute-profile` in this repository writes a built-in
+  profile:
+  - its module and header under `src/cpp_repl/profiles/<name>/`;
+  - its test, golden session, example and README row;
+  - its line in `PRELUDE_NAMES` and in `docker.py`'s environment list.
+
+The rest of the front end (lexer, sources, session, backend, config) follows
+the rule above.
 
 ## Layout
 
@@ -40,6 +57,9 @@ found in review stays in scope.
 | `docker/Dockerfile` | images with clang-repl from apt.llvm.org, or built from source |
 | `tests/` | unit tests, a fake clang-repl, golden sessions, compat probes |
 | `bench/` | NumPy vs Eigen in the REPL vs native Eigen |
+| `.claude-plugin/` | the Claude Code plugin and marketplace manifests; the plugin root is the repo root |
+| `skills/` | the plugin's skills; `skills/add-library/scripts/` probes libraries and checks profiles |
+| `evals/` | `claude plugin eval` cases for the skills; results go to `evals/results/` (ignored) |
 
 ## Commands
 
@@ -51,6 +71,8 @@ make compat         # what raw clang-repl does with the inputs cpp-repl rewrites
 make docker         # build cpp-repl:llvm23
 make test-docker    # the test suite inside the image
 make bench-quick    # a 3-minute benchmark run in the bench image
+claude plugin validate .   # the plugin's manifests and skills
+claude plugin eval . --case <case> --runs 1 --ablation none   # one skill eval; real model calls
 ```
 
 ## Probing clang-repl directly

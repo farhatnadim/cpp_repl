@@ -10,3 +10,6 @@ tests/compat/results/raw/
 
 # vim swap files
 .*.sw?
+
+# claude plugin eval output
+evals/results/

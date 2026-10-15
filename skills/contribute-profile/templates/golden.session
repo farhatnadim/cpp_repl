@@ -1,0 +1,6 @@
+# A golden session. cpp-repl --batch runs the inputs (the prompt lines) and must
+# print this transcript. <any> matches one line, <any lines> any number of them;
+# addresses and input_line numbers are normalised.
+# args: -p NAME
+# requires: profile=NAME
+c++> <the example's inputs, one per prompt line; CPP_REPL_UPDATE_GOLDEN=1 fills in the output>

@@ -1,0 +1,10 @@
+// <lib> at the prompt: cpp-repl -c .cpp-repl/<lib>.toml .cpp-repl/<lib>.repl
+// An input without a semicolon is a bare expression: its value prints.
+//
+// Construct the main types, print them, call at least one function that the
+// shared libraries define, and print one value inside a std::vector.
+// Nothing that blocks: no windows, no stdin, no files that may be missing.
+auto x = lib::make_thing(3);
+x
+lib::compute(x)
+std::vector<lib::Thing>{x, x}

@@ -221,6 +221,56 @@ even after the type was first printed. For a display of more than one line,
 specialise `repl::Show<T>`. See `src/cpp_repl/prelude/cpp_repl.h`, and
 `profiles/eigen/cpp_repl_eigen.h` for an example.
 
+### With Claude Code
+
+This repository is also a [Claude Code](https://claude.com/claude-code)
+plugin. Its skills add a library to cpp-repl for you:
+- they find its headers and shared libraries;
+- they write a profile into your project;
+- they make the library's types print;
+- they check the result with an example session.
+
+```
+/plugin install cpp-repl --marketplace farhatnadim/cpp_repl
+```
+
+| Skill | What it does |
+| --- | --- |
+| `/cpp-repl:add-library NAME` | Writes `.cpp-repl/NAME.toml`, a prelude with printers, and an example. Then checks them: the prelude compiles, the session starts, every input runs, the shared libraries are really used, and a `%save-cpp` of the example builds and prints the same. |
+| `/cpp-repl:add-printer` | Makes a type print well: a readable display on its own, and one line inside a list. |
+| `/cpp-repl:contribute-profile NAME` | In a clone of this repository, turns a working profile into a built-in `-p NAME`, with its tests. |
+
+Asking in words works too, as in "let me try OpenCV in cpp-repl". The skill
+hands back one command:
+
+```
+$ cpp-repl -c .cpp-repl/opencv.toml
+c++> cv::Mat img = cv::Mat::zeros(480, 640, CV_8UC3);
+c++> cv::circle(img, {320, 240}, 100, {0, 0, 255}, cv::FILLED);
+c++> img
+Mat 480×640 8UC3
+  (0, 0, 0)  (0, 0, 0)  (0, 0, 0)  ...  (0, 0, 0)  (0, 0, 0)  (0, 0, 0)
+  (0, 0, 0)  (0, 0, 0)  (0, 0, 0)  ...  (0, 0, 0)  (0, 0, 0)  (0, 0, 0)
+  (0, 0, 0)  (0, 0, 0)  (0, 0, 0)  ...  (0, 0, 0)  (0, 0, 0)  (0, 0, 0)
+        ...        ...        ...  ...        ...        ...        ...
+  (0, 0, 0)  (0, 0, 0)  (0, 0, 0)  ...  (0, 0, 0)  (0, 0, 0)  (0, 0, 0)
+  (0, 0, 0)  (0, 0, 0)  (0, 0, 0)  ...  (0, 0, 0)  (0, 0, 0)  (0, 0, 0)
+  (0, 0, 0)  (0, 0, 0)  (0, 0, 0)  ...  (0, 0, 0)  (0, 0, 0)  (0, 0, 0)
+c++> img.at<cv::Vec3b>(240, 320)
+[0, 0, 255]
+c++> cv::Mat gray;
+c++> cv::cvtColor(img, gray, cv::COLOR_BGR2GRAY);
+c++> cv::countNonZero(gray)
+31417
+```
+
+- **Nothing else to install.** The plugin puts this checkout's `bin/` on
+  Claude Code's PATH, so `cpp-repl` runs as it is.
+- **The profile stays in your project,** in `.cpp-repl/`. Nothing is written
+  to the plugin.
+- **Contributors load their own clone** with `claude --plugin-dir .`, so the
+  skills come from the working tree.
+
 ## Why a front end
 
 clang-repl is a real C++ JIT, but typed at directly it hangs, crashes or
@@ -371,6 +421,8 @@ make parity        # openusd-tutorial's lessons through usd-repl and cpp-repl -p
 make compat        # probe the host's clang-repl; make compat-docker for the images
 make compat-table  # the "Why a front end" table from the probes
 make bench-quick   # a 3-minute benchmark run (make docker-bench first)
+claude plugin validate .                                 # the Claude Code plugin and its skills
+claude plugin eval . --case glm --runs 1 --ablation none   # one skill eval (real model calls)
 ```
 
 The test suite passes on clang-repl 18.1.3, 23.1.2 and the 24 snapshot:

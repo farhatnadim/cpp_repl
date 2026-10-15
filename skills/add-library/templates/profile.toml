@@ -1,0 +1,21 @@
+# <lib> <version> for cpp-repl, from <the CMake package, pkg-config module or headers it came from>.
+# Start a session with: cpp-repl -c .cpp-repl/<lib>.toml
+#
+# Paths are relative to this file, except inside flags, which cpp-repl reads
+# from the working directory: write those absolute.
+
+# The library's include directories, as -isystem so that its own warnings stay quiet.
+# Never /usr/include or /usr/local/include: the compiler searches them already.
+flags = ["-isystem", "/abs/path/include"]
+
+# Exactly the compile definitions the package exports.
+defines = []
+
+# Every shared library the code calls directly, dependencies first. No .a files.
+libs = []
+
+# The prelude: the library's headers and its printers, parsed once at startup.
+prelude = ["<lib>_repl.h"]
+
+# Only when the library needs a newer standard than C++20 (cpp-repl's floor):
+# std = "c++23"

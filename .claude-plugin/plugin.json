@@ -1,0 +1,12 @@
+{
+  "name": "cpp-repl",
+  "description": "Use any C++ library at the cpp-repl prompt: find its headers and shared libraries, write a profile, make its types print, and prove it with a checked example session.",
+  "author": {
+    "name": "Nadim Farhat",
+    "url": "https://github.com/farhatnadim"
+  },
+  "homepage": "https://github.com/farhatnadim/cpp_repl",
+  "repository": "https://github.com/farhatnadim/cpp_repl",
+  "license": "MIT",
+  "keywords": ["c++", "repl", "clang-repl", "profile", "libraries"]
+}

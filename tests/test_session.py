@@ -2,7 +2,10 @@
 tests/fake_clang_repl.py: no compiler needed."""
 
 import io
+import os
 import signal
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -12,6 +15,7 @@ from cpp_repl.config import Config, Options
 from cpp_repl.session import Output, Session, SessionError
 
 FAKE = Path(__file__).resolve().parent / 'fake_clang_repl.py'
+CPP_REPL = Path(__file__).resolve().parent.parent / 'bin' / 'cpp-repl'
 
 
 def make(tmp_path, monkeypatch, batch=True, **env):
@@ -207,3 +211,17 @@ def test_inputs_through_a_file(tmp_path, monkeypatch, made):
     s.close()
     made.remove(s)
     assert not path.exists()
+
+
+def test_a_reader_that_goes_away(tmp_path):
+    """cpp-repl --batch f | head: a quiet exit, with the status a shell
+    reports for a C program that SIGPIPE stopped."""
+    (tmp_path / 'many.repl').write_text(''.join(f'say("line {i}");\n' for i in range(200)))
+    env = dict(os.environ, CPP_REPL_CLANG_REPL=str(FAKE), NO_COLOR='1')
+    proc = subprocess.Popen([sys.executable, str(CPP_REPL), '--no-config', '--batch', 'many.repl'],
+                            cwd=tmp_path, env=env, stdin=subprocess.DEVNULL,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    assert proc.stdout.readline() == b'c++> say("line 0");\n'
+    proc.stdout.close()
+    assert proc.wait(timeout=60) == 141
+    assert proc.stderr.read() == b''

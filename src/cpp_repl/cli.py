@@ -125,7 +125,17 @@ def _stdin_line(more):
 
 
 def main(argv=None):
-    argv = sys.argv[1:] if argv is None else list(argv)
+    try:
+        return _run(sys.argv[1:] if argv is None else list(argv))
+    except BrokenPipeError:
+        # Whoever read the output has gone (cpp-repl --batch f.cpp | head).
+        # Python flushes stdout at exit: point it at /dev/null, so that the
+        # flush stays quiet too.
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        return 141   # 128 + SIGPIPE, what a shell reports for a C program
+
+
+def _run(argv):
     flags, rest = split_compiler_flags(argv)
     args = make_parser().parse_args(rest)
 

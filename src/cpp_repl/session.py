@@ -51,6 +51,16 @@ cpp-repl started with -O1, -O2 or -O3 (add --native for AVX and FMA).
 Entry = namedtuple('Entry', 'text sent kind')
 
 VOID_MARK = '\x1e'   # what repl::print_expr writes after a void expression
+# What the prelude writes for a value with no printer: <type> between two marks.
+_UNPRINTABLE = re.compile('\x1f<(.*?)>\x1f')
+
+
+def printer_hint(name):
+    """How to give the type name a printer, for a note."""
+    if name.startswith('std::'):
+        return f'[{name} prints as <{name}>: a repl::Put<{name}> specialisation gives it a printer]'
+    where = ' in its own namespace' if '::' in name.split('<')[0] else ''
+    return f'[{name} prints as <{name}>: an operator<<{where}, or a repl::Put<{name}> specialisation, gives it a printer]'
 
 
 class SessionError(Exception):
@@ -113,6 +123,7 @@ class Session:
         self.inputs_dir = cfg.inputs / session_dir_name()
         self.prelude_names = PRELUDE_NAMES | {h.name for h in cfg.preludes}
         self.sources = set()   # what the inputs' origins name
+        self.unprintable = {}  # type: whether a note has said how to print it
         self.diagnostics = Diagnostics(cfg.options.diagnostics == 'brief', self.sources)
         self.backend = self._start()
         if not self.backend.knows_errors:
@@ -196,13 +207,21 @@ class Session:
     def _show(self, text):
         """Write backend output, its diagnostics filtered, painted when colour
         is on."""
-        text = self.diagnostics.feed(text)
+        text = _UNPRINTABLE.sub(self._unprintable, self.diagnostics.feed(text))
         self.out.write(self.painter.feed(text) if self.painter else text)
+
+    def _unprintable(self, m):
+        self.unprintable.setdefault(m.group(1), False)
+        return f'<{m.group(1)}>'
 
     def _show_end(self):
         if self.painter:
             self.out.write(self.painter.flush())
         self.out.end_line()
+        for name, told in self.unprintable.items():
+            if not told and not name.startswith('('):   # a lambda's or an unnamed type's
+                self._note(printer_hint(name))
+            self.unprintable[name] = True
 
     def _send(self, line, echo=True):
         """Run one line. Returns (output, result), result being 'ok', 'error',

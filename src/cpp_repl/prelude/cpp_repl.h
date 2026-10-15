@@ -17,7 +17,8 @@
 // primary templates cover the language and the standard library. A profile
 // adds constrained partial specialisations for its library's types. Your own
 // type prints through its operator<<, even one defined after the type was
-// first printed.
+// first printed, if argument-dependent lookup finds it: in the type's own
+// namespace.
 
 #pragma once
 
@@ -157,95 +158,133 @@ void put(std::ostream &os, const T &x)
   Put<T>::put(os, x);
 }
 
+namespace detail {
+
+template <class Tag, class T>
+void put_generic(std::ostream &os, const T &x);
+
+// One value inside another, for the input Tag: through the type's Put
+// specialisation if it has one, else as put_generic decides for this input.
+template <class Tag, class T>
+void put_item(std::ostream &os, const T &x)
+{
+  if constexpr (requires { Put<T>::generic; })
+    put_generic<Tag>(os, x);
+  else
+    Put<T>::put(os, x);
+}
+
+// In the REPL, a value with no printer is written between two of these, which
+// cpp-repl takes out and then says how to give the type a printer.
+inline constexpr char unprintable_mark = '\x1f';
+
+}  // namespace detail
+
 template <class T>
 struct Put {
-  static void put(std::ostream &os, const T &x)
-  {
-    if constexpr (std::is_same_v<T, bool>) {
-      os << (x ? "true" : "false");
-    } else if constexpr (std::is_same_v<T, char>) {
-      os << '\'';
-      if (x == '\'')
-        os << "\\'";
-      else if (x == '"')
-        os << '"';
-      else
-        detail::put_char(os, x);
-      os << '\'';
-    } else if constexpr (detail::is_char<T>) {
-      os << type_name<T>() << '(' << static_cast<unsigned long>(x) << ')';
-    } else if constexpr (std::is_same_v<T, signed char> || std::is_same_v<T, unsigned char>) {
-      os << static_cast<int>(x);
-    } else if constexpr (std::is_floating_point_v<T>) {
-      detail::put_float(os, x);
-    } else if constexpr (std::is_integral_v<T>) {
-      os << x;
-    } else if constexpr (detail::is_string<T>) {
-      if constexpr (std::is_pointer_v<T>) {
-        if (!x) {
-          os << "nullptr";
-          return;
-        }
-      }
-      detail::put_string(os, x);
-    } else if constexpr (detail::is_char_array<T>) {
-      detail::put_string(os, std::string_view(x, std::extent_v<T> && !x[std::extent_v<T> - 1]
-                                                     ? std::extent_v<T> - 1 : std::extent_v<T>));
-    } else if constexpr (std::is_enum_v<T>) {
-      os << type_name<T>() << '(' << +static_cast<std::underlying_type_t<T>>(x) << ')';
-    } else if constexpr (std::is_null_pointer_v<T>) {
-      os << "nullptr";
-    } else if constexpr (std::is_pointer_v<T>) {
-      if (!x)
-        os << "nullptr";
-      else
-        os << reinterpret_cast<const void *>(x);
-    } else if constexpr (requires (std::ostream &out) { out << x; }) {
-      os << x;   // before ranges: std::filesystem::path is both, and a range of itself
-    } else if constexpr (detail::is_pair<T>::value) {
-      os << '(';
-      repl::put(os, x.first);
-      os << ", ";
-      repl::put(os, x.second);
-      os << ')';
-    } else if constexpr (detail::is_tuple<T>::value) {
-      os << '(';
-      std::apply([&os](const auto &...item) {
-        std::size_t i = 0;
-        ((os << (i++ ? ", " : ""), repl::put(os, item)), ...);
-      }, x);
-      os << ')';
-    } else if constexpr (detail::is_optional<T>::value) {
-      if (x)
-        repl::put(os, *x);
-      else
-        os << "nullopt";
-    } else if constexpr (requires { std::begin(x); std::end(x); }) {
-      constexpr bool map = requires { typename T::key_type; typename T::mapped_type; };
-      constexpr bool set = !map && requires { typename T::key_type; };
-      os << (map || set ? '{' : '[');
-      std::size_t i = 0;
-      for (const auto &item : x) {
-        if (i == max_items) {
-          os << ", ...";
-          break;
-        }
-        if (i++)
-          os << ", ";
-        if constexpr (map) {
-          repl::put(os, item.first);
-          os << ": ";
-          repl::put(os, item.second);
-        } else {
-          repl::put(os, item);
-        }
-      }
-      os << (map || set ? '}' : ']');
-    } else {
-      os << '<' << type_name<T>() << '>';
-    }
-  }
+  static constexpr bool generic = true;   // a specialisation leaves this out
+
+  static void put(std::ostream &os, const T &x) { detail::put_generic<void>(os, x); }
 };
+
+namespace detail {
+
+// What the primary Put writes. Tag is the input that prints, or void. Every
+// input instantiates this afresh, so an operator<< declared after a type
+// first printed counts in a later input, for the items of a list too.
+template <class Tag, class T>
+void put_generic(std::ostream &os, const T &x)
+{
+  if constexpr (std::is_same_v<T, bool>) {
+    os << (x ? "true" : "false");
+  } else if constexpr (std::is_same_v<T, char>) {
+    os << '\'';
+    if (x == '\'')
+      os << "\\'";
+    else if (x == '"')
+      os << '"';
+    else
+      put_char(os, x);
+    os << '\'';
+  } else if constexpr (is_char<T>) {
+    os << type_name<T>() << '(' << static_cast<unsigned long>(x) << ')';
+  } else if constexpr (std::is_same_v<T, signed char> || std::is_same_v<T, unsigned char>) {
+    os << static_cast<int>(x);
+  } else if constexpr (std::is_floating_point_v<T>) {
+    put_float(os, x);
+  } else if constexpr (std::is_integral_v<T>) {
+    os << x;
+  } else if constexpr (is_string<T>) {
+    if constexpr (std::is_pointer_v<T>) {
+      if (!x) {
+        os << "nullptr";
+        return;
+      }
+    }
+    put_string(os, x);
+  } else if constexpr (is_char_array<T>) {
+    put_string(os, std::string_view(x, std::extent_v<T> && !x[std::extent_v<T> - 1]
+                                                   ? std::extent_v<T> - 1 : std::extent_v<T>));
+  } else if constexpr (std::is_enum_v<T>) {
+    os << type_name<T>() << '(' << +static_cast<std::underlying_type_t<T>>(x) << ')';
+  } else if constexpr (std::is_null_pointer_v<T>) {
+    os << "nullptr";
+  } else if constexpr (std::is_pointer_v<T>) {
+    if (!x)
+      os << "nullptr";
+    else
+      os << reinterpret_cast<const void *>(x);
+  } else if constexpr (requires (std::ostream &out) { out << x; }) {
+    os << x;   // before ranges: std::filesystem::path is both, and a range of itself
+  } else if constexpr (is_pair<T>::value) {
+    os << '(';
+    put_item<Tag>(os, x.first);
+    os << ", ";
+    put_item<Tag>(os, x.second);
+    os << ')';
+  } else if constexpr (is_tuple<T>::value) {
+    os << '(';
+    std::apply([&os](const auto &...item) {
+      std::size_t i = 0;
+      ((os << (i++ ? ", " : ""), put_item<Tag>(os, item)), ...);
+    }, x);
+    os << ')';
+  } else if constexpr (is_optional<T>::value) {
+    if (x)
+      put_item<Tag>(os, *x);
+    else
+      os << "nullopt";
+  } else if constexpr (requires { std::begin(x); std::end(x); }) {
+    constexpr bool map = requires { typename T::key_type; typename T::mapped_type; };
+    constexpr bool set = !map && requires { typename T::key_type; };
+    os << (map || set ? '{' : '[');
+    std::size_t i = 0;
+    for (const auto &item : x) {
+      if (i == max_items) {
+        os << ", ...";
+        break;
+      }
+      if (i++)
+        os << ", ";
+      if constexpr (map) {
+        put_item<Tag>(os, item.first);
+        os << ": ";
+        put_item<Tag>(os, item.second);
+      } else {
+        put_item<Tag>(os, item);
+      }
+    }
+    os << (map || set ? '}' : ']');
+  } else {
+#ifdef CPP_REPL
+    os << unprintable_mark << '<' << type_name<T>() << '>' << unprintable_mark;
+#else
+    os << '<' << type_name<T>() << '>';
+#endif
+  }
+}
+
+}  // namespace detail
 
 template <class T>
 struct Show {
@@ -292,11 +331,12 @@ shown operator,(T &&value, printer<Tag>)
   } else if constexpr (!requires { Show<V>::generic; } || detail::is_basic<V>) {
     Show<V>::show(value);
   } else if constexpr (requires (std::ostream &os) { os << value; }) {
-    // Checked here, once per input, rather than in Put<V>, which is
-    // instantiated once: an operator<< typed after the first print counts.
+    // Checked here, once per input: an operator<< typed after the first
+    // print counts.
     std::cout << value << std::endl;
   } else {
-    Show<V>::show(value);
+    detail::put_item<Tag>(std::cout, value);   // the generic Show, for this input
+    std::cout << std::endl;
   }
   return {};
 }

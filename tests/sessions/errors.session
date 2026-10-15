@@ -25,5 +25,6 @@ error: Parsing failed.
 c++> g(2)
 <any lines>
 [<Q>, <Q>]
+[Q prints as <Q>: an operator<<, or a repl::Put<Q> specialisation, gives it a printer]
 c++> 1 + 1
 2

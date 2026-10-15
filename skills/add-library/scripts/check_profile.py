@@ -39,6 +39,8 @@ from _common import (CPP_REPL_BIN, FAILED, OK, TIMEOUT, USAGE, elf_kind, ignore_
 
 CRASH = re.compile(r'^\[(clang-repl (?:crashed \([^)]*\)|exited \(code -?\d+\)|got stuck on that input))\]$', re.M)
 UNPRINTABLE = re.compile(r'^<[^\n]*>$')
+# cpp-repl's note on a type that printed as <type>, after the input's output.
+PRINTER_HINT = re.compile(r'^\[[^\n]* prints as <[^\n]*>: [^\n]*\]\n', re.M)
 # The generic printer's <type name> as an item of a printed container.
 UNPRINTABLE_ITEM = re.compile(r'(?:^|[\[{(]|, )(<[A-Za-z_:][^\n]*?>)(?=$|[\]})]|, )', re.M)
 CONTAINER = re.compile(r'^\s*std::(vector|array|map|unordered_map|set|list|deque|pair|tuple|optional)\b')
@@ -319,7 +321,7 @@ class Checker:
                 pieces.append((text, None))
                 continue
             end = next((s[0] for s in starts[i + 1:] if s), len(stdout))
-            pieces.append((text, stdout[starts[i][1]:end]))
+            pieces.append((text, PRINTER_HINT.sub('', stdout[starts[i][1]:end])))
         return pieces
 
     def classify(self, pieces, timed_out=False):

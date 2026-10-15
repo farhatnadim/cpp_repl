@@ -47,11 +47,17 @@ c++> struct Point { double x, y; };
 c++> Point p{1, 2};
 c++> p
 <Point>
+[Point prints as <Point>: an operator<<, or a repl::Put<Point> specialisation, gives it a printer]
 c++> std::ostream &operator<<(std::ostream &os, const Point &q) { return os << "Point(" << q.x << ", " << q.y << ")"; }
 c++> p
 Point(1, 2)
-c++> std::vector<Point>{p, {3, 4}}.size()
-2
+c++> std::vector<Point>{p, {3, 4}}
+[Point(1, 2), Point(3, 4)]
+c++> namespace geo { struct Vec { int x; }; }
+c++> std::ostream &operator<<(std::ostream &os, const geo::Vec &v) { return os << "global"; }
+c++> std::vector<geo::Vec>{{1}}
+[<geo::Vec>]
+[geo::Vec prints as <geo::Vec>: an operator<< in its own namespace, or a repl::Put<geo::Vec> specialisation, gives it a printer]
 c++> std::cout << "printed " << 42
 printed 42
 c++> std::cout << "no newline";
@@ -110,7 +116,7 @@ c++> a + b
 3
 c++> %undo
 undo: a + b
-[undo: restored 49 inputs]
+[undo: restored 52 inputs]
 c++> b
 2
 c++> std::vector<int>{1, 2, 3}[0]

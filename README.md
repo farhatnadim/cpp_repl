@@ -249,9 +249,11 @@ line says so.
 | `-p usd` | OpenUSD's libraries and `using namespace pxr`. A stage prints its usda; a prim its type, properties and children; an attribute its value and time samples. `tree(stage)` prints the hierarchy. The install is found through the `CMakeCache.txt` next to `compile_commands.json`, then `USD_ROOT`. |
 
 A profile of your own is a `cpp-repl.toml`-style file, loaded with `-c`. To
-make your types print, give them an `operator<<`; cpp-repl finds one defined
-even after the type was first printed. For a display of more than one line,
-specialise `repl::Show<T>`. See `src/cpp_repl/prelude/cpp_repl.h`, and
+make your types print, give them an `operator<<` in their own namespace,
+where argument-dependent lookup finds it, as it finds it for any template.
+cpp-repl finds one defined after the type first printed, in a list too. A
+type with no printer prints as `<Type>`, and a note says how to give it one.
+For a display of more than one line, specialise `repl::Show<T>`. See `src/cpp_repl/prelude/cpp_repl.h`, and
 `profiles/eigen/cpp_repl_eigen.h` for an example.
 
 ### With Claude Code

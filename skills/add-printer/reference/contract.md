@@ -27,7 +27,8 @@ shown operator,(T &&value, printer<Tag>)
   } else if constexpr (requires (std::ostream &os) { os << value; }) {
     std::cout << value << std::endl; // the type's own operator<<
   } else {
-    Show<V>::show(value);            // the generic Show, which calls Put
+    detail::put_item<Tag>(std::cout, value);   // the generic Show, for this input
+    std::cout << std::endl;
   }
   return {};
 }
@@ -36,9 +37,16 @@ shown operator,(T &&value, printer<Tag>)
 What follows from this:
 - **A `Show<V>` specialisation wins over the type's `operator<<`.** The
   primary template has a `static constexpr bool generic = true;`, and a
-  specialisation leaves it out. Never add `generic` to a specialisation.
-- **An `operator<<` counts even when it is typed after the first print.**
-  The check runs once per input, and every input has its own `Tag`.
+  specialisation leaves it out. Never add `generic` to a specialisation, of
+  `Show` or of `Put`.
+- **An `operator<<` counts even when it is typed after the first print,**
+  for the items of a list too. The checks run again for every input, which
+  has its own `Tag`: `detail::put_item<Tag>` hands an item to its type's `Put`
+  specialisation, or else to `detail::put_generic<Tag>`, the primary `Put`'s
+  logic.
+- **Argument-dependent lookup must find the `operator<<`:** declare it in the
+  type's namespace. A global `operator<<` for `lib::T` is invisible to the
+  prelude's templates, as to any template in a compiled program.
 - **`void` expressions print nothing** and are saved as statements by
   `%save-cpp`.
 
@@ -51,7 +59,8 @@ template <class T> struct Show {   // the primary: a value on its own
 };
 
 template <class T> struct Put {    // the primary: a value inline
-  static void put(std::ostream &os, const T &x);
+  static constexpr bool generic = true;
+  static void put(std::ostream &os, const T &x);   // detail::put_generic<void>
 };
 ```
 
@@ -70,7 +79,8 @@ The primary `Put<T>` tries these in order:
    - sets as `{a, ...}`;
    - anything else as `[a, ...]`;
    - each stops after `repl::max_items` (100) items, with `...`;
-9. **anything else, as `<TypeName>`.**
+9. **anything else, as `<TypeName>`.** In the REPL, cpp-repl then notes,
+   once per type, how to give it a printer.
 
 So:
 - **A container item uses its type's `operator<<`** whenever one exists, before

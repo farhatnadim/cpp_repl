@@ -2,7 +2,8 @@
 """Find a C++ library and work out what cpp-repl needs to load it.
 
   probe_library.py env                      the toolchain, Docker and the project
-  probe_library.py find NAME [--scan DIR]   CMake packages, pkg-config modules and headers named like NAME
+  probe_library.py find NAME [--scan DIR]   CMake packages, pkg-config modules and headers named like NAME,
+                                            and with --scan, its headers and built libraries under DIR
   probe_library.py resolve --cmake PKG [--components a,b] [--targets T,..]
   probe_library.py resolve --pkg-config MODULE[,MODULE] [--keep-libs NAME,..]
   probe_library.py resolve --headers DIR [--lib PATH]... [--define D]...
@@ -233,22 +234,46 @@ def pkg_config_modules(name):
     return modules
 
 
+def _headers_in(include, name):
+    """The directories and headers named like name in an include directory."""
+    found = []
+    for child in sorted(include.iterdir()):
+        stem = child.name.split('.')[0] if child.is_file() else child.name
+        if not similar(name, stem):
+            continue
+        if child.is_dir():
+            sample = sorted(p.name for p in child.iterdir() if p.suffix in CPP_SUFFIXES or not p.suffix)[:6]
+            found.append({'dir': str(child), 'include_root': str(include), 'sample': sample})
+        elif child.suffix in CPP_SUFFIXES or child.suffix == '':
+            found.append({'file': str(child), 'include_root': str(include)})
+    return found
+
+
 def header_candidates(name, roots):
     found = []
     for prefix in roots:
-        include = prefix / 'include'
-        if not include.is_dir():
-            continue
-        for child in sorted(include.iterdir()):
-            stem = child.name.split('.')[0] if child.is_file() else child.name
-            if not similar(name, stem):
-                continue
-            if child.is_dir():
-                sample = sorted(p.name for p in child.iterdir() if p.suffix in CPP_SUFFIXES or not p.suffix)[:6]
-                found.append({'dir': str(child), 'include_root': str(include), 'sample': sample})
-            elif child.suffix in CPP_SUFFIXES or child.suffix == '':
-                found.append({'file': str(child), 'include_root': str(include)})
+        if (prefix / 'include').is_dir():
+            found += _headers_in(prefix / 'include', name)
     return found
+
+
+def tree_candidates(name, root, depth=6):
+    """A library in a source tree rather than installed: {'headers': the
+    include directories under root that hold headers named like name,
+    'libs': the shared libraries named like it, built anywhere under root}."""
+    root = Path(root).resolve()
+    headers, libs = [], []
+    for d, dirs, files in os.walk(root):
+        here = Path(d)
+        keep = len(here.relative_to(root).parts) < depth
+        dirs[:] = sorted(x for x in dirs if keep and x not in SKIP_DIRS and not x.startswith('.'))
+        if here.name == 'include':
+            headers += _headers_in(here, name)
+        for f in sorted(files):
+            m = re.fullmatch(r'lib(.+?)\.so(?:\.[\d.]+)?', f)
+            if m and similar(name, m.group(1)) and elf_kind(here / f) == 'shared':
+                libs.append(str(here / f))
+    return {'headers': headers, 'libs': libs}
 
 
 def project_includes(directory, limit=4000):
@@ -290,6 +315,9 @@ def cmd_find(args):
                 tops |= {p.name for p in Path(d).iterdir()}
     includes = []
     if args.scan:
+        out['tree'] = tree_candidates(args.name, args.scan)
+        for h in out['tree']['headers']:
+            tops.add(Path(h.get('dir') or h['file']).name)
         counts = project_includes(Path(args.scan))
         includes = [{'include': i, 'count': c} for i, c in sorted(counts.items(), key=lambda x: (-x[1], x[0]))
                     if i.split('/')[0] in tops]
@@ -311,6 +339,11 @@ def cmd_find(args):
         h = out['headers'][0]
         out['suggest'] = {'source': 'headers', 'dir': h['include_root'],
                           'command': ['resolve', '--headers', h['include_root']]}
+    elif out.get('tree', {}).get('headers'):
+        h, libs = out['tree']['headers'][0], out['tree']['libs']
+        out['suggest'] = {'source': 'source tree', 'dir': h['include_root'],
+                          'command': ['resolve', '--headers', h['include_root'],
+                                      *(['--lib', libs[0]] if libs else []), '--name', args.name]}
     else:
         out['suggest'] = None
         emit(out, USAGE)
@@ -699,8 +732,12 @@ def cmd_resolve(args):
         name = profile_name(args.cmake)
     elif args.pkg_config:
         name = profile_name(args.pkg_config.split(',')[0])
+    elif args.lib:
+        name = profile_name(re.sub(r'^lib|\.so[\d.]*$', '', Path(args.lib[0]).name))
     else:
-        name = profile_name(Path(args.headers[0]).name)
+        # ../mylib/include is mylib's
+        d = Path(args.headers[0]).expanduser().resolve()
+        name = profile_name(d.parent.name if d.name in ('include', 'inc', 'headers', 'src') else d.name)
     dot = root / '.cpp-repl'
     flags, include = [], []
     for inc in res.includes:
@@ -908,7 +945,9 @@ def main():
     p = sub.add_parser('find', help='where a library is installed')
     p.add_argument('name')
     p.add_argument('--prefix', action='append', default=[], help='another install prefix to search')
-    p.add_argument('--scan', metavar='DIR', help="read this project's #include lines")
+    p.add_argument('--scan', metavar='DIR',
+                   help="read this project's #include lines, and look for the library's own headers and built "
+                        'shared libraries under DIR')
     p = sub.add_parser('resolve', help='what cpp-repl needs to load a library')
     p.add_argument('--cmake', metavar='PACKAGE')
     p.add_argument('--components', help='find_package COMPONENTS, comma-separated')

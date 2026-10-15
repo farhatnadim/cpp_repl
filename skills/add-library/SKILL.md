@@ -92,9 +92,16 @@ components the user needs. `suggest.components` comes from the project's
 `#include` lines. Without one, choose from what the user wants to do: core and
 imgproc for image arithmetic, say. Each extra module costs startup time.
 
-If nothing is found, the library is not installed. Name the package that
-provides it (`libopencv-dev`, say) and let the user install it; installing
-needs sudo, which is their call. A custom install goes in with `--prefix DIR`.
+`--scan DIR` also looks under DIR for the library's own headers and built
+shared libraries, as for a library in a source tree next to the project:
+`tree` lists them, and `suggest` resolves them when nothing is installed.
+Point `--scan` at the tree that holds the library, `..` for a sibling
+checkout.
+
+If nothing is found, ask where the library is: a custom install goes in with
+`--prefix DIR`, a source tree with `--scan DIR`. If it is not there at all,
+name the package that provides it (`libopencv-dev`, say) and let the user
+install it; installing needs sudo, which is their call.
 
 ## 3. Resolve it
 

@@ -203,6 +203,26 @@ def test_find_unknown_library(tmp_path):
     assert code == 2 and out['suggest'] is None
 
 
+def test_find_a_library_in_a_source_tree(tmp_path):
+    """A library next to the project, in a source tree with a build of its
+    own, rather than installed."""
+    lib = tmp_path / 'mylib'
+    (lib / 'include' / 'mylib').mkdir(parents=True)
+    (lib / 'include' / 'mylib' / 'point.h').write_text('int norm();\n')
+    (lib / 'build').mkdir()
+    so = lib / 'build' / 'libmylib.so'
+    so.write_bytes(b'\x7fELF\x02\x01\x01' + bytes(9) + (3).to_bytes(2, 'little') + bytes(64))
+    (tmp_path / 'app').mkdir()
+    (tmp_path / 'app' / 'main.cpp').write_text('#include <mylib/point.h>\nint main() { return norm(); }\n')
+    code, out = script('probe_library.py', 'find', 'mylib', '--scan', '..', cwd=tmp_path / 'app')
+    assert code == 0, out
+    assert out['tree'] == {'headers': [{'dir': str(lib / 'include' / 'mylib'), 'include_root': str(lib / 'include'),
+                                        'sample': ['point.h']}], 'libs': [str(so)]}
+    assert out['suggest']['command'] == ['resolve', '--headers', str(lib / 'include'), '--lib', str(so),
+                                         '--name', 'mylib']
+    assert out['project_includes'] == [{'include': 'mylib/point.h', 'count': 1}]
+
+
 # -- check_profile ------------------------------------------------------------
 
 def checker(max_lines=12):

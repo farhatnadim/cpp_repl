@@ -258,6 +258,33 @@ int main(int argc, char **argv)
     assert 'finish 21 repl\n' in result.stdout
 
 
+def test_a_return_inside_main_s_control_flow(tmp_path):
+    """`if (...) { ...; return 1; }` in main() runs, taken or not, with no
+    warning about the function cpp-repl runs it in. A return leaves that
+    input only: the file's later inputs still run."""
+    (tmp_path / 'prog.cpp').write_text('''\
+#include <cstdio>
+int main()
+{
+  int n = 2;
+  if (n == 0) {
+    std::puts("none");
+    return 1;
+  }
+  if (n == 2) {
+    std::puts("two");
+    return 2;
+  }
+  std::printf("n=%d\\n", n);
+  return 0;
+}
+''')
+    result = run_cpp_repl(['--batch', '--no-color', 'prog.cpp'], tmp_path)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert '\ntwo\n' in result.stdout and '\nn=2\n' in result.stdout and '\nnone\n' not in result.stdout
+    assert 'warning' not in result.stdout + result.stderr
+
+
 def test_emit_and_flags(tmp_path):
     (tmp_path / 'p.cpp').write_text('int main() { int a = 1; return a; }\n')
     assert run_cpp_repl(['--emit', 'p.cpp'], tmp_path).stdout == 'int a = 1;\na;\n'

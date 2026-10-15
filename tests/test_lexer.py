@@ -5,7 +5,7 @@ import pytest
 
 import itertools
 
-from cpp_repl.lexer import (completeness, is_definition, lex, needs_function, needs_lines,
+from cpp_repl.lexer import (completeness, in_function, is_definition, lex, needs_function, needs_lines,
                             open_conditionals, split_statements, trailing_expression, transform)
 
 
@@ -63,12 +63,13 @@ def test_completeness(text, state):
     ('std::vector<int>{1, 2}', 'expr', 'std::vector<int>{1, 2}'),
     ('std::vector<int>{1, 2};', 'stmt', 'std::vector<int>{1, 2};'),
     ('std::map<int, int> m{{1, 2}}', 'expr', 'std::map<int, int> m{{1, 2}}'),
-    ('for (auto p : v) {\n  f(p);\n}', 'stmt', 'void f1() { for (auto p : v) { f(p); } } f1();'),
-    ('try { f(); } catch (...) { g(); }', 'stmt', 'void f1() { try { f(); } catch (...) { g(); } } f1();'),
-    ('if (x) f(); else g();', 'stmt', 'void f1() { if (x) f(); else g(); } f1();'),
-    ('int a = 1; for (;;) {} for (;;) {}', 'stmt', 'int a = 1; void f1() { for (;;) {} } f1(); void f2() { for (;;) {} } f2();'),
+    ('for (auto p : v) {\n  f(p);\n}', 'stmt', in_function('f1', 'for (auto p : v) { f(p); }')),
+    ('try { f(); } catch (...) { g(); }', 'stmt', in_function('f1', 'try { f(); } catch (...) { g(); }')),
+    ('if (x) f(); else g();', 'stmt', in_function('f1', 'if (x) f(); else g();')),
+    ('int a = 1; for (;;) {} for (;;) {}', 'stmt',
+     'int a = 1; ' + in_function('f1', 'for (;;) {}') + ' ' + in_function('f2', 'for (;;) {}')),
     ('std::sort(v.begin(), v.end(), [](int a, int b) { return a > b; });', 'stmt',
-     'void f1() { std::sort(v.begin(), v.end(), [](int a, int b) { return a > b; }); } f1();'),
+     in_function('f1', 'std::sort(v.begin(), v.end(), [](int a, int b) { return a > b; });')),
     ('auto g = [](int x) { return x; };', 'stmt', 'auto g = [](int x) { return x; };'),
     ('int n = count(v, [](int x) { return x > 1; });', 'stmt', 'int n = count(v, [](int x) { return x > 1; });'),
     ('x = arr[i](3);', 'stmt', 'x = arr[i](3);'),
@@ -78,7 +79,7 @@ def test_completeness(text, state):
     ('int f() { return 1; }', 'stmt', 'int f() { return 1; }'),
     ('auto s = R"(a\nb)";', 'stmt', 'auto s = "a\\nb";'),
     ('#pragma omp parallel for\nfor (int i = 0; i < 4; ++i) f(i);',
-     'stmt', 'void f1() { _Pragma("omp parallel for") for (int i = 0; i < 4; ++i) f(i); } f1();'),
+     'stmt', in_function('f1', '_Pragma("omp parallel for") for (int i = 0; i < 4; ++i) f(i);')),
     ('#pragma pack(push, 1)\nstruct S { char c; int i; };',
      'stmt', '_Pragma("pack(push, 1)") struct S { char c; int i; };'),
     ('#pragma message("a \\"quoted\\" word")\nint y;',
@@ -91,6 +92,15 @@ def test_transform(text, kind, sent):
     assert (send.kind, send.text, send.file) == (kind, sent, False)
 
 
+def test_in_function():
+    """`return 1;` from a main() body leaves the function a statement runs in:
+    the diagnostic for a value returned from a void function is off for that
+    function alone."""
+    assert in_function('f1', 'if (x) return 1;') == (
+        '_Pragma("clang diagnostic push") _Pragma("clang diagnostic ignored \\"-Wreturn-type\\"") '
+        'void f1() { if (x) return 1; } _Pragma("clang diagnostic pop") f1();')
+
+
 def test_regions_and_block_directives_go_through_a_file():
     region = '#ifdef FOO\nint foo = 1;\n#else\nint foo = 2;\n#endif'
     assert transform(region) == (region, 'pp', True)
@@ -98,7 +108,7 @@ def test_regions_and_block_directives_go_through_a_file():
     send = transform(block, fresh=fresh())
     assert send.kind == 'stmt' and send.file
     assert '\n#ifdef X\n' in send.text and '\n#endif\n' in send.text
-    assert send.text.startswith('void f1() { for')
+    assert 'void f1() { for' in send.text
 
 
 def test_transform_without_wrapping():

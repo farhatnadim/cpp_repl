@@ -381,9 +381,18 @@ def needs_function(tokens, control):
     return control or (_has_lambda(tokens) and not _declaration(tokens))
 
 
+# `return 1;` inside an if of a main() body leaves the function the input runs
+# in. Clang rejects a value returned from a void function under -Wreturn-type,
+# an error by default but only a diagnostic: off for this function alone, the
+# value is dropped. (A deduced return type would trap, SIGILL, whenever the
+# input ran off the end instead.)
+_RETURN_WARNING_OFF = '_Pragma("clang diagnostic push") _Pragma("clang diagnostic ignored \\"-Wreturn-type\\"")'
+_RETURN_WARNING_ON = '_Pragma("clang diagnostic pop")'
+
+
 def in_function(name, body):
     """body as the body of a new function, and a call of it."""
-    return f'void {name}() {{ {body} }} {name}();'
+    return f'{_RETURN_WARNING_OFF} void {name}() {{ {body} }} {_RETURN_WARNING_ON} {name}();'
 
 
 def transform(text, wrap=True, fresh=fresh_name):

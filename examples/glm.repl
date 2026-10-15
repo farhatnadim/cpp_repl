@@ -1,0 +1,13 @@
+// glm at the prompt: cpp-repl -p glm examples/glm.repl
+glm::vec3 v(1, 2, 3);
+v
+glm::length(v)
+glm::normalize(v)
+glm::cross(v, glm::vec3(0, 0, 1))
+std::vector<glm::vec3>{v, v * 2.0f}
+glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(1, 2, 3));
+model
+model * glm::vec4(0, 0, 0, 1)
+glm::mat2(1, 2, 3, 4)
+glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0, 0, 1))
+glm::quat(1, 0, 0, 0)

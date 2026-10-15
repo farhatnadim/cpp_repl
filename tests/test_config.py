@@ -132,6 +132,34 @@ def test_eigen_profile(tmp_path, monkeypatch):
     assert 'cpp-repl -p eigen --native' == cfg.command()
 
 
+def test_glm_profile(tmp_path, monkeypatch):
+    monkeypatch.delenv('GLM_ROOT', raising=False)
+    try:
+        cfg = Config(Options(cwd=tmp_path, profiles=['glm']), backend=False)
+    except ConfigError as e:
+        pytest.skip(str(e))   # glm is not installed here
+    assert cfg.preludes[-1].name == 'cpp_repl_glm.h'
+    assert cfg.profiles[0].banner.startswith('glm ')
+    assert all(lib.is_file() for lib in cfg.libs)
+    flags = cfg.compiler_flags
+    assert not any(a in ('-I', '-isystem') and b in ('/usr/include', '/usr/local/include')
+                   for a, b in zip(flags, flags[1:]))
+
+
+def test_glm_profile_root_variable(tmp_path, monkeypatch):
+    monkeypatch.setenv('GLM_ROOT', str(tmp_path))
+    with pytest.raises(ConfigError, match='GLM_ROOT'):
+        Config(Options(cwd=tmp_path, profiles=['glm']), backend=False)
+
+
+def test_glm_profile_root_prefix(tmp_path, monkeypatch):
+    (tmp_path / 'include' / 'glm').mkdir(parents=True)
+    (tmp_path / 'include' / 'glm' / 'glm.hpp').write_text('')
+    monkeypatch.setenv('GLM_ROOT', str(tmp_path))
+    cfg = Config(Options(cwd=tmp_path, profiles=['glm']), backend=False)
+    assert ['-isystem', str(tmp_path / 'include')] == cfg.profiles[0].flags
+
+
 def test_split_compiler_flags():
     flags, rest = split_compiler_flags(['-p', 'eigen', '-O3', '-I', 'inc', '-march=native', 'a.cpp',
                                         '-DX', '--batch', '-isystem', '/x', '-pthread', '--lib', 'l.so'])

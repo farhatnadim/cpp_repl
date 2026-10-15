@@ -82,7 +82,7 @@ def docker_command(argv, args, options):
     cmd = ['docker', 'run', '--rm', '--init', '-i'] + (['-t'] if tty else [])
     cmd += ['--user', f'{os.getuid()}:{os.getgid()}', '--detach-keys', 'ctrl-^,ctrl-^',
             '-e', f'HOME={home}', '-e', f'XDG_STATE_HOME={state.parent}', '-e', 'PYTHONDONTWRITEBYTECODE=1']
-    for name in ('TERM', 'NO_COLOR', 'COLUMNS', 'LINES', 'USD_ROOT', 'EIGEN_ROOT'):
+    for name in ('TERM', 'NO_COLOR', 'COLUMNS', 'LINES', 'USD_ROOT', 'EIGEN_ROOT', 'GLM_ROOT'):
         if name in os.environ:
             cmd += ['-e', name]
     # Each directory is mounted once (Docker refuses a second mount at the

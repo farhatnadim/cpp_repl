@@ -413,6 +413,7 @@ class Options:
     colour: bool = False
     cwd: Path | None = None
     diagnostics: str = 'full'   # or 'brief': see diagnostics.py
+    stop_on_error: bool = False
 
 
 class Config:

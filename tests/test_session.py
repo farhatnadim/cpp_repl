@@ -22,13 +22,13 @@ FAKE = Path(__file__).resolve().parent / 'fake_clang_repl.py'
 CPP_REPL = Path(__file__).resolve().parent.parent / 'bin' / 'cpp-repl'
 
 
-def make(tmp_path, monkeypatch, batch=True, **env):
+def make(tmp_path, monkeypatch, batch=True, stop_on_error=False, **env):
     for name in ('FAKE_PROMPT', 'FAKE_SPLIT', 'FAKE_MARKER', 'FAKE_ECHO', 'FAKE_HANG_START'):
         monkeypatch.delenv(name, raising=False)
     for name, value in env.items():
         monkeypatch.setenv(name, value)
     monkeypatch.setattr(backend_module, 'STUCK_GRACE', 0.5)
-    cfg = Config(Options(cwd=tmp_path, no_config=True, clang_repl=str(FAKE)))
+    cfg = Config(Options(cwd=tmp_path, no_config=True, clang_repl=str(FAKE), stop_on_error=stop_on_error))
     stream = io.StringIO()
     s = Session(cfg, tmp_path, batch=batch, out=Output(stream))
     return s, stream
@@ -149,6 +149,32 @@ def test_an_input_kept_from_linking_by_an_earlier_error_runs_again(tmp_path, mon
     assert stream.getvalue().endswith('linked\n')
     assert s.failures == 1                  # the input that failed to compile
     assert [e.text for e in s.journal] == ['int a = 1;', 'stale();']
+
+
+@pytest.mark.parametrize('inputs, status, failures', [
+    (['int a = 1;'], 0, 0),
+    (['error_here;', 'int a = 1;'], 1, 1),
+    (['error_here;', 'crash();'], 139, 2),           # 128 + SIGSEGV, as a shell reports it
+    (['say("done");', 'exit(0);'], 0, 0),            # the program's own end
+    (['exit(3);'], 3, 1),
+])
+def test_exit_status(tmp_path, monkeypatch, made, inputs, status, failures):
+    s, stream = make(tmp_path, monkeypatch)
+    made.append(s)
+    s.run_inputs(inputs, echo=False)
+    assert (s.exit_status(), s.failures) == (status, failures)
+
+
+@pytest.mark.parametrize('stop', [False, True])
+def test_stop_on_error(tmp_path, monkeypatch, made, stop):
+    s, stream = make(tmp_path, monkeypatch, stop_on_error=stop)
+    made.append(s)
+    assert s.run_inputs(['say("one");', 'error_here;', 'say("two");', 'say("three");'], echo=False) is not stop
+    if stop:
+        assert stream.getvalue().endswith('[stopped at the first failure: 2 inputs not run]\n')
+        assert 'two' not in stream.getvalue()
+    else:
+        assert stream.getvalue().endswith('two\nthree\n')
 
 
 def test_a_link_failure_with_no_earlier_error_runs_once(tmp_path, monkeypatch, made):

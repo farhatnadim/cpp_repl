@@ -24,7 +24,7 @@ C++ sources into sessions and sessions back into C++ programs.
   cpp-repl                          an empty session
   cpp-repl -p eigen -O2 --native    Eigen loaded, optimised for this CPU
   cpp-repl prog.cpp                 run prog.cpp's main() and keep the prompt
-  cpp-repl --batch prog.cpp         run it and exit (status 1 if an input failed)
+  cpp-repl --batch prog.cpp         run it and exit (exit status: see below)
   cpp-repl --docker                 the same, in an image with the newest clang-repl
 """
 
@@ -33,6 +33,11 @@ Compiler flags go to clang as they are: -I DIR, -isystem DIR, -iquote DIR,
 -idirafter DIR, -D NAME[=VALUE], -U NAME, -O0 to -O3, -std=..., -m..., -f...,
 -W..., -g, -pthread. A cpp-repl.toml in the working directory or above adds
 its own (see the README). Inside the REPL, %help lists the commands.
+
+Exit status after running files: 0 when every input ran; 1 when an input
+failed to compile or link; when the program crashed or called exit(N), what a
+shell reports for it: 128 + the signal (139 for SIGSEGV, 134 for abort()), or
+N. 2 when cpp-repl cannot start, 130 after Ctrl-C.
 """
 
 _WITH_VALUE = ('-I', '-isystem', '-iquote', '-idirafter', '-D', '-U')
@@ -85,7 +90,9 @@ def make_parser():
                         help='the clang-repl to run (default: $CPP_REPL_CLANG_REPL, then the newest '
                              'one on PATH)')
     parser.add_argument('--batch', action='store_true',
-                        help='run the files and exit; exit status 1 if any input failed')
+                        help='run the files and exit (exit status: see below)')
+    parser.add_argument('--stop-on-error', action='store_true',
+                        help='stop running files at the first input that fails')
     parser.add_argument('--emit', action='store_true',
                         help='print the inputs the files turn into, without running them')
     parser.add_argument('--cwd', type=Path, help='working directory of the session')
@@ -115,7 +122,8 @@ def options_from(args, flags, colour, interactive=False):
                    no_config=args.no_config, compile_commands=args.compile_commands or args.build_dir,
                    flags=flags, libs=args.lib, native=args.native, no_std=args.no_std,
                    clang_repl=args.clang_repl, colour=colour, cwd=(args.cwd or Path.cwd()).resolve(),
-                   diagnostics=args.diagnostics or ('full' if interactive else 'brief'))
+                   diagnostics=args.diagnostics or ('full' if interactive else 'brief'),
+                   stop_on_error=args.stop_on_error)
 
 
 def _fail(message):
@@ -215,4 +223,4 @@ def _run(argv):
     except KeyboardInterrupt:
         OUT.write('\n')
         return 130
-    return 1 if session.failures and not interactive else 0
+    return 0 if interactive else session.exit_status()

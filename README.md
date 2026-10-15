@@ -132,7 +132,7 @@ c++> std::map<std::string, int>{{"one", 1}, {"two", 2}}
 
 ```sh
 cpp-repl prog.cpp            # run prog.cpp's main(), then keep the prompt
-cpp-repl --batch prog.cpp    # run it and exit; exit status 1 if an input failed
+cpp-repl --batch prog.cpp    # run it and exit
 cpp-repl --emit prog.cpp     # print the inputs prog.cpp becomes
 cpp-repl a.repl              # a session saved with %save
 ```
@@ -146,6 +146,12 @@ A C++ source becomes inputs like this:
 - Quoted includes next to the source are found. A `#pragma` stays with the
   statement after it. `CPP_REPL` is defined, so a source can tell where it
   runs.
+
+`--batch` exits with the status the program would: 0, the `N` of its
+`exit(N)`, or 128 + the signal that killed it (139 for a segfault, 134 for
+`abort()`). It exits with 1 if an input failed to compile or link.
+`--stop-on-error` stops at the first input that fails, as the rest usually
+depends on it.
 
 Each input reaches clang at its own line and column, so an error names the
 place in the file, and so do `__FILE__` and `__LINE__`. An input typed at the

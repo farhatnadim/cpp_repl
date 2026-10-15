@@ -92,7 +92,8 @@ def run(argv, workdir):
     proc = subprocess.run(argv, cwd=workdir, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT, text=True, errors='replace', timeout=600,
                           env=dict(os.environ, NO_COLOR='1'))
-    return proc.returncode, proc.stdout
+    # A signal as a shell reports it, and as cpp-repl --batch does: 128 + N.
+    return (128 - proc.returncode if proc.returncode < 0 else proc.returncode), proc.stdout
 
 
 def compare(name, sources, clang_repl, program, args, scratch):

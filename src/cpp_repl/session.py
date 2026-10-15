@@ -94,6 +94,7 @@ class Session:
         self.out = out or OUT
         self.journal = []
         self.failures = 0
+        self.ended = None      # the exit status a program's end stands for (see _status)
         self.tainted = False   # an input failed to compile in this clang-repl
         self.spare = None
         self.files = 0
@@ -217,7 +218,12 @@ class Session:
             self.restore(self.journal, 'that input failed to link after an earlier error',
                          then='; running it again')
             return again()
-        self.failures += 1
+        status = None
+        if result == 'dead':
+            how, status = self.backend.how_it_ended(), self._status()
+            self.ended = self.ended or status
+        if status != 0:   # exit(0) ends the program as it would end compiled
+            self.failures += 1
         if result == 'error':
             self.tainted = True
         if result == 'link':
@@ -225,14 +231,29 @@ class Session:
             self.restore(self.journal, 'that input failed to link')
         elif self.batch:
             if result == 'dead':
-                self._note(f'[{self.backend.how_it_ended()}]')
+                self._note(f'[{how}]')
         elif result == 'dead':
-            self.restore(self.journal, self.backend.how_it_ended())
+            self.restore(self.journal, how)
         elif result == 'interrupted':
             self.restore(self.journal, 'interrupted')
         if self.batch:
             return result not in ('dead', 'interrupted')
         return False
+
+    def _status(self):
+        """The exit status the end of clang-repl stands for, as a shell
+        reports a program's: 128 + the signal that killed it, or the status
+        the program passed to exit(). None when it got stuck on errors."""
+        if self.backend.stuck:
+            return None
+        rc = self.backend.proc.wait()
+        return 128 - rc if rc < 0 else rc
+
+    def exit_status(self):
+        """What cpp-repl exits with after running files: the status of the
+        program's end, if it crashed or called exit() with one; else 1 if an
+        input failed; else 0."""
+        return self.ended or (1 if self.failures else 0)
 
     def _fresh(self):
         self.functions += 1
@@ -297,10 +318,18 @@ class Session:
         return self._after(text, [line], output, result, kind, again=again) or not self.batch
 
     def run_inputs(self, inputs, echo):
-        for text in inputs:
+        """Run inputs in order. Returns False when the session should stop:
+        with --stop-on-error, at the first input that fails."""
+        for i, text in enumerate(inputs):
             if echo:
                 self._echo_input(text)
+            failures = self.failures
             if not self.run_input(text):
+                return False
+            if self.failures > failures and self.cfg.options.stop_on_error:
+                left = len(inputs) - i - 1
+                if left:
+                    self._note(f'[stopped at the first failure: {left} input{"s" if left != 1 else ""} not run]')
                 return False
         return True
 
@@ -394,7 +423,7 @@ class Session:
         if name == '%help':
             self.out.write(HELP + self.cfg.help)
         elif name == '%quit':
-            raise SystemExit(0 if not self.batch or not self.failures else 1)
+            raise SystemExit(self.exit_status() if self.batch else 0)
         elif name == '%undo':
             if not self.journal:
                 self.out.write('nothing to undo\n')

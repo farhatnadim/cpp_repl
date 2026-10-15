@@ -9,6 +9,7 @@ It reads one input per line and answers:
   printf("TEXT\\n");   TEXT
   say("TEXT")          TEXT and a newline       say_raw("TEXT")   TEXT alone
   crash()              dies of SIGSEGV          hang()            never answers
+  exit(N)              exits with status N
   link_fail()          a JIT link error         too_many()        clang's "too many errors", then a loop
   limit()              clang's "too many errors" for a limit asked with -ferror-limit, then the next input
   taint()              a parse error after which this process cannot link stale(), as clang-repl
@@ -97,6 +98,10 @@ def main():
             continue
         if 'crash()' in line:
             os.kill(os.getpid(), signal.SIGSEGV)
+        m = re.search(r'\bexit\((\d+)\)', line)
+        if m:
+            sys.stdout.flush()
+            os._exit(int(m.group(1)))
         if 'hang()' in line:
             while True:
                 time.sleep(1)

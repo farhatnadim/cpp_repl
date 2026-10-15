@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
-"""Run the OpenUSD lessons through usd-repl and through cpp-repl, and diff
-what they print and the files they write.
+"""Run openusd-tutorial's lessons through cpp-repl -p usd and as the compiled
+programs, and diff what they print and the files they write.
 
 The lessons are the `repl_*` tests of an openusd-tutorial build: each test's
-command names the lesson's sources. Every run starts in a fresh working
-directory holding a copy of the lesson's _assets, as usd-repl's lessons get
-under ctest.
+command names the lesson's sources, and the test of the same name without
+`repl_` runs the compiled program. Every run starts in a fresh working
+directory holding a copy of the lesson's _assets, as the lessons get under
+ctest.
+
+Both outputs are stdout and stderr in the order they were written: the
+compiled program runs under `stdbuf -o0`, as clang-repl's stdout is
+unbuffered. cpp-repl echoes each input after its prompt, ending the line
+before it, so the echoed lines and the newlines at the very end are left
+out of the comparison.
 
     scripts/parity.py                          all lessons, ../openusd-tutorial
     scripts/parity.py 08_xform 14_primvar_deformation
@@ -29,19 +36,24 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CPP_REPL = ROOT / 'bin' / 'cpp-repl'
+ECHO = re.compile(r'^(usd|\.\.\.)> ')   # cpp-repl's prompts, before each echoed input line
 
 
-
-def lessons(tutorial, build):
-    """[(name, sources, clang_repl)] for each repl_* test of the build."""
-    out = subprocess.run(['ctest', '--test-dir', str(build), '--show-only=json-v1', '-L', 'repl'],
+def lessons(build):
+    """[(name, sources, clang_repl, program)] for each repl_* test of the
+    build, program being the command of the compiled lesson's test."""
+    out = subprocess.run(['ctest', '--test-dir', str(build), '--show-only=json-v1'],
                          capture_output=True, text=True, check=True).stdout
+    tests = json.loads(out)['tests']
+    programs = {t['name']: t['command'] for t in tests if not t['name'].startswith('repl_')}
     found = []
-    for test in json.loads(out)['tests']:
-        cmd = test['command']
+    for test in tests:
+        if not test['name'].startswith('repl_'):
+            continue
+        cmd, name = test['command'], test['name'].removeprefix('repl_')
         sources = cmd[cmd.index('--batch') + 1:cmd.index('--cwd')]
         clang_repl = cmd[cmd.index('--clang-repl') + 1] if '--clang-repl' in cmd else None
-        found.append((test['name'].removeprefix('repl_'), [Path(s) for s in sources], clang_repl))
+        found.append((name, [Path(s) for s in sources], clang_repl, programs.get(name)))
     return found
 
 
@@ -71,54 +83,50 @@ def snapshot(workdir):
             for p in sorted(workdir.rglob('*')) if p.is_file()}
 
 
-def normalise(text, workdir, replacements):
-    text = text.replace(str(workdir), '<cwd>')
-    for old, new in replacements:
-        text = text.replace(old, new)
-    return text
+def normalise(text, workdir):
+    return text.replace(str(workdir), '<cwd>').rstrip('\n')
 
 
 def run(argv, workdir):
-    proc = subprocess.run(argv, cwd=workdir, stdin=subprocess.DEVNULL, capture_output=True,
-                          text=True, errors='replace', timeout=600,
+    """(exit status, stdout and stderr as written)."""
+    proc = subprocess.run(argv, cwd=workdir, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT, text=True, errors='replace', timeout=600,
                           env=dict(os.environ, NO_COLOR='1'))
-    return proc.returncode, proc.stdout + proc.stderr
+    return proc.returncode, proc.stdout
 
 
-def compare(name, sources, clang_repl, args, scratch):
-    usd_dir, cpp_dir = scratch / name / 'usd-repl', scratch / name / 'cpp-repl'
-    stage(usd_dir, sources, args.tutorial)
-    stage(cpp_dir, sources, args.tutorial)
-    common = ['--batch', *map(str, sources)]
+def compare(name, sources, clang_repl, program, args, scratch):
+    native_dir, repl_dir = scratch / name / 'native', scratch / name / 'cpp-repl'
+    if not program:
+        return name, None, [f'no compiled lesson: the build has no test named {name}']
+    stage(native_dir, sources, args.tutorial)
+    stage(repl_dir, sources, args.tutorial)
     backend = ['--clang-repl', args.clang_repl or clang_repl] if (args.clang_repl or clang_repl) else []
-    usd_argv = [str(args.usd_repl), *common, '--cwd', str(usd_dir),
-                '--build-dir', str(args.build), *backend]
-    cpp_argv = [str(CPP_REPL), *shlex.split(args.cpp_repl_args), *common, '--cwd', str(cpp_dir),
-                '--build-dir', str(args.build), *backend]
-    replacements = [(str(args.usd_repl.parent / 'usd_repl.h'), '<prelude>'),
-                    (str(ROOT / 'src' / 'cpp_repl' / 'profiles' / 'usd' / 'usd.h'), '<prelude>')]
-    usd_rc, usd_out = run(usd_argv, usd_dir)
-    cpp_rc, cpp_out = run(cpp_argv, cpp_dir)
+    repl_argv = [str(CPP_REPL), *shlex.split(args.cpp_repl_args), '--batch', *map(str, sources),
+                 '--cwd', str(repl_dir), '--build-dir', str(args.build), *backend]
+    native_rc, native_out = run(['stdbuf', '-o0', *program], native_dir)
+    repl_rc, repl_out = run(repl_argv, repl_dir)
+    repl_out = ''.join(line for line in repl_out.splitlines(keepends=True) if not ECHO.match(line))
 
     problems = []
-    if usd_rc != cpp_rc:
-        problems.append(f'exit status: usd-repl {usd_rc}, cpp-repl {cpp_rc}')
-    a, b = normalise(usd_out, usd_dir, replacements), normalise(cpp_out, cpp_dir, replacements)
+    if native_rc != repl_rc:
+        problems.append(f'exit status: compiled {native_rc}, cpp-repl {repl_rc}')
+    a, b = normalise(native_out, native_dir), normalise(repl_out, repl_dir)
     if a != b:
-        diff = difflib.unified_diff(a.splitlines(), b.splitlines(), 'usd-repl', 'cpp-repl', lineterm='')
+        diff = difflib.unified_diff(a.splitlines(), b.splitlines(), 'compiled', 'cpp-repl', lineterm='')
         problems.append('output differs:\n' + '\n'.join(list(diff)[:60]))
-    files_a, files_b = snapshot(usd_dir), snapshot(cpp_dir)
+    files_a, files_b = snapshot(native_dir), snapshot(repl_dir)
     if files_a.keys() != files_b.keys():
-        problems.append(f'files differ: only usd-repl {sorted(files_a.keys() - files_b.keys())}, '
+        problems.append(f'files differ: only compiled {sorted(files_a.keys() - files_b.keys())}, '
                         f'only cpp-repl {sorted(files_b.keys() - files_a.keys())}')
     for rel in sorted(files_a.keys() & files_b.keys()):
-        fa = normalise(files_a[rel].decode('utf-8', 'replace'), usd_dir, replacements)
-        fb = normalise(files_b[rel].decode('utf-8', 'replace'), cpp_dir, replacements)
+        fa = normalise(files_a[rel].decode('utf-8', 'replace'), native_dir)
+        fb = normalise(files_b[rel].decode('utf-8', 'replace'), repl_dir)
         if fa != fb:
-            diff = difflib.unified_diff(fa.splitlines(), fb.splitlines(), f'usd-repl/{rel}',
+            diff = difflib.unified_diff(fa.splitlines(), fb.splitlines(), f'compiled/{rel}',
                                         f'cpp-repl/{rel}', lineterm='')
             problems.append(f'{rel} differs:\n' + '\n'.join(list(diff)[:40]))
-    return name, usd_rc, problems
+    return name, repl_rc, problems
 
 
 def main():
@@ -126,26 +134,23 @@ def main():
     parser.add_argument('only', nargs='*', help='lesson names (default: all)')
     parser.add_argument('--tutorial', type=Path, default=ROOT.parent / 'openusd-tutorial')
     parser.add_argument('--build', type=Path, help='the tutorial build (default: TUTORIAL/build)')
-    parser.add_argument('--usd-repl', type=Path, help='default: TUTORIAL/repl/usd-repl')
     parser.add_argument('--clang-repl', help='default: the one the ctest commands name')
     parser.add_argument('--cpp-repl-args', default='-p usd',
-                        help='how cpp-repl is asked to behave like usd-repl (default: %(default)s)')
+                        help='how cpp-repl is asked to run a lesson (default: %(default)s)')
     parser.add_argument('--jobs', type=int, default=4)
     parser.add_argument('--keep', action='store_true', help='keep the working directories')
     args = parser.parse_args()
     args.tutorial = args.tutorial.resolve()
     args.build = (args.build or args.tutorial / 'build').resolve()
-    args.usd_repl = (args.usd_repl or args.tutorial / 'repl' / 'usd-repl').resolve()
 
-    found = lessons(args.tutorial, args.build)
+    found = lessons(args.build)
     if args.only:
         found = [entry for entry in found if entry[0] in args.only]
     scratch = Path(tempfile.mkdtemp(prefix='cpp-repl-parity-'))
     failed = 0
     try:
         with ThreadPoolExecutor(args.jobs) as pool:
-            jobs = [pool.submit(compare, name, sources, clang_repl, args, scratch)
-                    for name, sources, clang_repl in found]
+            jobs = [pool.submit(compare, *entry, args, scratch) for entry in found]
             for job in jobs:
                 name, rc, problems = job.result()
                 if problems:
@@ -160,7 +165,7 @@ def main():
             print(f'working directories: {scratch}')
         else:
             shutil.rmtree(scratch, ignore_errors=True)
-    print(f'{len(found) - failed} of {len(found)} lessons identical')
+    print(f'{len(found) - failed} of {len(found)} lessons alike')
     return 1 if failed else 0
 
 

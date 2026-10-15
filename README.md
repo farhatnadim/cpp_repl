@@ -76,9 +76,10 @@ pip install -e '.[ui]'       # optional: cpp-repl on PATH, with prompt_toolkit f
 ```
 
 Without prompt_toolkit, input goes through readline, a line at a time. With
-Pygments, output is coloured. `cpp-repl --docker` mounts the working
-directory, the checkout and whatever your configuration reads, each at its
-own path, so paths mean the same inside the container and out.
+Pygments, output is coloured. `cpp-repl --docker` mounts the directory it
+runs in, the session's working directory, the checkout and whatever your
+configuration reads, each at its own path, so paths mean the same inside the
+container and out.
 
 ### Which clang-repl
 
@@ -401,8 +402,8 @@ Everything is in [bench/](bench/README.md).
 
 cpp-repl began as `repl/usd-repl` in
 [openusd-tutorial](https://github.com/farhatnadim/openusd-tutorial), a REPL for learning OpenUSD's C++ API.
-`scripts/parity.py` checks that both tools run that tutorial's 20 lessons
-alike.
+`scripts/parity.py` checks that cpp-repl runs that tutorial's 20 lessons as
+their compiled programs do: the same output, the same files written.
 
 ## Related work
 
@@ -418,7 +419,7 @@ alike.
 make test          # unit and fake-backend tests: no clang-repl needed
 make test-host     # every test against the host's clang-repl
 make test-docker   # every test inside cpp-repl:llvm23 (make docker first)
-make parity        # openusd-tutorial's lessons through usd-repl and cpp-repl -p usd
+make parity        # openusd-tutorial's lessons through cpp-repl -p usd and compiled, diffed
 make compat        # probe the host's clang-repl; make compat-docker for the images
 make compat-table  # the "Why a front end" table from the probes
 make bench-quick   # a 3-minute benchmark run (make docker-bench first)

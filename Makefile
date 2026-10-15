@@ -35,7 +35,7 @@ test-docker:  ## every test, inside cpp-repl:llvm23
 test-snapshot:  ## every test, inside cpp-repl:llvm-snapshot (LLVM main)
 	$(DOCKER_RUN) cpp-repl:llvm-snapshot python3 -m pytest -q -p no:cacheprovider -rs
 
-parity:  ## openusd-tutorial's lessons through usd-repl and cpp-repl -p usd, diffed
+parity:  ## openusd-tutorial's lessons through cpp-repl -p usd and compiled, diffed
 	$(PYTHON) scripts/parity.py --tutorial $(TUTORIAL)
 
 compat:  ## probe the host's clang-repl

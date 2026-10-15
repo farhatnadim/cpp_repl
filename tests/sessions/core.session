@@ -127,3 +127,9 @@ alive: 1
 c++> #include <atomic>
 c++> std::atomic<int>{5}
 5
+c++> struct Lazy { int m() { auto l = [] { return 7; }; return l(); } };
+c++> Lazy{}.m()
+7
+c++> namespace lam { auto f = [] { return 1; }; }
+c++> lam::f()
+1

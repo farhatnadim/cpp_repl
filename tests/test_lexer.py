@@ -178,6 +178,12 @@ def test_open_conditionals():
     ('[[maybe_unused]] int q = 1;', False),
     ('m[k] = 2;', False),
     ('f(m[k]);', False),
+    ('struct S { int m() { auto l = [] { return 7; }; return l(); } };', False),
+    ('template <class T> struct W { T v; auto get() { return [this] { return v; }; } };', False),
+    ('namespace N { auto f = [] { return 1; }; }', False),
+    ('int twice_each(std::vector<int> v) { std::for_each(v.begin(), v.end(), [](int &x) { x *= 2; }); return v[0]; }',
+     False),
+    ('std::enable_if_t<(N > 4), int> k = count(v, [](int x) { return x > 1; });', False),
 ])
 def test_needs_function(text, wrapped):
     tokens, _ = lex(text)

@@ -304,20 +304,21 @@ def fresh_name():
 
 
 def _angle_end(tokens, i):
-    """Index just past the template argument list opening at tokens[i]."""
-    depth = 0
-    for j in range(i, len(tokens)):
+    """Index just past the template argument list opening at tokens[i]. A
+    bracketed part, as in enable_if_t<(N > 4)>, is skipped whole."""
+    depth, j = 0, i
+    while j < len(tokens):
         t = tokens[j]
-        if t.kind != 'op':
-            continue
-        if t.text == '<':
-            depth += 1
-        elif t.text in ('>', '>>'):
-            depth -= len(t.text)
-        elif t.text in '([{':
-            j = _match(tokens, j)
-        if depth <= 0:
-            return j + 1
+        if t.kind == 'op':
+            if t.text == '<':
+                depth += 1
+            elif t.text in ('>', '>>'):
+                depth -= len(t.text)
+            elif t.text in '([{':
+                j = _match(tokens, j)
+            if depth <= 0:
+                return j + 1
+        j += 1
     return len(tokens)
 
 
@@ -377,8 +378,10 @@ def needs_function(tokens, control):
     """Whether a statement has to run inside a function: control flow, which
     clang-repl 18 mis-compiles at top level, and a statement with a lambda in
     it, which crashes clang-repl 23 at top level. A declaration such as
-    `auto f = [](int x) { ... };` is fine where it is."""
-    return control or (_has_lambda(tokens) and not _declaration(tokens))
+    `auto f = [](int x) { ... };` is fine where it is, and so is a definition:
+    a struct, namespace or function whose body holds a lambda belongs at file
+    scope, where later inputs can see it."""
+    return control or (_has_lambda(tokens) and not _declaration(tokens) and not _definition(tokens))
 
 
 # `return 1;` inside an if of a main() body leaves the function the input runs

@@ -764,10 +764,11 @@ inline void put_seconds(std::ostream &os, double seconds)
 // Times f as IPython's %timeit does. The number of loops per run doubles
 // through 1, 2, 5, 10, 20, ... until a run takes at least 0.2 s. There are
 // 7 runs, or 3 when a run takes over a second, and the result is the mean and
-// standard deviation of the time per loop. opt_level is the session's -O
-// level, shown because unoptimised code is easy to forget about.
+// standard deviation of the time per loop. opt is the session's -O flag, as
+// given ("-O0" when none was), shown because unoptimised code is easy to
+// forget about.
 template <class F>
-void timeit(F f, int opt_level = -1)
+void timeit(F f, const char *opt = nullptr)
 {
   using clock = std::chrono::steady_clock;
   const auto seconds = [](clock::duration d) { return std::chrono::duration<double>(d).count(); };
@@ -803,10 +804,10 @@ void timeit(F f, int opt_level = -1)
   detail::put_seconds(std::cout, spread);
   std::cout << " per loop (mean \xc2\xb1 std. dev. of " << runs << " runs, " << loops
             << (loops == 1 ? " loop" : " loops") << " each";
-  if (opt_level == 0)
+  if (opt && std::string_view(opt) == "-O0")
     std::cout << "; JIT at -O0, see %help";
-  else if (opt_level > 0)
-    std::cout << "; JIT at -O" << opt_level;
+  else if (opt)
+    std::cout << "; JIT at " << opt;
   std::cout << ')' << std::endl;
 }
 

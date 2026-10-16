@@ -34,9 +34,10 @@ COMPLETION = ['usd/usd', 'usd/usdGeom', 'usd/usdLux', 'usd/usdShade', 'usd/sdf',
 HELP = """\
   tree(stage)     the prim hierarchy of a stage or prim
   A stage prints its usda, a prim its type, properties and children, an
-  attribute its value and time samples. The session compiles as C++20:
-  OpenUSD's headers do not build as C++23 or later (a std::unique_ptr of an
-  incomplete type, which libstdc++'s constexpr unique_ptr rejects).
+  attribute its value and time samples. %flags shows the standard in use:
+  the profile asks for C++20, since OpenUSD's headers do not build as C++23
+  or later (a std::unique_ptr of an incomplete type, which libstdc++'s
+  constexpr unique_ptr rejects).
 """
 
 # OpenUSD's headers as of 26.11 do not compile as C++23 or later with
@@ -139,4 +140,4 @@ def configure(ctx):
     return Profile(name='usd', flags=flags, libs=libraries(root), prelude=[HERE / 'cpp_repl_usd.h'],
                    prompt='usd> ', blocks=[(re.compile(r'#usda '), 'usd')], diagnostics=DIAGNOSTICS,
                    completion=[include / d for d in COMPLETION], help=HELP,
-                   banner=f'OpenUSD {version(root)}', mounts=[root], notes=[STD_NOTE])
+                   banner=f'OpenUSD {version(root)}', mounts=[root], notes=[STD_NOTE], std=STD)

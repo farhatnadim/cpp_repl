@@ -340,6 +340,7 @@ class Session:
         self.inputs_run = 0      # inputs run from files
         self.skipped = 0         # inputs of files left unrun once the run stopped
         self.timeouts = 0        # inputs stopped at --timeout
+        self.interrupted = 0     # inputs Ctrl-C stopped
         self.program_ends = 0    # inputs that ended the program: a return from main, exit(), a crash
         self.end_status = None   # the exit status the first of those stands for (see _status)
 
@@ -498,6 +499,8 @@ class Session:
             self.restore(self.journal, how)
         elif result == 'interrupted':
             self.restore(self.journal, 'interrupted')
+        if result == 'interrupted':
+            self.interrupted += 1
         if result == 'timeout':
             self.timeouts += 1
             self.restore(self.journal, f'that input ran past {self.cfg.options.timeout:g} s')
@@ -530,9 +533,10 @@ class Session:
     def exit_status(self):
         """What cpp-repl exits with after running files: the status of the
         program's end, if main returned one, or it crashed or called exit()
-        with one; else 124, as timeout(1) reports it, if an input ran past
+        with one; else 130, as a shell reports Ctrl-C, if one stopped an
+        input; else 124, as timeout(1) reports it, if an input ran past
         --timeout; else 1 if an input failed; else 0."""
-        return self.end_status or (124 if self.timeouts else 1 if self.failures else 0)
+        return self.end_status or (130 if self.interrupted else 124 if self.timeouts else 1 if self.failures else 0)
 
     def _fresh(self):
         self.functions += 1
@@ -730,7 +734,7 @@ class Session:
             body = f'repl::keep_result([&]() -> decltype(auto) {{ return ({send.text}); }});'
         else:
             body = send.text
-        output, result = self._send(in_function(self._fresh(), f'repl::timeit([]{{ {body} }}, {self.cfg.opt_level});',
+        output, result = self._send(in_function(self._fresh(), f'repl::timeit([]{{ {body} }}, "{self.cfg.opt or "-O0"}");',
                                                 timed=False, exceptions=self.cfg.exceptions))
         return self._after(text, [], output, result, journal=False)
 

@@ -400,6 +400,25 @@ def test_ctrl_c_stops_an_input(tmp_path, monkeypatch, made):
     assert s.run_input('say("back");')
 
 
+def test_ctrl_c_under_batch_exits_130(tmp_path, monkeypatch, made):
+    """A Ctrl-C that stops an input of a --batch run ends it with 130, as a
+    shell reports Ctrl-C, where it used to count as a failed input (1)."""
+    s, stream = make(tmp_path, monkeypatch)
+    made.append(s)
+
+    def interrupt(signum, frame):
+        raise KeyboardInterrupt
+
+    previous = signal.signal(signal.SIGALRM, interrupt)
+    try:
+        signal.setitimer(signal.ITIMER_REAL, 0.5)
+        assert s.run_inputs(inputs_from_repl('say("one");\nhang();\nsay("two");\n'), echo=False) is False
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous)
+    assert s.exit_status() == 130 and s.interrupted == 1
+
+
 def test_undo_reset_and_journal(tmp_path, monkeypatch, made):
     s, stream = make(tmp_path, monkeypatch, batch=False)
     made.append(s)

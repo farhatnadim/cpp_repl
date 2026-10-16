@@ -188,7 +188,9 @@ def test_config_without_a_backend(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)   # -I inc is relative to where cpp-repl runs, not to --cwd
     cfg = Config(Options(cwd=sub, flags=['-O2', '-DFROM_CLI', '-I', 'inc']), backend=False)
     assert cfg.std == '-std=c++20' and any('raised' in n for n in cfg.notes)
-    assert cfg.opt == '-O2' and cfg.opt_level == 2
+    assert cfg.opt == '-O2'
+    # The build line of a %save-cpp file names the project file this session found.
+    assert cfg.command().startswith(f'cpp-repl --no-config -c {tmp_path / "cpp-repl.toml"} ')
     assert cfg.compiler_flags == ['-std=c++20', '-O2', '-I', str(tmp_path / 'inc'), '-DFROM_TOML=1',
                                   '-DFROM_CLI', '-iquote', str(PRELUDE_DIR), '-iquote', str(sub), '-DCPP_REPL=1']
     assert '-iquote' in cfg.cflags() and str(sub) in cfg.cflags()
@@ -216,9 +218,13 @@ def test_relative_paths(tmp_path, monkeypatch):
     assert flags[flags.index('-isystem') + 1] == str(proj / 'vendor' / 'include')
     assert flags[flags.index('-I') + 1] == str(proj / 'inc')
     monkeypatch.chdir(tmp_path)
-    assert cfg.command() == (f'cpp-repl -c {proj / "x.toml"} --compile-commands '
+    assert cfg.command() == (f'cpp-repl --no-config -c {proj / "x.toml"} --compile-commands '
                              f'{proj / "build" / "compile_commands.json"} -I {proj / "inc"} '
                              f'--lib {proj / "libx.so"}')
+    fake = tmp_path / 'clang-repl'
+    fake.touch()
+    assert f'--clang-repl {fake}' in Config(Options(cwd=tmp_path, no_config=True, clang_repl=str(fake)),
+                                           backend=False).command()
 
 
 def test_profiles_and_libraries_load_in_order(tmp_path):
@@ -290,6 +296,11 @@ def test_usd_profile_takes_the_install_of_the_build(tmp_path, monkeypatch):
     options = Options(cwd=tmp_path, no_config=True, profiles=['usd'], compile_commands=str(build))
     cfg = Config(options, backend=False)
     assert [lib.name for lib in cfg.libs] == ['libusd_arch.so', 'libusd_sdf.so', 'libusd_usd.so']
+    # The profile's note on its standard holds only while that standard is in use.
+    assert cfg.std == '-std=gnu++20' and cfg.profile_notes and 'gnu++20' in cfg.profile_notes[0]
+    with_std = Config(Options(cwd=tmp_path, no_config=True, profiles=['usd'], compile_commands=str(build),
+                              flags=['-std=gnu++23']), backend=False)
+    assert with_std.std == '-std=gnu++23' and with_std.profile_notes == []
     (build / 'CMakeCache.txt').write_text(f'USD_ROOT:PATH={tmp_path / "gone"}\n')
     monkeypatch.setenv('USD_ROOT', str(root))
     with pytest.raises(ConfigError, match='CMakeCache.txt has USD_ROOT=.*gone'):

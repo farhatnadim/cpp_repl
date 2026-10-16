@@ -2,7 +2,8 @@
 # `make help` lists the targets.
 
 PYTHON     ?= python3
-CLANG_REPL ?= $(shell command -v clang-repl 2>/dev/null || ls -1 /usr/bin/clang-repl-* 2>/dev/null | sort -V | tail -1)
+# The clang-repl cpp-repl itself would run: the newest one, as config.find_clang_repl picks it.
+CLANG_REPL ?= $(shell $(PYTHON) -c 'import sys; sys.path.insert(0, "src"); from cpp_repl.config import find_clang_repl; print(find_clang_repl())' 2>/dev/null)
 LLVM       ?= 23
 LLVM_REF   ?= llvmorg-23.1.3
 IMAGE      ?= cpp-repl:llvm$(LLVM)

@@ -71,6 +71,7 @@ class Profile:
     mounts: list = field(default_factory=list)       # directories `cpp-repl --docker` mounts
     base: Path | None = None                         # what relative paths in flags are relative to
     notes: list = field(default_factory=list)        # what the profile changed, said at the start and by %flags
+    std: str | None = None                           # the -std the profile asks for, when its notes depend on it
 
 
 # ---------------------------------------------------------------------------
@@ -643,9 +644,10 @@ class Config:
         if note:
             self.notes.append(note)
         self.opt = opt
-        self.opt_level = {None: 0, '-O': 1, '-O0': 0, '-O1': 1, '-O2': 2, '-O3': 3,
-                          '-Ofast': 3, '-Os': 2, '-Oz': 2, '-Og': 1}.get(opt, -1)
         self.flags = flags
+        # What a profile has to say stands whatever the command line, unless
+        # it is about the standard the profile asked for and another won.
+        self.profile_notes = [note for p in self.profiles for note in p.notes if p.std is None or p.std == self.std]
         # Whether the code compiles with exceptions: the function a statement
         # runs in catches an uncaught one only then (-fno-exceptions is a
         # project flag compile_commands.json keeps).
@@ -713,10 +715,9 @@ class Config:
         command line name, and settle on a compile_commands.json. Returns
         the TOML profiles, in order."""
         tomls = []
-        if not options.no_config:
-            project = find_project_file(cwd)
-            if project:
-                tomls.append(read_toml(project))
+        self.project_file = None if options.no_config else find_project_file(cwd)
+        if self.project_file:
+            tomls.append(read_toml(self.project_file))
         configs, names = list(options.configs), []
         for p in options.profiles:
             if p.endswith('.toml') or os.sep in p:
@@ -733,9 +734,6 @@ class Config:
         self.compile_commands = compile_commands_file(compile_commands) if compile_commands else None
         ctx = SimpleNamespace(compile_commands=self.compile_commands, env=os.environ, cwd=cwd)
         self.profiles = [load_profile(n, ctx) for n in names]
-        # What a profile has to say stands whatever the command line: the
-        # prompt's first line and %flags say it; a batch run does not.
-        self.profile_notes = [note for p in self.profiles for note in p.notes]
         return tomls
 
     def _flag_layers(self, options, tomls):
@@ -779,6 +777,14 @@ class Config:
             return str((self.here / Path(p).expanduser()).resolve())
 
         args = ['cpp-repl']
+        # The project file this session found, named, so that the line means
+        # the same from a directory where another would be found, or none.
+        if self.project_file:
+            args += ['--no-config', '-c', str(self.project_file)]
+        elif o.no_config:
+            args.append('--no-config')
+        if o.clang_repl:
+            args += ['--clang-repl', self.clang_repl or o.clang_repl]
         for p in o.profiles:
             args += ['-p', absolute(p) if p.endswith('.toml') or os.sep in p else p]
         for c in o.configs:

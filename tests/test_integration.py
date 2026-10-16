@@ -293,6 +293,21 @@ def test_an_exception_from_an_initialiser_is_named_before_the_rebuild(session):
     assert stream.getvalue().endswith('42\n')
 
 
+def test_a_char_array_prints_up_to_its_last_character(session):
+    """A buffer a C API filled (cudaDeviceProp::name, char[256]) prints its
+    string, not the nulls after it; a null inside still shows."""
+    s, stream = session
+    assert s.run_input('char name[16] = "RTX 3090";')
+    assert s.run_input('name')
+    assert stream.getvalue().endswith('"RTX 3090"\n')
+    assert s.run_input('char mid[6] = {\'a\', 0, \'b\'};')
+    assert s.run_input('mid')
+    assert stream.getvalue().endswith('"a\\0b"\n')
+    assert s.run_input('wchar_t wide[8] = L"wide";')
+    assert s.run_input('wide')
+    assert stream.getvalue().endswith('L"wide"\n')
+
+
 def test_names_can_be_declared_again(session):
     """A variable, a struct and a function declared again replace the old
     ones; a name a later input depends on stays, with the error."""

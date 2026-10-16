@@ -104,10 +104,13 @@ def serve(session, address):
     """Run the requests that reach address until %quit, Ctrl-C or SIGTERM."""
     path = Path(address)
     if path.exists():
+        if not path.is_socket():
+            sys.stderr.write(f'cpp-repl: {path} exists and is not a socket\n')
+            return 2
         if _listening(path):
             sys.stderr.write(f'cpp-repl: a server already listens at {path}\n')
             return 2
-        path.unlink()
+        path.unlink()   # a socket nothing answers at: left by a server that died
     server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     # Whoever connects runs code as this user, so the socket is this user's
     # alone (0600) from the moment it exists; bind() creates it under the umask.

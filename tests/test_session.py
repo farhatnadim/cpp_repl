@@ -578,6 +578,18 @@ def test_a_session_that_stays(tmp_path):
         server.wait()
 
 
+def test_serve_refuses_a_path_that_is_not_a_socket(tmp_path):
+    """cpp-repl --serve FILE, FILE being a regular file, used to replace the
+    file with the socket and delete it on exit."""
+    precious = tmp_path / 'precious.txt'
+    precious.write_text('keep me\n')
+    env = dict(os.environ, CPP_REPL_CLANG_REPL=str(FAKE), NO_COLOR='1')
+    run = subprocess.run([sys.executable, str(CPP_REPL), '--no-config', '--serve', 'precious.txt'], cwd=tmp_path,
+                         env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=60)
+    assert run.returncode == 2 and run.stderr == f'cpp-repl: precious.txt exists and is not a socket\n'
+    assert precious.read_text() == 'keep me\n'
+
+
 def test_a_reader_that_goes_away(tmp_path):
     """cpp-repl --batch f | head: a quiet exit, with the status a shell
     reports for a C program that SIGPIPE stopped."""

@@ -110,6 +110,8 @@ def test_completeness(text, state):
     ('auto f = [](int a) { return a; }', 'stmt', 'auto f = [](int a) { return a; };'),
     ('return x', 'stmt', in_function('f1', 'return x;')),
     ('x = 5', 'expr', 'x = 5'),
+    ('[](int x) { return x; }', 'expr', '[](int x) { return x; }'),
+    ('S::S() : x{1} { }', 'stmt', 'S::S() : x{1} { }'),
     ('for (auto p : v) {\n  f(p);\n}', 'stmt', in_function('f1', 'for (auto p : v) { f(p); }')),
     ('try { f(); } catch (...) { g(); }', 'stmt', in_function('f1', 'try { f(); } catch (...) { g(); }')),
     ('if (x) f(); else g();', 'stmt', in_function('f1', 'if (x) f(); else g();')),
@@ -172,6 +174,8 @@ def test_transform_without_wrapping():
     ('if (a) {} else if (b) {} else {} y;', [(True, 'if (a) {} else if (b) {} else {}'), (False, 'y;')]),
     ('do {} while (0); z;', [(True, 'do {} while (0);'), (False, 'z;')]),
     ('{ a(); } b();', [(True, '{ a(); }'), (False, 'b();')]),
+    ('S::S() : x{1}, y{2} { } for (;;) {}', [(False, 'S::S() : x{1}, y{2} { }'), (True, 'for (;;) {}')]),
+    ('void f() { } { a(); }', [(False, 'void f() { }'), (True, '{ a(); }')]),
 ])
 def test_split_statements(text, expected):
     tokens, _ = lex(text)
@@ -200,6 +204,26 @@ def test_directives_belong_to_the_next_statement():
     ('std::vector<int>{1, 2}', False),
     ('auto l = [] { return 1; };', False),
     ('for (;;) {}', False),
+    # The shapes a function definition takes.
+    ('S::S() : x{1} { }', True),
+    ('S::S(int v) : Base<T>(v)..., x_{v}, y(v) { }', True),
+    ('void f() requires Num<int> { }', True),
+    ('template <class T> requires Num<T> T f(T x) { return x; }', True),
+    ('int f() try { return 1; } catch (...) { return 2; }', True),
+    ('auto f() -> std::vector<int> { return {}; }', True),
+    ('int f() const & noexcept(true) { return 1; }', True),
+    ('constexpr long double operator""_kg(long double x) { return x * 1000; }', True),
+    ('inline namespace v1 { int k; }', True),
+    ('static void f() { }', True),
+    ('[[nodiscard]] int f() { return 1; }', True),
+    ('template <class T> concept Num = std::is_arithmetic_v<T>;', True),
+    # What is not one, though it ends in '}'.
+    ('[](int x) { return x; }', False),
+    ('[]() mutable { }', False),
+    ('std::array<int, (N > 2)> arr{1}', False),
+    ('S s{[](int x) { return x; }}', False),
+    ('S::S() = default;', False),
+    ('int f(), g();', False),
 ])
 def test_is_definition(text, definition):
     assert is_definition(text) is definition
@@ -301,6 +325,8 @@ def test_an_open_raw_string_is_unclosed():
     ('TF_DEFINE_PRIVATE_TOKENS(_tokens, ((a, "a")));', False),
     ('DEFINE_bool(verbose, false, "say more");', False),
     ('PXR_NAMESPACE_USING_DIRECTIVE;', False),
+    ('[](int x) { return x; };', True),
+    ('S::S() : x{1} { }', False),
 ])
 def test_needs_function(text, wrapped):
     tokens, _ = lex(text)

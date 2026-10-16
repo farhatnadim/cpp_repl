@@ -161,19 +161,31 @@ def _match(tokens, i):
     return len(tokens) - 1
 
 
+def _initialiser_brace(tokens, j, mem_inits):
+    """Whether the '{' at j opens an initialiser rather than a block or a
+    body: `x{1}` among a constructor's member initialisers (mem_inits: a
+    ')' and a ':' came before), which the body's '{' follows."""
+    return mem_inits and j > 0 and (tokens[j - 1].kind == 'ident' or tokens[j - 1].text == '>')
+
+
 def _plain_end(tokens, i):
     """End of a statement that is not control flow: its ';' at depth 0. A '}'
-    closing a top-level block also ends it when control flow follows."""
-    depth = 0
+    closing a top-level block also ends it when control flow or another
+    block follows."""
+    depth, mem_inits, initialiser = 0, False, False
     for j in range(i, len(tokens)):
         t = tokens[j]
         if t.kind != 'op':
             continue
         if t.text in '([{':
+            if depth == 0 and t.text == '{':
+                initialiser = _initialiser_brace(tokens, j, mem_inits)
             depth += 1
         elif t.text in ')]}':
             depth -= 1
-            if depth == 0 and t.text == '}' and j + 1 < len(tokens):
+            if depth == 0 and t.text == ')' and _is(tokens, j + 1, ':'):
+                mem_inits = True
+            if depth == 0 and t.text == '}' and not initialiser and j + 1 < len(tokens):
                 after = tokens[j + 1]
                 if (after.kind == 'ident' and after.text in CONTROL) or _is(tokens, j + 1, '{'):
                     return j
@@ -611,31 +623,71 @@ def _statement_shaped(toks):
     return _declaration(code) or (code[0].kind == 'ident' and code[0].text in ('return', 'throw'))
 
 
+_DEFINITION_HEADS = {'struct', 'class', 'union', 'enum', 'template', 'typedef', 'namespace', 'using',
+                     'extern', 'concept'}
+# What may stand between a function's parameter list and its body's '{'.
+_BEFORE_BODY = {')', 'const', 'volatile', 'override', 'final', 'noexcept', '&', '&&', 'try'}
+
+
+def _skip_initialisers(tokens, i):
+    """Index past a constructor's member initialisers starting at i, after
+    the ':': `x(1), y{2}, Base<T>(args)...`, up to the body's '{'."""
+    n = len(tokens)
+    while i < n:
+        while i < n and (tokens[i].kind == 'ident' or _is(tokens, i, '::')):
+            i += 1
+        if _is(tokens, i, '<'):
+            i = _angle_end(tokens, i)
+        if not (_is(tokens, i, '(') or _is(tokens, i, '{')):
+            break
+        i = _match(tokens, i) + 1
+        if _is(tokens, i, '...'):
+            i += 1
+        if not _is(tokens, i, ','):
+            break
+        i += 1
+    return i
+
+
 def _definition(tokens):
     """is_definition() for an input already lexed."""
     tokens = [t for t in tokens if t.kind != 'directive']
-    if not tokens:
+    i, n = _skip_attributes(tokens, 0), len(tokens)
+    if i >= n or _is(tokens, i, '['):   # nothing, or a lambda
         return False
-    head = tokens[0].text
-    if head in ('struct', 'class', 'union', 'enum', 'template', 'typedef', 'namespace', 'using',
-                'extern'):
+    while i < n and tokens[i].kind == 'ident' and tokens[i].text in ('inline', 'static', 'constexpr', 'consteval',
+                                                                     'constinit', 'export'):
+        i += 1
+    head = tokens[i].text if i < n else ''
+    if head in _DEFINITION_HEADS:
         return True
-    if head in CONTROL or not _is(tokens, len(tokens) - 1, '}'):
+    if head in CONTROL or not _is(tokens, n - 1, '}'):
         return False
-    depth, returns = 0, False
-    for i, t in enumerate(tokens):
-        if t.kind != 'op':
-            continue
-        if t.text == '=' and depth == 0:
-            return False
-        if t.text == '->' and depth == 0 and i > 0 and tokens[i - 1].text in (')', 'const', 'noexcept'):
-            returns = True   # a trailing return type: auto f() -> int { ... }
-        if t.text == '{' and depth == 0:
-            return returns or (i > 0 and tokens[i - 1].text in (')', 'const', 'override', 'final', 'noexcept'))
-        if t.text in '([{':
-            depth += 1
-        elif t.text in ')]}':
-            depth -= 1
+    # A function definition: a parameter list, then its trailers (const,
+    # noexcept, -> T, requires C<T>, a constructor's member initialisers),
+    # then the body. An '=' at depth 0 makes it a declaration with an
+    # initialiser instead.
+    depth, params, trailing = 0, False, False
+    while i < n:
+        t = tokens[i]
+        if t.kind == 'ident' and t.text == 'requires' and depth == 0 and params:
+            trailing = True
+        elif t.kind == 'op':
+            if depth == 0:
+                if t.text == '=':
+                    return False
+                if t.text == '->' and params:
+                    trailing = True
+                elif t.text == ':' and params:
+                    return _is(tokens, _skip_initialisers(tokens, i + 1), '{')
+                elif t.text == '{':
+                    return params and (trailing or tokens[i - 1].text in _BEFORE_BODY)
+            if t.text in '([{':
+                depth += 1
+            elif t.text in ')]}':
+                depth -= 1
+                params = params or (depth == 0 and t.text == ')')
+        i += 1
     return False
 
 

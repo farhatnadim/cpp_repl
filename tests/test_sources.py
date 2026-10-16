@@ -61,6 +61,8 @@ def test_where_file_scope_items_end():
         ['int f() try { return 1; } catch (...) { return 2; }', 'return f();']
     assert inputs_from_cpp('namespace n { int k; }\nextern "C" { int c(); }\nint main() {}') == \
         ['namespace n { int k; }', 'extern "C" { int c(); }']
+    assert inputs_from_cpp('S::S() : x{1}, y(2) { }\nS::~S() { }\nint main() {}') == \
+        ['S::S() : x{1}, y(2) { }', 'S::~S() { }']
 
 
 def test_main_parameters_get_stand_ins():

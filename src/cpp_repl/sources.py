@@ -4,8 +4,8 @@ import re
 import textwrap
 from pathlib import Path
 
-from .lexer import (_CONDITIONAL, Origin, _angle_end, _is, _match, completeness, lex, located,
-                    split_statements)
+from .lexer import (_CONDITIONAL, Origin, _angle_end, _initialiser_brace, _is, _match, completeness, lex,
+                    located, split_statements)
 
 CPP_SUFFIXES = {'.cpp', '.cc', '.cxx', '.c++', '.C', '.h', '.hh', '.hpp', '.hxx', '.h++'}
 
@@ -120,6 +120,7 @@ def _item_end(tokens, i):
     (`struct S { } s;`) ends nothing, and a function-try-block goes on with
     its handlers."""
     depth, initialiser, type_body = 0, False, _declares_type(tokens, i)
+    mem_inits, mem_init = False, False   # reading a constructor's member initialisers; inside one
     for j in range(i, len(tokens)):
         t = tokens[j]
         if t.kind != 'op':
@@ -127,10 +128,14 @@ def _item_end(tokens, i):
         if t.text == '=' and depth == 0:
             initialiser = True
         elif t.text in '([{':
+            if depth == 0 and t.text == '{':
+                mem_init = _initialiser_brace(tokens, j, mem_inits)
             depth += 1
         elif t.text in ')]}':
             depth -= 1
-            if (depth == 0 and t.text == '}' and not initialiser and not type_body
+            if depth == 0 and t.text == ')' and _is(tokens, j + 1, ':'):
+                mem_inits = True
+            if (depth == 0 and t.text == '}' and not initialiser and not type_body and not mem_init
                     and not _is(tokens, j + 1, ';') and not _is(tokens, j + 1, 'catch', 'ident')):
                 return j
         elif t.text == ';' and depth == 0:

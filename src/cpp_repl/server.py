@@ -30,16 +30,30 @@ from .sources import inputs_from_cpp, inputs_from_repl, is_cpp
 
 
 class _Frames:
-    """A stream whose writes reach the client as {"out": TEXT} lines."""
+    """A stream whose writes reach the client as {"out": TEXT} lines. Once
+    the client has gone, gone is set and writes are dropped: the input that
+    is running is still read to its end, so that the journal and clang-repl
+    stay in step, and the run stops there (Session.run_inputs). An error
+    raised from inside the backend's read would leave its output in the
+    pipe, for the next client to receive."""
 
     def __init__(self, f):
         self.f = f
+        self.gone = False
 
     def write(self, text):
-        self.f.write((json.dumps({'out': text}, ensure_ascii=False) + '\n').encode())
+        if not self.gone:
+            try:
+                self.f.write((json.dumps({'out': text}, ensure_ascii=False) + '\n').encode())
+            except OSError:   # BrokenPipeError, ConnectionResetError
+                self.gone = True
 
     def flush(self):
-        self.f.flush()
+        if not self.gone:
+            try:
+                self.f.flush()
+            except OSError:
+                self.gone = True
 
 
 def _inputs(request, session):
@@ -56,11 +70,12 @@ def _inputs(request, session):
 
 
 def _run(session, f):
-    """Answer one request. Returns False after %quit."""
+    """Answer one request. Returns None to go on, or the status to stop
+    with: 0 after %quit, 1 after SIGTERM or SIGHUP (cli.py's handlers)."""
     try:
         request = json.loads(f.readline() or b'{}')
     except ValueError:
-        return True
+        return None
     frames = _Frames(f)
     session.out = JsonOutput(frames) if request.get('json') else Output(frames)
     session.echo = not (request.get('quiet') or request.get('json'))
@@ -73,21 +88,23 @@ def _run(session, f):
         options.stop_on_error = True
     if request.get('diagnostics'):
         diagnostics.brief = request['diagnostics'] == 'brief'
-    go_on = True
+    stop = None
     try:
         if request.get('fresh'):
             session.restore([], 'fresh', note=False)
         session.run_inputs(_inputs(request, session), echo=True)
-    except SystemExit:   # %quit
-        go_on = False
+    except SystemExit as e:   # %quit, or a signal
+        stop = e.code if isinstance(e.code, int) else int(e.code is not None)
     finally:
         options.timeout, options.stop_on_error, diagnostics.brief = before
+    if frames.gone:   # nobody to answer
+        return stop
     status = session.exit_status()
     if request.get('json'):
         session.out.finish(status, session)
     f.write((json.dumps({'exit': status}) + '\n').encode())
     f.flush()
-    return go_on
+    return stop
 
 
 def _listening(path):
@@ -130,14 +147,15 @@ def serve(session, address):
     try:
         while True:
             conn, _ = server.accept()
-            with conn, conn.makefile('rwb') as f:
-                try:
-                    if not _run(session, f):
-                        return 0
-                except (BrokenPipeError, ConnectionResetError):
-                    pass   # the client went away; the session stays
-                finally:
-                    session.out = Output(sys.stderr)
+            try:
+                with conn, conn.makefile('rwb') as f:   # closing f flushes, which may raise too
+                    stop = _run(session, f)
+            except (BrokenPipeError, ConnectionResetError):
+                stop = None   # the client went away; the session stays
+            finally:
+                session.out = Output(sys.stderr)
+            if stop is not None:
+                return stop
     except KeyboardInterrupt:
         return 130
     finally:

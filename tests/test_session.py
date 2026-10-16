@@ -578,6 +578,46 @@ def test_a_session_that_stays(tmp_path):
         server.wait()
 
 
+def test_a_client_that_goes_away_mid_run(tmp_path):
+    """A --connect client killed while its output streams: the server reads
+    the input it is on to its end, stops the run there, and the next client
+    gets a clean session whose journal holds what ran. SIGTERM then ends the
+    server with 1, as cpp-repl's handler says."""
+    env = dict(os.environ, CPP_REPL_CLANG_REPL=str(FAKE), NO_COLOR='1')
+    server = subprocess.Popen([sys.executable, str(CPP_REPL), '--no-config', '--serve', 'repl.sock'], cwd=tmp_path,
+                              env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
+    def client(*args, stdin=''):
+        return subprocess.run([sys.executable, str(CPP_REPL), '--connect', 'repl.sock', *args], cwd=tmp_path,
+                              env=env, input=stdin, capture_output=True, text=True, timeout=60)
+
+    try:
+        for _ in range(200):
+            if (tmp_path / 'repl.sock').exists():
+                break
+            time.sleep(0.05)
+        (tmp_path / 'big.repl').write_text(''.join(f'say("line {i}");\n' for i in range(2000)))
+        gone = subprocess.Popen([sys.executable, str(CPP_REPL), '--connect', 'repl.sock', '-q', 'big.repl'],
+                                cwd=tmp_path, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                stderr=subprocess.DEVNULL)
+        assert gone.stdout.readline() == b'line 0\n'
+        gone.kill()
+        gone.wait()
+        after = client('--json', stdin='42\n')
+        records = [json.loads(line) for line in after.stdout.splitlines()]
+        assert [r.get('output') for r in records if 'input' in r] == ['42\n'], after.stdout   # none of big.repl's
+        assert records[-1] == {'exit': 0, 'inputs': 1, 'failures': 0, 'skipped': 0}
+        entries = [line for line in client(stdin='%journal\n').stdout.splitlines() if line[:3].strip().isdigit()]
+        assert entries[0].endswith(' say("line 0");') and entries[-1].endswith(' 42')
+        assert 2 < len(entries) < 2001   # the run stopped once the client was found gone
+        server.send_signal(signal.SIGTERM)
+        assert server.wait(timeout=30) == 1
+        assert not (tmp_path / 'repl.sock').exists()
+    finally:
+        server.kill()
+        server.wait()
+
+
 def test_serve_refuses_a_path_that_is_not_a_socket(tmp_path):
     """cpp-repl --serve FILE, FILE being a regular file, used to replace the
     file with the socket and delete it on exit."""

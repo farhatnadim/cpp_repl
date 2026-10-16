@@ -126,6 +126,12 @@ class Output:
         if not self.at_line_start:
             self.write('\n')
 
+    @property
+    def gone(self):
+        """Whether whoever read the stream has gone, as a --connect client
+        that died has: a run then stops after the input it is on."""
+        return getattr(self._stream, 'gone', False)
+
     def note(self, text):
         """A line of cpp-repl's own, about the input that ran."""
         self.end_line()
@@ -656,6 +662,11 @@ class Session:
                     return False
             finally:
                 self.out.end()
+            if self.out.gone:
+                # The input was read to its end, so the journal and clang-repl
+                # agree; nobody is left to run the rest for.
+                self._left_unrun(len(inputs) - i - 1, 'the client went away')
+                return False
         return True
 
     def _left_unrun(self, left, why):

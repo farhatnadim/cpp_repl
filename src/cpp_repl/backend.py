@@ -169,13 +169,14 @@ class Backend:
         dropped. echo(text) receives whole lines as they arrive. Returns
         (output, alive). With a deadline in seconds, raises BackendError when
         it passes."""
-        tok, pieces, first = token.encode(), [], [True]
+        tok, pieces, first = token.encode(), [], True
         until = time.monotonic() + deadline if deadline else None
         stuck_by = None   # when to give up on the marker after the error limit
 
         def emit(data):
-            if first[0] and data:
-                first[0] = False
+            nonlocal first
+            if first and data:
+                first = False
                 if self.prompt and data.startswith(self.prompt):
                     data = data[len(self.prompt):]
             text = ''.join(line for line in data.decode('utf-8', 'replace').splitlines(keepends=True)

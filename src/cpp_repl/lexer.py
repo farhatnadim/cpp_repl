@@ -30,9 +30,9 @@ CONTINUES = {'=', ',', '<<', '&&', '||', '+', '-', '/', '%', '|', '^', '?', ':',
              '&=', '|=', '^=', '<<=', '>>='}
 
 # What to send for one input. text is a single line, or several lines when
-# file is set: then the input goes to clang-repl through a temporary file and
-# an #include, which keeps the lines a preprocessor directive needs.
-Send = namedtuple('Send', 'text kind file')
+# via_file is set: then the input goes to clang-repl through a temporary file
+# and an #include, which keeps the lines a preprocessor directive needs.
+Send = namedtuple('Send', 'text kind via_file')
 
 # Where an input starts in its source: the path, the line (from 1) and column
 # (from 0) of its first character, and how many columns its later lines lost
@@ -347,14 +347,6 @@ TYPE_WORDS = {'auto', 'int', 'char', 'bool', 'float', 'double', 'void', 'wchar_t
 _AFTER_CAPTURES = {'(', '{', '<', '->'}
 _LAMBDA_WORDS = {'mutable', 'constexpr', 'consteval', 'noexcept', 'static'}
 
-_names = itertools.count(1)
-
-
-def fresh_name():
-    """A function name no input uses: cpp_repl_1, cpp_repl_2, ..."""
-    return f'cpp_repl_{next(_names)}'
-
-
 def angle_end(tokens, i):
     """Index just past the template argument list opening at tokens[i]. A
     bracketed part, as in enable_if_t<(N > 4)>, is skipped whole."""
@@ -562,19 +554,25 @@ def _end(toks):
     return toks[-1].start + len(toks[-1].text)
 
 
-def transform(text, wrap=True, fresh=fresh_name, origin=None, statement=False):
+def transform(text, wrap=True, fresh=None, origin=None, as_statement=False):
     """What to send to clang-repl for one input, as a Send whose kind is 'pp',
     'stmt', 'expr' or 'empty'. A statement that cannot run at top level (see
-    needs_function) runs as the body of a new function named fresh();
+    needs_function) runs as the body of a new function named fresh()
+    (cpp_repl_1, cpp_repl_2, ... for this call, when no fresh is given);
     wrap=False leaves every statement as it is, for code that goes inside a
     function anyway. A block of preprocessor lines (an #if region), or code
     holding a directive other than a #pragma, goes through a file. With
-    statement set, a bare expression is sent as a statement.
+    as_statement set, a bare expression is sent as a statement.
 
     With an origin (see Origin), code and #if regions go through a file in
     which they sit at their source's lines and columns. An input with a line
     splice outside a directive goes as one line, as without an origin."""
     s = unsplice(text).strip()
+    if fresh is None:
+        names = itertools.count(1)
+
+        def fresh():
+            return f'cpp_repl_{next(names)}'
     if origin is not None:
         origin = located(origin, text, len(text) - len(text.lstrip())) if s == text.strip() else None
     if CONDITIONAL_LINE.match(s):
@@ -591,8 +589,8 @@ def transform(text, wrap=True, fresh=fresh_name, origin=None, statement=False):
         return Send('', 'empty', False)
     lines = needs_lines(tokens)
     if len(stmts) == 1 and open_end(*stmts[0]) and _statement_shaped(stmts[0][0]):
-        statement = True   # `int x = 5` without its ';': a statement, with no value to print
-    if not statement and not lines and len(stmts) == 1 and open_end(*stmts[0]):
+        as_statement = True   # `int x = 5` without its ';': a statement, with no value to print
+    if not as_statement and not lines and len(stmts) == 1 and open_end(*stmts[0]):
         toks = stmts[0][0]
         if origin:
             # The caller writes the expression into a call: its first line
@@ -601,7 +599,7 @@ def transform(text, wrap=True, fresh=fresh_name, origin=None, statement=False):
         return Send(join(toks), 'expr', False)
     parts = []
     for toks, control in stmts:
-        semicolon = statement and open_end(toks, control)
+        semicolon = as_statement and open_end(toks, control)
         if origin:
             line = _place(s, toks[0].start, _end(toks), origin) + (';' if semicolon else '')
         else:

@@ -391,9 +391,10 @@ class Session:
         return output, outcome(output)
 
     def _after(self, text, sent, output, result, kind='stmt', journal=True, again=None):
-        """Journal or recover after an input ran. Returns True if it worked,
-        or in batch mode if the session can go on. again(), when given, runs
-        the input once more."""
+        """Journal or recover after an input ran. Returns whether the run
+        goes on: always at the prompt, where the session is rebuilt as
+        needed; in a batch run, unless clang-repl died or was interrupted.
+        again(), when given, runs the input once more."""
         if result == 'ok':
             if journal:
                 self.journal.append(Entry(text, sent, kind))
@@ -440,9 +441,7 @@ class Session:
         if result == 'timeout':
             self.timeouts += 1
             self.restore(self.journal, f'that input ran past {self.cfg.options.timeout:g} s')
-        if self.batch:
-            return result not in ('dead', 'interrupted')
-        return False
+        return not self.batch or result not in ('dead', 'interrupted')
 
     def _program_ended(self, status):
         """The program is over, as the compiled one would be: main returned,
@@ -521,7 +520,7 @@ class Session:
             # because a lambda in a top-level statement crashes clang-repl 23.
             printed = in_function(self._fresh(), 'struct cpp_repl_tag; '
                                   f'repl::print_expr((({send.text}), repl::printer<cpp_repl_tag>{{}}));')
-            line = self._file(printed) if send.file else printed
+            line = self._file(printed) if send.via_file else printed
             output, result = self._send(line, echo=False)
             if result != 'error':
                 if VOID_MARK in output:
@@ -529,12 +528,12 @@ class Session:
                 if not (result == 'link' and self.tainted):   # else it runs again, with a note
                     self._show(output)
                 self._show_end()
-                return self._after(text, [line], output, result, kind, again=again) or not self.batch
+                return self._after(text, [line], output, result, kind, again=again)
             # Not something print_expr takes. The attempt failed to compile,
             # which can leave stale instantiations behind like any error.
             self.tainted = True
-            send, kind = transform(text, fresh=self._fresh, origin=origin, statement=True), 'stmt'
-        line = self._file(send.text) if send.file else send.text
+            send, kind = transform(text, fresh=self._fresh, origin=origin, as_statement=True), 'stmt'
+        line = self._file(send.text) if send.via_file else send.text
         output, result = self._send(line, hold=_REDEFINED.search if redefine and kind == 'stmt' else None)
         if self.held:
             held, self.held = self.held, ''   # the redefinition's own inputs reset it
@@ -548,7 +547,7 @@ class Session:
             if m and m.group(1) in _NEWER_HEADERS:
                 self._note(f'[<{m.group(1)}> is C++23, in {_NEWER_HEADERS[m.group(1)]}: this clang-repl\'s '
                            'standard library lacks it]')
-        return self._after(text, [line], output, result, kind, again=again) or not self.batch
+        return self._after(text, [line], output, result, kind, again=again)
 
     def _declares(self, entry, name):
         return entry.kind == 'stmt' and name in declared_names(lex(unsplice(entry.text))[0])
@@ -627,7 +626,7 @@ class Session:
 
     def _timeit(self, text):
         send = transform(text, wrap=False)
-        if send.kind in ('empty', 'pp') or send.file:
+        if send.kind in ('empty', 'pp') or send.via_file:
             self.out.write('usage: %timeit STATEMENT or %timeit EXPRESSION\n')
             return True
         if send.kind == 'expr':
@@ -636,7 +635,7 @@ class Session:
         else:
             body = send.text
         output, result = self._send(in_function(self._fresh(), f'repl::timeit([]{{ {body} }}, {self.cfg.opt_level});'))
-        return self._after(text, [], output, result, journal=False) or not self.batch
+        return self._after(text, [], output, result, journal=False)
 
     # -- saving -----------------------------------------------------------
 
@@ -750,7 +749,7 @@ class Session:
             output, result = self._send(line)
             if result == 'ok' and ANY_ERROR.search(plain(output)):
                 result = 'error'
-            return self._after(text, [line], output, result, 'lib') or not self.batch
+            return self._after(text, [line], output, result, 'lib')
         elif name == '%time':
             if not arg:
                 self.out.write('usage: %time INPUT\n')

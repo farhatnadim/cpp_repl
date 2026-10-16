@@ -18,7 +18,8 @@ PRELUDE_NAMES = frozenset({'cpp_repl.h', 'cpp_repl_std.h', 'cpp_repl_usd.h', 'cp
 class Input(str):
     """The text of one input, and its origin (see lexer.Origin): where in a
     file it starts, or None when that is not known. An input typed at the
-    prompt is a plain str."""
+    prompt is a plain str. A str method (strip, join) returns a plain str,
+    without the origin: take the origin first."""
 
     def __new__(cls, text, origin=None):
         self = super().__new__(cls, text)

@@ -602,40 +602,8 @@ class Config:
         cwd = Path(options.cwd or self.here)
         self.notes = []
 
-        # cpp-repl.toml files and profiles.
-        tomls = []
-        if not options.no_config:
-            project = find_project_file(cwd)
-            if project:
-                tomls.append(read_toml(project))
-        configs, names = list(options.configs), []
-        for p in options.profiles:
-            if p.endswith('.toml') or os.sep in p:
-                configs.append(p)
-            elif p not in names:
-                names.append(p)
-        tomls += [read_toml(c) for c in configs]
-        for t in tomls:
-            names = [n for n in t.profiles if n not in names] + names
-        self.tomls = tomls
-
-        compile_commands = options.compile_commands
-        if compile_commands is None:
-            compile_commands = next((t.compile_commands for t in reversed(tomls) if t.compile_commands), None)
-        self.compile_commands = compile_commands_file(compile_commands) if compile_commands else None
-
-        ctx = SimpleNamespace(compile_commands=self.compile_commands, env=os.environ, cwd=cwd)
-        self.profiles = [load_profile(n, ctx) for n in names]
-        self.notes += [note for p in self.profiles for note in p.notes]
-
-        layers = [parse_flags(p.flags) for p in self.profiles]
-        if self.compile_commands:
-            entry = compile_commands_entry(self.compile_commands, options.files)
-            layers.append(compile_command_flags(entry, self.notes))
-        layers += [parse_flags(t.flags, t.base) for t in tomls]
-        cli = list(options.flags) + (['-march=native'] if options.native else [])
-        layers.append(parse_flags(cli, self.here))
-        flags, std, opt, included = merge_flags(layers)
+        tomls = self._read_configuration(options, cwd)
+        flags, std, opt, included = merge_flags(self._flag_layers(options, tomls))
         sanitizers = [f for f in flags if f.startswith('-fsanitize=')]
         if sanitizers:
             raise ConfigError(f'{sanitizers[0]}: clang-repl\'s JIT cannot run sanitized code. Leave it out, or '
@@ -714,6 +682,46 @@ class Config:
         self.prologue += ['prctl(PR_SET_DUMPABLE, 0, 0, 0, 0);'] if sys.platform.startswith('linux') else []
         self.prologue += ['setvbuf(stdout, nullptr, _IONBF, 0);']   # keep stdout in step with stderr
         self.prologue += [f'%lib {lib}' for lib in self.libs]
+
+    def _read_configuration(self, options, cwd):
+        """Read the cpp-repl.toml files, load the profiles they and the
+        command line name, and settle on a compile_commands.json. Returns
+        the TOML profiles, in order."""
+        tomls = []
+        if not options.no_config:
+            project = find_project_file(cwd)
+            if project:
+                tomls.append(read_toml(project))
+        configs, names = list(options.configs), []
+        for p in options.profiles:
+            if p.endswith('.toml') or os.sep in p:
+                configs.append(p)
+            elif p not in names:
+                names.append(p)
+        tomls += [read_toml(c) for c in configs]
+        for t in tomls:
+            names = [n for n in t.profiles if n not in names] + names
+        self.tomls = tomls
+        compile_commands = options.compile_commands
+        if compile_commands is None:
+            compile_commands = next((t.compile_commands for t in reversed(tomls) if t.compile_commands), None)
+        self.compile_commands = compile_commands_file(compile_commands) if compile_commands else None
+        ctx = SimpleNamespace(compile_commands=self.compile_commands, env=os.environ, cwd=cwd)
+        self.profiles = [load_profile(n, ctx) for n in names]
+        self.notes += [note for p in self.profiles for note in p.notes]
+        return tomls
+
+    def _flag_layers(self, options, tomls):
+        """The parsed flags of each source, lowest precedence first: the
+        profiles, compile_commands.json, the TOML files, the command line."""
+        layers = [parse_flags(p.flags) for p in self.profiles]
+        if self.compile_commands:
+            entry = compile_commands_entry(self.compile_commands, options.files)
+            layers.append(compile_command_flags(entry, self.notes))
+        layers += [parse_flags(t.flags, t.base) for t in tomls]
+        cli = list(options.flags) + (['-march=native'] if options.native else [])
+        layers.append(parse_flags(cli, self.here))
+        return layers
 
     # -- what profiles add -------------------------------------------------
 

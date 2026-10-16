@@ -141,7 +141,7 @@ def test_completeness(text, state):
 ])
 def test_transform(text, kind, sent):
     send = transform(text, fresh=fresh())
-    assert (send.kind, send.text, send.file) == (kind, sent, False)
+    assert (send.kind, send.text, send.via_file) == (kind, sent, False)
 
 
 def test_in_function():
@@ -159,7 +159,7 @@ def test_regions_and_block_directives_go_through_a_file():
     assert transform(region) == (region, 'pp', True)
     block = 'for (int i = 0; i < 2; ++i) {\n#ifdef X\n  f(i);\n#endif\n}'
     send = transform(block, fresh=fresh())
-    assert send.kind == 'stmt' and send.file
+    assert send.kind == 'stmt' and send.via_file
     assert '\n#ifdef X\n' in send.text and '\n#endif\n' in send.text
     assert 'repl::ended f1() { try { for' in send.text
 
@@ -289,7 +289,7 @@ def test_an_input_sits_at_its_source_lines_and_columns():
 def test_a_placed_expression_and_its_statement():
     send = transform('v.size()', origin=ORIGIN)
     assert send == ('\n#line 7 "prog.cpp"\n  v.size()', 'expr', True)
-    send = transform('v.size()  // a comment', origin=ORIGIN, statement=True, fresh=fresh())
+    send = transform('v.size()  // a comment', origin=ORIGIN, as_statement=True, fresh=fresh())
     assert send.text == in_function('f1', '\n#line 7 "prog.cpp"\n  v.size();\n')
 
 
@@ -300,7 +300,7 @@ def test_what_keeps_no_place():
     assert transform('#include <vector>', origin=ORIGIN) == ('#line 7 "prog.cpp"\n  #include <vector>', 'pp', True)
     send = transform('int a = \\\n  1;', origin=ORIGIN)   # a line splice: one line, as without an origin
     assert send == ('int a = 1;', 'stmt', False)
-    assert transform('x', statement=True, fresh=fresh()).text == in_function('f1', 'x;')
+    assert transform('x', as_statement=True, fresh=fresh()).text == in_function('f1', 'x;')
 
 
 def test_located():

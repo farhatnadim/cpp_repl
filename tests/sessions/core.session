@@ -139,3 +139,50 @@ c++> Lazy{}.m()
 c++> namespace lam { auto f = [] { return 1; }; }
 c++> lam::f()
 1
+c++> int arr[3] = {1, 2, 3};
+c++> arr
+[1, 2, 3]
+c++> enum class Shade { light, dark };
+c++> std::ostream &operator<<(std::ostream &os, Shade s) { return os << (s == Shade::light ? "light" : "dark"); }
+c++> Shade::dark
+dark
+c++> std::vector<Shade>{Shade::light, Shade::dark}
+[light, dark]
+c++> L"wide"
+L"wide"
+c++> std::wstring(L"wé\U0001F600")
+L"w\u00e9\U0001f600"
+c++> u8"xé"
+u8"x\xc3\xa9"
+c++> u"sixteen"
+u"sixteen"
+c++> std::nullopt
+nullopt
+c++> std::variant<int, std::string> var = "hi";
+c++> var
+"hi"
+c++> std::variant<std::monostate, int>{}
+monostate
+c++> int seven = 7;
+c++> std::ref(seven)
+7
+c++> std::atomic<int>{7}
+7
+c++> std::make_shared<int>(5)
+0x… -> 5
+c++> std::unique_ptr<int>()
+nullptr
+c++> std::make_unique<std::vector<int>>(2, 9)
+0x… -> [9, 9]
+c++> std::any(std::string("s"))
+any(std::string)
+c++> (__int128)1 << 100
+1267650600228229401496703205376
+c++> [](int x) { return x; }
+<any>
+c++> struct Handle { explicit operator bool() const { return true; } };
+c++> Handle{}
+<Handle>
+[Handle prints as <Handle>: an operator<<, or a repl::Put<Handle> specialisation, gives it a printer]
+c++> std::pair<std::variant<int, double>, std::optional<int>>{2.5, std::nullopt}
+(2.5, nullopt)

@@ -4,7 +4,9 @@
 // expression of them such as A * B, is evaluated and shown with its shape,
 // its elements right-aligned in columns. As NumPy does with a large array,
 // past 10 rows or columns only the first and last three are shown. Inside a
-// list it prints as nested brackets.
+// list it prints as nested brackets. A comma initialiser (`m << 1, 2, 3`)
+// prints the matrix it filled; a quaternion is Quaternion(w, x, y, z), an
+// angle-axis AngleAxis(angle, [axis]), and a transform its matrix.
 
 #pragma once
 
@@ -106,6 +108,62 @@ struct Put<T> {
       os << ']';
     }
     os << ']';
+  }
+};
+
+// `m << 1, 2, 3` as a bare expression is a comma initialiser: it prints the
+// matrix it filled. finished() checks that every coefficient was set and
+// hands the matrix back; it is not const, though it changes nothing, and
+// the initialiser printed is never a const object.
+template <class M>
+struct Show<Eigen::CommaInitializer<M>> {
+  static void show(const Eigen::CommaInitializer<M> &c)
+  {
+    Show<M>::show(const_cast<Eigen::CommaInitializer<M> &>(c).finished());
+  }
+};
+
+template <class M>
+struct Put<Eigen::CommaInitializer<M>> {
+  static void put(std::ostream &os, const Eigen::CommaInitializer<M> &c)
+  {
+    Put<M>::put(os, const_cast<Eigen::CommaInitializer<M> &>(c).finished());
+  }
+};
+
+template <class Scalar, int Options>
+struct Put<Eigen::Quaternion<Scalar, Options>> {
+  static void put(std::ostream &os, const Eigen::Quaternion<Scalar, Options> &q)
+  {
+    os << "Quaternion(" << eigen::text<Scalar>(q.w()) << ", " << eigen::text<Scalar>(q.x()) << ", "
+       << eigen::text<Scalar>(q.y()) << ", " << eigen::text<Scalar>(q.z()) << ')';
+  }
+};
+
+template <class Scalar>
+struct Put<Eigen::AngleAxis<Scalar>> {
+  static void put(std::ostream &os, const Eigen::AngleAxis<Scalar> &r)
+  {
+    const auto &axis = r.axis();
+    os << "AngleAxis(" << eigen::text<Scalar>(r.angle()) << ", [" << eigen::text<Scalar>(axis.x()) << ", "
+       << eigen::text<Scalar>(axis.y()) << ", " << eigen::text<Scalar>(axis.z()) << "])";
+  }
+};
+
+// A transform shows as its matrix. (Its matrix converts back to a
+// transform, so the matrix's Show is named, not found by overloading.)
+template <class Scalar, int Dim, int Mode, int Options>
+struct Show<Eigen::Transform<Scalar, Dim, Mode, Options>> {
+  using Transform = Eigen::Transform<Scalar, Dim, Mode, Options>;
+
+  static void show(const Transform &t) { Show<typename Transform::MatrixType>::show(t.matrix()); }
+};
+
+template <class Scalar, int Dim, int Mode, int Options>
+struct Put<Eigen::Transform<Scalar, Dim, Mode, Options>> {
+  static void put(std::ostream &os, const Eigen::Transform<Scalar, Dim, Mode, Options> &t)
+  {
+    repl::put(os, t.matrix());
   }
 };
 

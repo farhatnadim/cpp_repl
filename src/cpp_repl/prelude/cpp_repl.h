@@ -18,20 +18,30 @@
 // adds constrained partial specialisations for its library's types. Your own
 // type prints through its operator<<, even one defined after the type was
 // first printed, if argument-dependent lookup finds it: in the type's own
-// namespace.
+// namespace. (show(x) is instantiated once per type, so for it only the
+// operators known at its first use count.) A type with an operator, of its
+// own, as Boost.Assign's lists have, cannot be printed as a bare expression,
+// which then runs as a statement.
+//
+// Names: the customisation points Put and Show are capitalised, as a type
+// meant to be specialised; everything else is lower case.
 
 #pragma once
 
 #include <iostream>
 
 #include <algorithm>
+#include <any>
+#include <atomic>
 #include <charconv>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
+#include <functional>
 #include <iomanip>
 #include <iterator>
 #include <memory>
@@ -43,7 +53,11 @@
 #include <type_traits>
 #include <typeinfo>
 #include <utility>
+#include <variant>
 #include <vector>
+#if __has_include(<expected>)
+#include <expected>
+#endif
 #if defined(__linux__)
 #include <sys/prctl.h>   // cpp-repl's first input turns core dumps off
 #endif
@@ -92,6 +106,7 @@ inline constexpr std::size_t max_items = 100;
 
 namespace detail {
 
+// The character types other than char: their strings print with a prefix.
 template <class T>
 inline constexpr bool is_char = std::is_same_v<T, wchar_t> || std::is_same_v<T, char8_t> ||
                                 std::is_same_v<T, char16_t> || std::is_same_v<T, char32_t>;
@@ -103,23 +118,90 @@ inline constexpr bool is_char_array = std::is_array_v<T> &&
                                       std::is_same_v<std::remove_cv_t<std::remove_extent_t<T>>, char>;
 
 template <class T>
-struct is_optional : std::false_type {};
+inline constexpr bool is_std_wide_string = false;
+template <class C, class Traits, class Alloc>
+  requires is_char<C>
+inline constexpr bool is_std_wide_string<std::basic_string<C, Traits, Alloc>> = true;
+template <class C, class Traits>
+  requires is_char<C>
+inline constexpr bool is_std_wide_string<std::basic_string_view<C, Traits>> = true;
+
+// A string of wchar_t, char8_t, char16_t or char32_t: a pointer to one, an
+// array of them, or a standard string or string view of them.
 template <class T>
-struct is_optional<std::optional<T>> : std::true_type {};
+inline constexpr bool is_wide_string =
+    (std::is_pointer_v<T> && is_char<std::remove_cv_t<std::remove_pointer_t<T>>>) ||
+    (std::is_array_v<T> && is_char<std::remove_cv_t<std::remove_extent_t<T>>>) || is_std_wide_string<T>;
+
 template <class T>
-struct is_pair : std::false_type {};
+inline constexpr bool is_optional = false;
+template <class T>
+inline constexpr bool is_optional<std::optional<T>> = true;
+template <class T>
+inline constexpr bool is_pair = false;
 template <class A, class B>
-struct is_pair<std::pair<A, B>> : std::true_type {};
+inline constexpr bool is_pair<std::pair<A, B>> = true;
 template <class T>
-struct is_tuple : std::false_type {};
+inline constexpr bool is_tuple = false;
 template <class... T>
-struct is_tuple<std::tuple<T...>> : std::true_type {};
+inline constexpr bool is_tuple<std::tuple<T...>> = true;
+template <class T>
+inline constexpr bool is_variant = false;
+template <class... T>
+inline constexpr bool is_variant<std::variant<T...>> = true;
+template <class T>
+inline constexpr bool is_reference_wrapper = false;
+template <class T>
+inline constexpr bool is_reference_wrapper<std::reference_wrapper<T>> = true;
+template <class T>
+inline constexpr bool is_shared_ptr = false;
+template <class T>
+inline constexpr bool is_shared_ptr<std::shared_ptr<T>> = true;
+template <class T>
+inline constexpr bool is_unique_ptr = false;
+template <class T, class Deleter>
+inline constexpr bool is_unique_ptr<std::unique_ptr<T, Deleter>> = true;
+template <class T>
+inline constexpr bool is_atomic = false;
+template <class T>
+inline constexpr bool is_atomic<std::atomic<T>> = true;
+template <class T>
+inline constexpr bool is_expected = false;
+#ifdef __cpp_lib_expected
+template <class T, class E>
+inline constexpr bool is_expected<std::expected<T, E>> = true;
+#endif
+#ifdef __SIZEOF_INT128__
+template <class T>
+inline constexpr bool is_int128 = std::is_same_v<T, __int128> || std::is_same_v<T, unsigned __int128>;
+#else
+template <class T>
+inline constexpr bool is_int128 = false;
+#endif
+
+// The standard's wrappers that print as what they hold, before any
+// operator<< of theirs (a shared_ptr's writes an address) or conversion
+// (an atomic converts to its value, which the char inserters would take).
+template <class T>
+inline constexpr bool is_wrapper = is_atomic<T> || is_reference_wrapper<T> || is_shared_ptr<T> || is_unique_ptr<T>;
 
 // A scalar or a string: printed by Put, never by an operator<< of the
-// user's, and never shown in more than one line.
+// user's, and never shown in more than one line. An enum is not one: its
+// own operator<<, even one typed later, counts.
 template <class T>
-inline constexpr bool is_basic = std::is_arithmetic_v<T> || std::is_enum_v<T> || std::is_pointer_v<T> ||
-                                 std::is_null_pointer_v<T> || is_string<T> || is_char_array<T>;
+inline constexpr bool is_basic = std::is_arithmetic_v<T> || std::is_pointer_v<T> || std::is_null_pointer_v<T> ||
+                                 is_string<T> || is_char_array<T> || is_wide_string<T>;
+
+// Whether T has an operator<< of its own: a non-member one that this call
+// finds, by argument-dependent lookup (in the type's namespace) or in scope.
+// The stream's member inserters, for bool, the integers and pointers, are
+// not found this way, so a type that merely converts to one of those (a
+// handle with an operator bool, an array decaying to a pointer) does not
+// count, and prints as what it is instead. Tag is the input asking: the
+// compiler keeps a concept's answer per argument list, and a new Tag per
+// input has it look again, so an operator<< typed later counts.
+template <class T, class Tag>
+concept streamable = requires (std::ostream &os, const T &x) { operator<<(os, x); };
 
 inline void put_char(std::ostream &os, char c)
 {
@@ -133,7 +215,7 @@ inline void put_char(std::ostream &os, char c)
     default:
       if (static_cast<unsigned char>(c) < 0x20 || c == 0x7f)
         os << "\\x" << std::hex << std::setw(2) << std::setfill('0')
-           << int(static_cast<unsigned char>(c)) << std::dec << std::setfill(' ');
+           << static_cast<int>(static_cast<unsigned char>(c)) << std::dec << std::setfill(' ');
       else
         os << c;
   }
@@ -145,6 +227,83 @@ inline void put_string(std::ostream &os, std::string_view s)
   for (char c : s)
     put_char(os, c);
   os << '"';
+}
+
+// A wide string as its literal: L"...", u8"...", u"..." or U"...", ASCII as
+// it is and anything else as a \x, \u or \U escape, so that it reads back.
+template <class C>
+void put_wide(std::ostream &os, std::basic_string_view<C> s)
+{
+  os << (std::is_same_v<C, wchar_t> ? "L" : std::is_same_v<C, char8_t> ? "u8" : std::is_same_v<C, char16_t> ? "u" : "U")
+     << '"';
+  for (const C c : s) {
+    const auto unit = static_cast<std::uint32_t>(c);
+    if (unit < 0x80) {
+      put_char(os, static_cast<char>(unit));
+    } else {
+      const auto flags = os.flags();
+      const auto fill = os.fill('0');
+      if constexpr (std::is_same_v<C, char8_t>)
+        os << "\\x" << std::hex << std::setw(2) << unit;
+      else if (unit <= 0xffff)
+        os << "\\u" << std::hex << std::setw(4) << unit;
+      else
+        os << "\\U" << std::hex << std::setw(8) << unit;
+      os.fill(fill);
+      os.flags(flags);
+    }
+  }
+  os << '"';
+}
+
+// The code units of a wide string, whatever holds them.
+template <class T>
+auto wide_units(const T &x)
+{
+  if constexpr (std::is_pointer_v<T>) {
+    return std::basic_string_view<std::remove_cv_t<std::remove_pointer_t<T>>>(x);
+  } else if constexpr (std::is_array_v<T>) {
+    constexpr std::size_t n = std::extent_v<T>;
+    return std::basic_string_view<std::remove_cv_t<std::remove_extent_t<T>>>(x, n && !x[n - 1] ? n - 1 : n);
+  } else {
+    return std::basic_string_view<typename T::value_type>(x.data(), x.size());
+  }
+}
+
+#ifdef __SIZEOF_INT128__
+inline void put_int128(std::ostream &os, unsigned __int128 magnitude, bool negative)
+{
+  char buffer[41];   // 39 digits and a sign
+  char *p = buffer + sizeof buffer;
+  do {
+    *--p = static_cast<char>('0' + static_cast<int>(magnitude % 10));
+    magnitude /= 10;
+  } while (magnitude);
+  if (negative)
+    *--p = '-';
+  os << std::string_view(p, static_cast<std::size_t>(buffer + sizeof buffer - p));
+}
+#endif
+
+// A type's name as a programmer spells it, from the name typeid gives:
+// demangled, and std::string as such rather than as the basic_string the
+// library spells out.
+inline std::string demangled(const char *name)
+{
+  std::string out = name;
+#if __has_include(<cxxabi.h>)
+  int status = 0;
+  const std::unique_ptr<char, void (*)(void *)> readable(abi::__cxa_demangle(name, nullptr, nullptr, &status),
+                                                         std::free);
+  if (status == 0 && readable)
+    out = readable.get();
+#endif
+  for (std::string_view spelled : {"std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >",
+                                   "std::__1::basic_string<char, std::char_traits<char>, std::allocator<char> >",
+                                   "std::basic_string<char, std::char_traits<char>, std::allocator<char> >"})
+    for (std::size_t at = out.find(spelled); at != std::string::npos; at = out.find(spelled, at))
+      out.replace(at, spelled.size(), "std::string");
+  return out;
 }
 
 // The shortest text that reads back as the same number.
@@ -218,6 +377,11 @@ void put_generic(std::ostream &os, const T &x)
     os << static_cast<int>(x);
   } else if constexpr (std::is_floating_point_v<T>) {
     put_float(os, x);
+  } else if constexpr (is_int128<T>) {
+#ifdef __SIZEOF_INT128__
+    const bool negative = x < 0;
+    put_int128(os, negative ? -static_cast<unsigned __int128>(x) : static_cast<unsigned __int128>(x), negative);
+#endif
   } else if constexpr (std::is_integral_v<T>) {
     os << x;
   } else if constexpr (is_string<T>) {
@@ -231,31 +395,76 @@ void put_generic(std::ostream &os, const T &x)
   } else if constexpr (is_char_array<T>) {
     put_string(os, std::string_view(x, std::extent_v<T> && !x[std::extent_v<T> - 1]
                                                    ? std::extent_v<T> - 1 : std::extent_v<T>));
-  } else if constexpr (std::is_enum_v<T>) {
-    os << type_name<T>() << '(' << +static_cast<std::underlying_type_t<T>>(x) << ')';
+  } else if constexpr (is_wide_string<T>) {
+    if constexpr (std::is_pointer_v<T>) {
+      if (!x) {
+        os << "nullptr";
+        return;
+      }
+    }
+    put_wide(os, wide_units(x));
   } else if constexpr (std::is_null_pointer_v<T>) {
     os << "nullptr";
+  } else if constexpr (std::is_same_v<T, std::nullopt_t>) {
+    os << "nullopt";
+  } else if constexpr (std::is_same_v<T, std::monostate>) {
+    os << "monostate";
+  } else if constexpr (std::is_same_v<T, std::any>) {
+    os << "any(" << (x.has_value() ? demangled(x.type().name()) : std::string("empty")) << ')';
+  // The standard's wrappers come before a type's own operator<<: an atomic
+  // or a reference_wrapper converts to what it holds, and a shared_ptr's
+  // operator<< writes an address, where the value it points to is wanted.
+  } else if constexpr (is_atomic<T>) {
+    put_item<Tag>(os, x.load());
+  } else if constexpr (is_reference_wrapper<T>) {
+    put_item<Tag>(os, x.get());
+  } else if constexpr (is_shared_ptr<T> || is_unique_ptr<T>) {
+    if (!x) {
+      os << "nullptr";
+    } else {
+      os << static_cast<const void *>(x.get());
+      if constexpr (requires { put_item<Tag>(os, *x); })
+        put_item<Tag>((os << " -> "), *x);
+    }
+  } else if constexpr (is_variant<T>) {
+    if (x.valueless_by_exception())
+      os << "valueless";
+    else
+      std::visit([&os](const auto &held) { put_item<Tag>(os, held); }, x);
+  } else if constexpr (is_expected<T>) {
+    if (x) {
+      if constexpr (std::is_void_v<typename T::value_type>)
+        os << "expected()";
+      else
+        put_item<Tag>(os, *x);
+    } else {
+      os << "unexpected(";
+      put_item<Tag>(os, x.error());
+      os << ')';
+    }
+  } else if constexpr (streamable<T, Tag>) {
+    os << x;   // before ranges: std::filesystem::path is both, and a range of itself
+  } else if constexpr (std::is_enum_v<T>) {
+    os << type_name<T>() << '(' << +static_cast<std::underlying_type_t<T>>(x) << ')';
   } else if constexpr (std::is_pointer_v<T>) {
     if (!x)
       os << "nullptr";
     else
       os << reinterpret_cast<const void *>(x);
-  } else if constexpr (requires (std::ostream &out) { out << x; }) {
-    os << x;   // before ranges: std::filesystem::path is both, and a range of itself
-  } else if constexpr (is_pair<T>::value) {
+  } else if constexpr (is_pair<T>) {
     os << '(';
     put_item<Tag>(os, x.first);
     os << ", ";
     put_item<Tag>(os, x.second);
     os << ')';
-  } else if constexpr (is_tuple<T>::value) {
+  } else if constexpr (is_tuple<T>) {
     os << '(';
     std::apply([&os](const auto &...item) {
       std::size_t i = 0;
       ((os << (i++ ? ", " : ""), put_item<Tag>(os, item)), ...);
     }, x);
     os << ')';
-  } else if constexpr (is_optional<T>::value) {
+  } else if constexpr (is_optional<T>) {
     if (x)
       put_item<Tag>(os, *x);
     else
@@ -334,11 +543,14 @@ shown operator,(T &&value, printer<Tag>)
   using V = std::remove_cvref_t<T>;
   if constexpr (std::is_base_of_v<std::ios_base, V>) {
     std::cout << void_mark << std::flush;
-  } else if constexpr (!requires { Show<V>::generic; } || detail::is_basic<V>) {
+  } else if constexpr (!requires { Show<V>::generic; } || !requires { Put<V>::generic; } || detail::is_basic<V>) {
+    // A Show or Put specialisation, a profile's, comes before the type's
+    // own operator<<: the profile chose how the type reads.
     Show<V>::show(value);
-  } else if constexpr (requires (std::ostream &os) { os << value; }) {
+  } else if constexpr (detail::streamable<V, Tag> && !std::is_enum_v<V> && !detail::is_wrapper<V>) {
     // Checked here, once per input: an operator<< typed after the first
-    // print counts.
+    // print counts. (An enum's does too, through put_item, which puts the
+    // standard's own wrappers first.)
     std::cout << value << std::endl;
   } else {
     detail::put_item<Tag>(std::cout, value);   // the generic Show, for this input
@@ -379,22 +591,6 @@ struct ended {
 
 inline constexpr char end_mark = '\x1d';
 inline constexpr int abort_status = 134;   // 128 + SIGABRT
-
-namespace detail {
-
-inline std::string demangled(const char *name)
-{
-#if __has_include(<cxxabi.h>)
-  int status = 0;
-  const std::unique_ptr<char, void (*)(void *)> readable(abi::__cxa_demangle(name, nullptr, nullptr, &status),
-                                                         std::free);
-  if (status == 0 && readable)
-    return readable.get();
-#endif
-  return name;
-}
-
-}  // namespace detail
 
 // Inside a handler: what the exception being handled is, on one line.
 inline ended uncaught()
@@ -447,7 +643,7 @@ namespace detail {
 
 inline void put_seconds(std::ostream &os, double seconds)
 {
-  static constexpr const char *units[] = {"s", "ms", "\xc2\xb5s", "ns"};
+  constexpr std::string_view units[] = {"s", "ms", "\xc2\xb5s", "ns"};
   int unit = 0;
   while (unit < 3 && seconds != 0 && std::fabs(seconds) < 1) {
     seconds *= 1000;

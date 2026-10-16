@@ -168,7 +168,7 @@ inline void show_attribute(const UsdAttribute &attr)
   std::vector<double> times;
   if (attr.GetTimeSamples(&times) && !times.empty()) {
     std::cout << "\n  time samples: {";
-    for (size_t i = 0; i < times.size(); ++i) {
+    for (std::size_t i = 0; i < times.size(); ++i) {
       VtValue sample;
       attr.Get(&sample, times[i]);
       std::cout << (i ? ", " : "") << times[i] << ": " << sample;
@@ -282,8 +282,7 @@ struct Show<T> {
 };
 
 // A spec handle (SdfPrimSpecHandle, SdfAttributeSpecHandle, ...) shows its
-// layer and path: @tmp.usda@</World>. It converts to bool, which makes
-// `os << handle` valid and print 1, so a bare value needs Show as well as Put.
+// layer and path: @tmp.usda@</World>, on its own and inside a list alike.
 template <class S>
 struct Put<SdfHandle<S>> {
   static void put(std::ostream &os, const SdfHandle<S> &spec)

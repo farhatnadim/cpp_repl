@@ -22,9 +22,9 @@ shown operator,(T &&value, printer<Tag>)
   using V = std::remove_cvref_t<T>;
   if constexpr (std::is_base_of_v<std::ios_base, V>) {
     // a stream (std::cout << 42): treated as a statement
-  } else if constexpr (!requires { Show<V>::generic; } || detail::is_basic<V>) {
-    Show<V>::show(value);            // a Show specialisation, or a number or string
-  } else if constexpr (requires (std::ostream &os) { os << value; }) {
+  } else if constexpr (!requires { Show<V>::generic; } || !requires { Put<V>::generic; } || detail::is_basic<V>) {
+    Show<V>::show(value);            // a Show or Put specialisation, or a number or string
+  } else if constexpr (detail::streamable<V, Tag> && !std::is_enum_v<V> && !detail::is_wrapper<V>) {
     std::cout << value << std::endl; // the type's own operator<<
   } else {
     detail::put_item<Tag>(std::cout, value);   // the generic Show, for this input
@@ -35,15 +35,22 @@ shown operator,(T &&value, printer<Tag>)
 ```
 
 What follows from this:
-- **A `Show<V>` specialisation wins over the type's `operator<<`.** The
-  primary template has a `static constexpr bool generic = true;`, and a
-  specialisation leaves it out. Never add `generic` to a specialisation, of
-  `Show` or of `Put`.
+- **A `Show<V>` or `Put<V>` specialisation wins over the type's
+  `operator<<`:** the profile chose how the type reads. The primary templates
+  have a `static constexpr bool generic = true;`, and a specialisation leaves
+  it out. Never add `generic` to a specialisation, of `Show` or of `Put`.
+- **Only a non-member `operator<<` counts.** `detail::streamable` asks for
+  `operator<<(os, x)` by name, which finds a free function, through
+  argument-dependent lookup or in scope, and not the stream's member
+  inserters for `bool`, the integers and pointers. So a type that merely
+  converts to one of those (a handle with an `operator bool`) prints as
+  `<Type>`, with a note, rather than as `1`.
 - **An `operator<<` counts even when it is typed after the first print,**
-  for the items of a list too. The checks run again for every input, which
-  has its own `Tag`: `detail::put_item<Tag>` hands an item to its type's `Put`
-  specialisation, or else to `detail::put_generic<Tag>`, the primary `Put`'s
-  logic.
+  for the items of a list and for enums too. The checks run again for every
+  input, which has its own `Tag` (`streamable<V, Tag>` carries it because the
+  compiler keeps a concept's answer per argument list): `detail::put_item<Tag>`
+  hands an item to its type's `Put` specialisation, or else to
+  `detail::put_generic<Tag>`, the primary `Put`'s logic.
 - **Argument-dependent lookup must find the `operator<<`:** declare it in the
   type's namespace. A global `operator<<` for `lib::T` is invisible to the
   prelude's templates, as to any template in a compiled program.
@@ -67,19 +74,26 @@ template <class T> struct Put {    // the primary: a value inline
 The primary `Put<T>` tries these in order:
 1. `bool`, then the character types, then floating-point numbers, which print
    as the shortest text that reads back as the same number;
-2. integers;
-3. strings and character arrays, which print quoted and escaped;
-4. enums, which print as `Type(N)`;
-5. `nullptr`, then pointers;
-6. **the type's `operator<<`**;
-7. `std::pair`, then `std::tuple`, then `std::optional` (`nullopt` when
+2. integers, `__int128` included;
+3. strings and character arrays, which print quoted and escaped; wide
+   strings as their literal, `L"..."`, `u8"..."`, `u"..."` or `U"..."`;
+4. `nullptr`, `std::nullopt`, `std::monostate`, and `std::any` as
+   `any(Type)`;
+5. the standard's wrappers, as what they hold: `std::atomic`,
+   `std::reference_wrapper`, `std::variant`, `std::expected` (or
+   `unexpected(e)`), and `std::shared_ptr`/`std::unique_ptr` as
+   `0x... -> value`;
+6. **the type's own `operator<<`**, a non-member one;
+7. enums, which print as `Type(N)`;
+8. pointers, as addresses;
+9. `std::pair`, then `std::tuple`, then `std::optional` (`nullopt` when
    empty);
-8. **ranges**:
+10. **ranges**:
    - maps as `{k: v, ...}`;
    - sets as `{a, ...}`;
    - anything else as `[a, ...]`;
    - each stops after `repl::max_items` (100) items, with `...`;
-9. **anything else, as `<TypeName>`.** In the REPL, cpp-repl then notes,
+11. **anything else, as `<TypeName>`.** In the REPL, cpp-repl then notes,
    once per type, how to give it a printer.
 
 So:
@@ -97,6 +111,7 @@ So:
 | `repl::type_name<T>()` | The compiler's spelling of `T`, as a `std::string_view`. |
 | `repl::max_items` | 100: the most items a list prints. |
 | `repl::detail::put_float(os, x)` | The shortest text that reads back as `x`. |
+| `repl::detail::demangled(name)` | A `typeid(x).name()` as a programmer spells it. |
 
 ## Specialising
 

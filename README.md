@@ -10,8 +10,9 @@ would inside `main()`, and:
   and a `template <...>` line, an attribute or `struct S` for what they head,
   so C++ is typed as it is written.
 - **Values print.** A bare expression prints its value: containers, maps,
-  tuples and optionals, and your own types through their `operator<<`.
-  Profiles add Eigen matrices and OpenUSD stages.
+  tuples, optionals, variants, smart pointers and wide strings, and your own
+  types through their `operator<<`. Profiles add Eigen matrices and OpenUSD
+  stages.
 - **A crash costs nothing.** A segfault, a Ctrl-C or a link failure replays the
   session's journal into a spare clang-repl that is already running. Five
   inputs come back in 0.05 s, every variable with them.

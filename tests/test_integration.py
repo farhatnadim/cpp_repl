@@ -429,7 +429,17 @@ def test_quiet_and_json(tmp_path):
     result = run_cpp_repl(['--no-config', '--batch', '--json', 'p.cpp'], tmp_path)
     records = [json.loads(line) for line in result.stdout.splitlines()]
     assert [(r.get('line'), r.get('status')) for r in records[:-1]] == [(1, 'ok'), (4, 'ok'), (5, 'error')]
-    assert records[1]['output'] == 'hi\n' and records[-1] == {'exit': 1, 'inputs': 3, 'failures': 1}
+    assert records[1]['output'] == 'hi\n' and records[-1] == {'exit': 1, 'inputs': 3, 'failures': 1, 'skipped': 0}
+
+
+def test_timeit_times_statements_and_expressions(tmp_path):
+    """%timeit of a void expression (a call for its effect) works like one
+    with a value, and like a statement."""
+    (tmp_path / 'p.repl').write_text('std::vector<int> u{3, 1, 2};\n%timeit std::sort(u.begin(), u.end())\n'
+                                     '%timeit u.size()\n%timeit std::sort(u.begin(), u.end());\n')
+    result = run_cpp_repl(['--no-config', '--batch', '-q', 'p.repl'], tmp_path)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout.count('per loop') == 3 and 'error' not in result.stdout
 
 
 def test_a_library_named_with_l(tmp_path):

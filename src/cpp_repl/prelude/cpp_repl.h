@@ -686,6 +686,18 @@ inline void keep(T &&x)
   }
 }
 
+// keep_result(f) calls f and keeps what it returns, if anything: %timeit
+// sends an expression as `[&]() -> decltype(auto) { return (EXPR); }`,
+// since whether EXPR is void can only be told inside a template.
+template <class F>
+inline void keep_result(F &&f)
+{
+  if constexpr (std::is_void_v<decltype(f())>)
+    f();
+  else
+    keep(f());
+}
+
 namespace detail {
 
 inline void put_seconds(std::ostream &os, double seconds)

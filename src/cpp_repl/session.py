@@ -123,7 +123,8 @@ class JsonOutput(Output):
     stuck, timeout or interrupted, and returned is main's return value when
     the input returned. Anything written between inputs is {"output": TEXT}
     or {"note": TEXT}, and the last line is {"exit": STATUS, "inputs": N,
-    "failures": N}."""
+    "failures": N, "skipped": N}, skipped being the inputs left unrun once
+    the program ended or --stop-on-error stopped the run."""
 
     def __init__(self, stream=None):
         super().__init__(stream)
@@ -180,7 +181,8 @@ class JsonOutput(Output):
         """End what is still running, as after %quit, then the last line."""
         while self.records:
             self.end()
-        self._emit({'exit': status, 'inputs': session.inputs_run, 'failures': session.failures})
+        self._emit({'exit': status, 'inputs': session.inputs_run, 'failures': session.failures,
+                    'skipped': session.skipped})
 
 
 OUT = Output()
@@ -274,6 +276,7 @@ class Session:
         cpp-repl --serve runs."""
         self.failures = 0
         self.inputs_run = 0      # inputs run from files
+        self.skipped = 0         # inputs of files left unrun once the run stopped
         self.timeouts = 0        # inputs stopped at --timeout
         self.program_ends = 0    # inputs that ended the program: a return from main, exit(), a crash
         self.end_status = None   # the exit status the first of those stands for (see _status)
@@ -527,15 +530,21 @@ class Session:
                     self._echo_input(text)
                 failures, ends = self.failures, self.program_ends
                 if not self.run_input(text) or self.program_ends > ends:
+                    self._left_unrun(len(inputs) - i - 1, 'the program ended' if self.program_ends > ends
+                                     else 'the run stopped')
                     return False
                 if self.failures > failures and self.cfg.options.stop_on_error:
-                    left = len(inputs) - i - 1
-                    if left:
-                        self._note(f'[stopped at the first failure: {left} input{"s" if left != 1 else ""} not run]')
+                    self._left_unrun(len(inputs) - i - 1, 'stopped at the first failure')
                     return False
             finally:
                 self.out.end()
         return True
+
+    def _left_unrun(self, left, why):
+        """Say, and count for --json, the inputs a run leaves unrun."""
+        self.skipped += left
+        if left:
+            self._note(f'[{why}: {left} input{"s" if left != 1 else ""} not run]')
 
     def _echo_input(self, text):
         prompt, more = self.cfg.prompt, self.cfg.more
@@ -551,7 +560,11 @@ class Session:
         if send.kind in ('empty', 'pp') or send.file:
             self.out.write('usage: %timeit STATEMENT or %timeit EXPRESSION\n')
             return True
-        body = f'repl::keep({send.text});' if send.kind == 'expr' else send.text
+        if send.kind == 'expr':
+            # The value, if any, is kept, so that the work is not optimised away.
+            body = f'repl::keep_result([&]() -> decltype(auto) {{ return ({send.text}); }});'
+        else:
+            body = send.text
         output, result = self._send(in_function(self._fresh(), f'repl::timeit([]{{ {body} }}, {self.cfg.opt_level});'))
         return self._after(text, [], output, result, journal=False) or not self.batch
 

@@ -150,8 +150,8 @@ def test_a_return_ends_the_program(tmp_path, monkeypatch, made):
     made.append(s)
     inputs = inputs_from_repl('say("before");\nreturn 3;\nsay("after");\n')
     assert s.run_inputs(inputs, echo=False) is False
-    assert stream.getvalue() == 'before\n[main returned 3]\n'
-    assert s.exit_status() == 3 and s.failures == 0
+    assert stream.getvalue() == 'before\n[main returned 3]\n[the program ended: 1 input not run]\n'
+    assert s.exit_status() == 3 and s.failures == 0 and s.skipped == 1
     assert [e.text for e in s.journal] == ['say("before");', 'return 3;']
     s, stream = make(tmp_path, monkeypatch, batch=False)
     made.append(s)
@@ -159,6 +159,22 @@ def test_a_return_ends_the_program(tmp_path, monkeypatch, made):
     assert stream.getvalue() == '[main returned 2]\n'
     assert s.run_input('say("still here");')
     assert stream.getvalue().endswith('still here\n')
+
+
+def test_a_run_says_what_it_left_unrun(tmp_path, monkeypatch, made):
+    """When the program ends before the file does, the inputs left are
+    counted and said, as --stop-on-error's are; --json's last line carries
+    the count."""
+    s, stream = make(tmp_path, monkeypatch)
+    made.append(s)
+    inputs = inputs_from_repl('say("a");\ncrash();\nsay("b");\nsay("c");\n')
+    assert s.run_inputs(inputs, echo=False) is False
+    assert stream.getvalue().endswith('[clang-repl crashed (SIGSEGV)]\n[the program ended: 2 inputs not run]\n')
+    assert s.skipped == 2 and s.exit_status() == 139
+    out = io.StringIO()
+    s.out = JsonOutput(out)
+    s.out.finish(s.exit_status(), s)
+    assert json.loads(out.getvalue()) == {'exit': 139, 'inputs': 2, 'failures': 1, 'skipped': 2}
 
 
 def test_an_uncaught_exception_ends_the_program(tmp_path, monkeypatch, made):
@@ -169,7 +185,8 @@ def test_an_uncaught_exception_ends_the_program(tmp_path, monkeypatch, made):
     made.append(s)
     inputs = inputs_from_repl('say("before");\nthrow_it();\nsay("after");\n')
     assert s.run_inputs(inputs, echo=False) is False
-    assert stream.getvalue() == 'before\n[uncaught exception: std::runtime_error: boom]\n'
+    assert stream.getvalue() == ('before\n[uncaught exception: std::runtime_error: boom]\n'
+                                 '[the program ended: 1 input not run]\n')
     assert s.exit_status() == 134 and s.failures == 1
     s, stream = make(tmp_path, monkeypatch, batch=False)
     made.append(s)
@@ -371,7 +388,7 @@ def test_json_output(tmp_path, monkeypatch, made):
         {'input': 1, 'file': name, 'line': 1, 'status': 'ok', 'output': 'one\n'},
         {'input': 2, 'file': name, 'line': 3, 'status': 'error', 'output': records[1]['output']},
         {'input': 3, 'file': name, 'line': 4, 'status': 'ok', 'output': '42\n'},
-        {'exit': 1, 'inputs': 3, 'failures': 1},
+        {'exit': 1, 'inputs': 3, 'failures': 1, 'skipped': 0},
     ]
     assert "undeclared identifier 'error_here'" in records[1]['output']
 
@@ -453,7 +470,7 @@ def test_a_session_that_stays(tmp_path):
         run = client('-q', 'p.repl')
         assert run.returncode == 1 and run.stdout.startswith('one\n') and 'error_here' in run.stdout
         records = [json.loads(line) for line in client('--json', '--fresh', stdin='42\n').stdout.splitlines()]
-        assert records[0]['output'] == '42\n' and records[-1] == {'exit': 0, 'inputs': 1, 'failures': 0}
+        assert records[0]['output'] == '42\n' and records[-1] == {'exit': 0, 'inputs': 1, 'failures': 0, 'skipped': 0}
         # --timeout and --stop-on-error hold for the run; the configuration is the server's.
         assert client('-q', '--timeout', '1', stdin='hang();\n').returncode == 124
         (tmp_path / 's.repl').write_text('error_here;\nsay("after");\n')

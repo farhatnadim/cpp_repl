@@ -16,8 +16,8 @@ from pathlib import Path
 from .backend import ANY_ERROR, STARTUP_ERROR, Backend, BackendError, outcome, plain
 from .config import session_dir_name
 from .diagnostics import SNIPPET, Diagnostics
-from .lexer import (Origin, open_end, unsplice, declared_names, has_lambda, in_function, is_definition, join, lex,
-                    located, split_statements, trailing_expression, transform)
+from .lexer import (Origin, open_end, unsplice, declared_names, in_function, is_definition, join, lambda_free_names,
+                    lex, located, rewrite_captures, split_statements, trailing_expression, transform)
 from .sources import PRELUDE_NAMES, Input, inputs_from_file, split_directives
 
 STARTUP_DEADLINE = 300   # seconds; a large prelude on a cold disk takes a while
@@ -76,6 +76,17 @@ _DIAGNOSTIC_LINE = re.compile(r'(?:\S[^:\n]*:\d+:\d+: )?(?:fatal error|error|war
                               r'|In file included from |' + SNIPPET.pattern)
 # What clang says of a name declared again.
 _REDEFINED = re.compile(r"error: redefinition of '([^']+)'")
+# What clang says of a lambda capturing a variable typed at the prompt, which
+# is a global, and of a lambda at file scope with a capture-default: the
+# capture goes, and the lambda uses the global itself (lexer.rewrite_captures).
+_CAPTURED = re.compile(r"error: '([^']+)' cannot be captured because it does not have automatic storage duration")
+_CAPTURE_DEFAULT = re.compile(r'error: non-local lambda expression cannot have a capture-default')
+
+
+def _handled(diagnostics):
+    """Whether cpp-repl acts on these held diagnostics itself, rather than
+    show them: a redefinition, or a capture a global cannot have."""
+    return any(pattern.search(diagnostics) for pattern in (_REDEFINED, _CAPTURED, _CAPTURE_DEFAULT))
 
 
 def _top_level_comma(tokens):
@@ -534,11 +545,13 @@ class Session:
         path.write_text(text + '\n')
         return f'#include "{path}"'
 
-    def run_input(self, text, redefine=True):
+    def run_input(self, text, redefine=True, as_typed=None):
         """Run one complete input: an Input, which says where it comes from,
         or a str typed at the prompt. Returns False when the session should
         stop. A name the input declares again replaces the old one (see
-        _redefine), unless redefine is False."""
+        _redefine), unless redefine is False. The journal keeps as_typed
+        when it is given: the input as the user wrote it, when what runs is
+        a rewriting of it."""
         stripped = text.strip()
         if not stripped:
             return True
@@ -561,7 +574,8 @@ class Session:
         if send.kind == 'empty':
             return True
         kind = send.kind
-        again = partial(self.run_input, text)
+        again = partial(self.run_input, text, as_typed=as_typed)
+        journaled = text if as_typed is None else as_typed
         if kind == 'expr':
             # Run in a function, for the local struct that print_expr needs, and
             # because a lambda in a top-level statement crashes clang-repl 23.
@@ -576,7 +590,7 @@ class Session:
                 if not (result == 'link' and self.tainted):   # else it runs again, with a note
                     self._show(output)
                 self._show_end()
-                return self._after(text, [line], output, result, kind, again=again)
+                return self._after(journaled, [line], output, result, kind, again=again)
             # Not something print_expr takes. The attempt failed to compile,
             # which can leave stale instantiations behind like any error. What
             # is no expression is a declaration the lexer did not see as one
@@ -587,12 +601,27 @@ class Session:
             send, kind = transform(text, fresh=self._fresh, origin=origin, as_statement=True, wrap=False,
                                   exceptions=self.cfg.exceptions), 'stmt'
         line = self._file(send.text) if send.via_file else send.text
-        output, result = self._send(line, hold=_REDEFINED.search if redefine and kind == 'stmt' else None)
+        output, result = self._send(line, hold=_handled if redefine and kind == 'stmt' else None)
         if self.held:
             held, self.held = self.held, ''   # the redefinition's own inputs reset it
-            replaced = self._redefine(_REDEFINED.search(plain(held)).group(1), text)
-            if replaced is not None:
-                return replaced
+            redefined = _REDEFINED.search(plain(held))
+            if redefined:
+                replaced = self._redefine(redefined.group(1), text)
+                if replaced is not None:
+                    return replaced
+            else:
+                names = list(dict.fromkeys(_CAPTURED.findall(plain(held))))
+                defaults = _CAPTURE_DEFAULT.search(plain(held)) is not None
+                rewritten = rewrite_captures(text, set(names), defaults)
+                if rewritten != text:
+                    if names:
+                        are = 'is a global here' if len(names) == 1 else 'are globals here'
+                        self._note(f'[{", ".join(names)} {are}: the lambda uses {"it" if len(names) == 1 else "them"} '
+                                   'without a capture]')
+                    if defaults:
+                        self._note('[a lambda at file scope has no capture-default: it uses the globals it names]')
+                    rerun = Input(rewritten, text.origin) if isinstance(text, Input) else rewritten
+                    return self.run_input(rerun, redefine=redefine, as_typed=journaled)
             self._show(held)
             self._show_end()
         if kind == 'pp' and result == 'error' and 'file not found' in output:
@@ -602,7 +631,7 @@ class Session:
                            'standard library lacks it]')
         if result == 'error' and (m := _NO_MODULE.search(output)):
             self._note(f"[clang-repl has no module '{m.group(1)}': #include the headers]")
-        return self._after(text, [line], output, result, kind, again=again)
+        return self._after(journaled, [line], output, result, kind, again=again)
 
     def _declares(self, entry, name):
         return entry.kind == 'stmt' and name in declared_names(lex(unsplice(entry.text))[0])
@@ -727,8 +756,10 @@ class Session:
                 at_file_scope.add(i)
                 hoisted[:0] = [n for n in names if n not in hoisted]
                 needed |= idents
-            elif has_lambda(tokens):
-                needed |= idents
+            else:
+                # A lambda's body may name a global without capturing it; a
+                # name it captures must stay a local of main(), as typed.
+                needed |= lambda_free_names(tokens)
         return at_file_scope, hoisted
 
     def as_cpp(self, path):

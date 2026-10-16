@@ -500,7 +500,16 @@ and cpp-repl says so.
 ## Limits
 
 - **Variables typed at the prompt are globals.** A name can clash with a C
-  library function: `int index = 3;` fails.
+  library function: `int index = 3;` fails. A lambda can neither name a
+  global in its capture list nor, at file scope, have a capture-default, so
+  `[x]`, `[&x]`, `[=]` and `[&]` go, cpp-repl says so, and the lambda uses
+  the global itself: a change to `x` after the lambda was made shows in it,
+  where `[x]` would have kept a copy.
+- **A lambda typed at the prompt whose init-capture is not a constant**
+  (`auto f = [v = base](int x) { return v + x; };`) holds zero for `v`:
+  clang-repl 18, 23 and 24 never run that closure's initialiser. `[n = 5]`
+  is fine, a `std::function` holding the lambda is fine, and so is any
+  lambda inside a function.
 - **Rebuilding replays the journal,** file writes and other side effects
   included; declaring a name again replays the inputs after its old
   declaration.

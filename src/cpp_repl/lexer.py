@@ -544,9 +544,14 @@ def _head_state(toks):
 
 
 def has_lambda(tokens):
-    """Whether tokens hold a lambda expression: a [ that does not follow a
-    name, a ) or a ] (which would make it a subscript), closed by a ] that a
-    parameter list, a body, or a lambda specifier follows."""
+    """Whether tokens hold a lambda expression (see _lambda_introducers)."""
+    return next(_lambda_introducers(tokens), None) is not None
+
+
+def _lambda_introducers(tokens):
+    """The index of the '[' of every lambda introducer among tokens: a '['
+    that does not follow a name, a ')' or a ']' (a subscript), closed by a ']'
+    that a parameter list, a body or a lambda specifier follows."""
     for i, t in enumerate(tokens):
         if not token_is(tokens, i, '['):
             continue
@@ -560,8 +565,83 @@ def has_lambda(tokens):
             after = tokens[close + 1]
             if (after.kind == 'op' and after.text in _AFTER_CAPTURES
                     or after.kind == 'ident' and after.text in _LAMBDA_WORDS):
-                return True
-    return False
+                yield i, close
+
+
+def _capture_items(tokens, start, close):
+    """The items of the capture list between tokens[start] ('[') and
+    tokens[close] (']'), each a list of tokens: `&`, `=`, `x`, `&x`, `this`,
+    `*this`, `xs...`, `x = expr`."""
+    items, j = [], start + 1
+    while j < close:
+        k, depth = j, 0
+        while k < close and not (depth == 0 and token_is(tokens, k, ',')):
+            if tokens[k].kind == 'op' and tokens[k].text in '([{':
+                depth += 1
+            elif tokens[k].kind == 'op' and tokens[k].text in ')]}':
+                depth -= 1
+            k += 1
+        items.append(tokens[j:k])
+        j = k + 1
+    return items
+
+
+def _captured_name(item):
+    """The name a capture item introduces (`x`, `&x`, `x = e`, `&x = e`,
+    `xs...`), or None for a default, `this` and `*this`."""
+    if token_is(item, 0, '&') or token_is(item, 0, '*'):
+        item = item[1:]
+    return item[0].text if item and item[0].kind == 'ident' and item[0].text != 'this' else None
+
+
+def _lambda_body(tokens, close):
+    """The tokens of the body of the lambda whose introducer ends at
+    tokens[close]: past the parameter list, the specifiers and a trailing
+    return type, what the braces hold."""
+    j = _skip_attributes(tokens, close + 1)
+    if token_is(tokens, j, '('):
+        j = match_bracket(tokens, j) + 1
+    while j < len(tokens) and not token_is(tokens, j, '{'):
+        j = angle_end(tokens, j) if token_is(tokens, j, '<') else j + 1
+    return tokens[j + 1:match_bracket(tokens, j)] if j < len(tokens) else []
+
+
+def rewrite_captures(text, names, defaults=False):
+    """text with the captures of the names in names taken out of every
+    lambda's capture list (`[x]` and `[&x]` become `[]`), and, with defaults
+    set, its capture-defaults (`=`, `&`) too. A variable typed at the prompt
+    is a global, which a lambda can neither name in its capture list nor
+    take through a default; without the capture, the lambda uses the global
+    itself. Init-captures, `this` and packs stay as they are."""
+    tokens, _ = lex(text)
+    edits = []   # (start offset, end offset, replacement) of each capture list to rewrite
+    for start, close in _lambda_introducers(tokens):
+        items = _capture_items(tokens, start, close)
+        kept = [item for item in items
+                if not (len(item) == 1 and item[0].kind == 'op' and item[0].text in ('=', '&') and defaults)
+                and not (len(item) in (1, 2) and _captured_name(item) in names and not token_is(item, -1, '...'))]
+        if len(kept) != len(items):
+            inside = ', '.join(text[item[0].start:item[-1].start + len(item[-1].text)] for item in kept)
+            edits.append((tokens[start].start, tokens[close].start + 1, f'[{inside}]'))
+    for start, end, replacement in sorted(edits, reverse=True):
+        text = text[:start] + replacement + text[end:]
+    return text
+
+
+def lambda_free_names(tokens):
+    """The names the lambdas among tokens use without capturing them: the
+    identifiers of each body (keywords among them, which no declaration
+    names), less what its capture list names, for a lambda with no
+    capture-default. Those must be globals wherever the lambda goes; a
+    captured name must not be one (it cannot be captured then)."""
+    free = set()
+    for start, close in _lambda_introducers(tokens):
+        items = _capture_items(tokens, start, close)
+        if any(len(item) == 1 and item[0].kind == 'op' and item[0].text in ('=', '&') for item in items):
+            continue
+        captured = {name for name in map(_captured_name, items) if name}
+        free |= {t.text for t in _lambda_body(tokens, close) if t.kind == 'ident'} - captured
+    return free
 
 
 # The name of a macro, as macros are named: TF_DEFINE_PRIVATE_TOKENS, Q_UNUSED,

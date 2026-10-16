@@ -305,6 +305,37 @@ def test_declared_names(text, names):
     assert declared_names(lex(text)[0]) == names
 
 
+@pytest.mark.parametrize('text, names, defaults, rewritten', [
+    ('auto add = [base](int x) { return base + x; };', {'base'}, False, 'auto add = [](int x) { return base + x; };'),
+    ('[&base](int x) { return base + x; }', {'base'}, False, '[](int x) { return base + x; }'),
+    ('[=, &k, this, xs...]() mutable { }', {'k', 'xs'}, True, '[this, xs...]() mutable { }'),
+    ('[k = k, &j](int) { }', {'k', 'j'}, False, '[k = k](int) { }'),
+    ('f([a] { return a; }, [&b] { return b; })', {'a', 'b'}, False, 'f([] { return a; }, [] { return b; })'),
+    ('auto g = [&]() { return base; };', set(), True, 'auto g = []() { return base; };'),
+    ('[&](int x) { return x; }', set(), False, '[&](int x) { return x; }'),   # a default is kept unless asked
+    ('v[base] + 1', {'base'}, False, 'v[base] + 1'),   # a subscript
+    ('[base](int x) { return base; }', {'other'}, False, '[base](int x) { return base; }'),
+])
+def test_rewrite_captures(text, names, defaults, rewritten):
+    from cpp_repl.lexer import rewrite_captures
+    assert rewrite_captures(text, names, defaults) == rewritten
+
+
+@pytest.mark.parametrize('text, free', [
+    ('auto f = [](int q) { return q + seen; };', {'q', 'seen'}),
+    ('auto f = [cap](int q) { return q + cap; };', {'q'}),
+    ('auto f = [&cap, k = 2](int q) -> int { return q + cap + k + lim; };', {'q', 'lim'}),
+    ('auto f = [=](int q) { return q + seen; };', set()),
+    ('std::for_each(v.begin(), v.end(), [](int x) { total += x; });', {'x', 'total'}),
+    ('int n = count(v, [](int x) { return x > lim; });', {'x', 'lim'}),
+    ('v[base] + 1', set()),
+])
+def test_lambda_free_names(text, free):
+    """Keywords come along (`return`): no declaration names one."""
+    from cpp_repl.lexer import lambda_free_names
+    assert lambda_free_names(lex(text)[0]) - {'return'} == free
+
+
 def test_trailing_expression():
     assert trailing_expression('int a = 1;\na') == ('int a = 1;', 'a', 11)
     assert trailing_expression('int a = 1;\na + 1;') is None

@@ -118,6 +118,24 @@ def test_a_header_the_library_lacks_is_explained(tmp_path, monkeypatch, made):
     assert Path(sent[len('#include "'):-1]).read_text() == '#line 1 "<input>"\n#define ANSWER 42\n'
 
 
+def test_a_lambda_uses_a_global_without_capturing_it(tmp_path, monkeypatch, made):
+    """`[cap]` of a variable typed at the prompt, a global, and `[&]` at file
+    scope are errors clang reports; cpp-repl drops the capture, says so, and
+    runs the lambda on the global itself. The journal keeps the input as
+    typed, and what ran replays."""
+    s, stream = make(tmp_path, monkeypatch)
+    made.append(s)
+    assert s.run_input('int cap = 1;')
+    assert s.run_input('auto f = [cap](int x) { return x + cap; };')
+    assert stream.getvalue() == '[cap is a global here: the lambda uses it without a capture]\n'
+    text, (sent,), kind = s.journal[-1]
+    assert text == 'auto f = [cap](int x) { return x + cap; };' and s.failures == 0
+    assert Path(sent[len('#include "'):-1]).read_text() == '#line 1 "<input>"\nauto f = [](int x) { return x + cap; };\n'
+    assert s.run_input('auto g = [&] { return cap; };')
+    assert stream.getvalue().endswith('[a lambda at file scope has no capture-default: it uses the globals it names]\n')
+    assert s.journal[-1].text == 'auto g = [&] { return cap; };'
+
+
 def test_what_the_program_prints_is_never_a_diagnostic(tmp_path, monkeypatch, made):
     """A line of the program's own output that reads like clang's ("fatal
     error: ...", "JIT session error: ...") comes after the start mark, so it
@@ -390,7 +408,9 @@ def test_save_and_save_cpp(tmp_path, monkeypatch, made):
                  # so does one its initialiser names (base, through n).
                  'int base = 1;', 'int n = base + 2;', 'int f() { return n; }', 'f()',
                  'int seen = 0;', 'auto count = [](int q) { return q + seen; };', 'count(1)',
-                 'seen, 42'):   # a comma expression is one argument to show()
+                 'seen, 42',   # a comma expression is one argument to show()
+                 # A name a lambda captures stays a local of main(), as typed.
+                 'int cap2 = 1;', 'auto h = [cap2](int q) { return q + cap2; };'):
         assert s.run_input(text)
     s.run_input(f'%save {tmp_path / "s.repl"}')
     assert (tmp_path / 's.repl').read_text().startswith('#include <vector>\nint twice')
@@ -402,7 +422,8 @@ def test_save_and_save_cpp(tmp_path, monkeypatch, made):
     assert ('\nint twice(int x) { return 2 * x; }\n\nint base = 1;\n\nint n = base + 2;\n\nint f() { return n; }\n\n'
             'int seen = 0;\n\nint main()\n{\n') in cpp
     assert ('  int a = twice(2);\n  show(42);\n  void_call();\n  if (a) {\n    say("yes");\n  }\n  show(f());\n'
-            '  auto count = [](int q) { return q + seen; };\n  show(count(1));\n  show((seen, 42));\n  return 0;\n}') in cpp
+            '  auto count = [](int q) { return q + seen; };\n  show(count(1));\n  show((seen, 42));\n'
+            '  int cap2 = 1;\n  auto h = [cap2](int q) { return q + cap2; };\n  return 0;\n}') in cpp
 
 
 def test_a_backend_that_never_answers(tmp_path, monkeypatch):

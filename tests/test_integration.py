@@ -268,10 +268,14 @@ def test_save_cpp_builds_and_prints_the_same(session, tmp_path):
               'int base = 1;', 'int n = base + 2;', 'int f() { return n; }', 'f()',
               'auto plus_n = [](int a) { return a + n; };', 'plus_n(1)',
               'int alive = 0;', 'struct Tracked { Tracked() { ++alive; } ~Tracked() { --alive; } };',
-              'Tracked{}, alive']
+              'Tracked{}, alive',
+              # A captured name stays a local of main() in the program, as typed.
+              'int cap = 1;', 'auto plus_cap = [cap](int a) { return cap + a; };', 'plus_cap(1)']
     for text in inputs:
         assert s.run_input(text), stream.getvalue()
-    in_repl = stream.getvalue()
+    # cpp-repl's own notes (the capture of cap) are not the program's output.
+    in_repl = ''.join(line for line in stream.getvalue().splitlines(keepends=True)
+                      if not (line.startswith('[') and line.rstrip().endswith(']')))
     source = tmp_path / 'saved.cpp'
     s.run_input(f'%save-cpp {source}')
     cflags = shlex.split(run_cpp_repl(['--cflags', '--no-config'], tmp_path).stdout)
@@ -354,6 +358,28 @@ int helper(int x) { return x * 2; }
     result = run_cpp_repl(['--no-config', '--batch', '-q', 'prog.cpp'], tmp_path)
     assert result.returncode == 0, result.stdout + result.stderr
     assert result.stdout == '2\n'
+
+
+def test_main_s_locals_are_used_by_lambdas_without_a_capture(tmp_path):
+    """main()'s variables are globals in the session, which a lambda can
+    neither capture by name nor through a default: the capture goes, with a
+    note, and the lambda uses the global itself."""
+    (tmp_path / 'prog.cpp').write_text('''\
+#include <iostream>
+int main() {
+    int base = 10;
+    auto add = [base](int x) { return base + x; };
+    auto add2 = [&base](int x) { return base + x; };
+    auto add3 = [=](int x) { return base + x; };
+    std::cout << add(1) << " " << add2(2) << " " << add3(3) << "\\n";
+    return 0;
+}
+''')
+    result = run_cpp_repl(['--no-config', '--batch', '-q', 'prog.cpp'], tmp_path)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout == ('[base is a global here: the lambda uses it without a capture]\n' * 2
+                             + '[a lambda at file scope has no capture-default: it uses the globals it names]\n'
+                             + '11 12 13\n')
 
 
 def test_a_return_inside_main_s_control_flow(tmp_path):

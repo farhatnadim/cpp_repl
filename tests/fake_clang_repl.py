@@ -18,6 +18,9 @@ It reads one input per line and answers:
   stale()              "linked", or a JIT link error in a process that has seen taint()
   syntax error         anything with 'error_here' in it fails to parse
   int NAME ..., double NAME ..., struct NAME ...   declares NAME; declared again, "redefinition of 'NAME'"
+  [NAME] or [&NAME]   a lambda capturing a global: "'NAME' cannot be captured because it does not have
+                      automatic storage duration"; [=] or [&]: "non-local lambda expression cannot have a
+                      capture-default"
   ...repl::print_expr(((N), ...))...   prints N; with void_call() for N, the void mark
   ...return N; ... repl::finish(...)   the end mark around N, as a statement that returned from main
   ...throw_it(); ... repl::finish(...) the end mark of an uncaught std::runtime_error, "boom"
@@ -169,6 +172,15 @@ def main():
             continue
         if 'throw_it()' in line and mark:
             out(start + mark + '\x1d!134std::runtime_error: boom\x1d\n')
+            continue
+        m = re.search(r'\[&?(\w+)\]', line)
+        if m and m.group(1) != 'this':
+            out(f"input_line_{n}:1:12: error: '{m.group(1)}' cannot be captured because it does not have "
+                'automatic storage duration\nerror: Parsing failed.\n')
+            continue
+        if re.search(r'\[[=&]\]', line):
+            out(f'input_line_{n}:1:12: error: non-local lambda expression cannot have a capture-default\n'
+                'error: Parsing failed.\n')
             continue
         m = re.match(r'(?:int|double|struct) (\w+)\b', line)
         if m:

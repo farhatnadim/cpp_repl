@@ -7,7 +7,7 @@ the toolchain does.
 
 | Target | Tag | What it adds |
 | --- | --- | --- |
-| `base` | — | ubuntu:24.04, Python 3.12, prompt_toolkit, Pygments, pytest, libstdc++ 13, Eigen 3.4.0, libpython3.12 |
+| `base` | — | ubuntu:24.04, Python 3.12, prompt_toolkit, Pygments, pytest, libstdc++ 13, Eigen 3.4.0, glm 0.9.9.8, spdlog 1.12, CMake 3.28, libpython3.12 |
 | `apt` | `cpp-repl:llvm23`, `cpp-repl:llvm23.1.4` | `clang-23` and `clang-tools-23` (clang-repl) from apt.llvm.org, with `libc++-23-dev` and `libc++abi-23-dev` for `-stdlib=libc++` |
 | `bench` | `cpp-repl:bench-llvm23` | `apt` plus libomp, g++-13, a venv at `/opt/bench-venv` with NumPy (OpenBLAS wheel), threadpoolctl and matplotlib, and Eigen 5.0.1 at `$EIGEN5_ROOT` (`/opt/eigen-5.0.1`) |
 | `snapshot` | `cpp-repl:llvm-snapshot` | clang and clang-repl from apt.llvm.org's development snapshot (LLVM main; 24 in October 2026), with its libc++ |

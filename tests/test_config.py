@@ -315,6 +315,7 @@ def test_docker_command(tmp_path, monkeypatch):
     monkeypatch.delenv('CPP_REPL_IMAGE', raising=False)
     monkeypatch.setenv('LIBRARY_PATH', str(linked))
     monkeypatch.setenv('PXR_ROOT', '/opt/usd')
+    monkeypatch.delenv('USD_ROOT', raising=False)
     options = Options(cwd=tmp_path / 'work', no_config=True, libs=[str(libdir / 'libdemo.so')],
                       flags=['-I', '/usr/include/eigen3', '-O2'])
     (tmp_path / 'work').mkdir()

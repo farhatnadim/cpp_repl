@@ -34,7 +34,8 @@ docker build --target src      --build-arg DOCKERFILE_SHA=$SHA --build-arg LLVM_
 run the same commands. `DOCKERFILE_SHA` lands in the label
 `io.cpp-repl.dockerfile-sha256`, so `cpp-repl --docker` can tell an image built
 from an older Dockerfile. `LLVM_MAJOR` (default 23; the Makefile calls it `LLVM`) picks another
-apt.llvm.org release for `apt` and `bench`.
+apt.llvm.org release for `apt` and `bench`: 23 or newer, since cpp-repl refuses an older
+clang-repl.
 
 Every instruction works with the legacy builder, which `docker build` uses when
 buildx is not installed. The legacy builder runs every stage that precedes

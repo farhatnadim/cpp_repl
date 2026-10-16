@@ -30,9 +30,10 @@ would inside `main()`, and:
 - **It runs at native speed.** With `-O3 --native`, Eigen typed at the prompt
   multiplies matrices as fast as clang++-compiled Eigen, and as fast as NumPy
   (see [Speed](#speed)). `%timeit` times a statement as IPython does.
-- **It starts in a tenth of a second.** The first start of a configuration
+- **It starts in half a second.** The first start of a configuration
   precompiles its preludes, a few seconds; every start after that takes
-  about 0.1 s, OpenUSD's headers included ([Start-up](#start-up)).
+  about half a second, and about a second with OpenUSD's headers
+  ([Start-up](#start-up)).
 - **Errors point at your lines.** An error in a file you run names its line
   and column, `prog.cpp:12:5`, as clang++ would. `--batch` keeps errors brief,
   for a coding agent that fixes the code and runs it again.
@@ -79,9 +80,13 @@ c++> %timeit C.noalias() = A * B;
 That product is 64 GFLOP/s on one core of a Ryzen 9 5950X, the same as
 clang++ -O3 makes of it.
 
+The [tutorials](docs/tutorials/README.md) walk through a first session,
+programs without a build, libraries and your project, scripts and coding
+agents, and the Claude Code plugin, each in a few minutes.
+
 ## Install and run
 
-Linux, Python 3.11 or newer, and either a clang-repl or Docker.
+Linux, Python 3.11 or newer, and either clang-repl 23 or newer, or Docker.
 
 ```sh
 git clone https://github.com/farhatnadim/cpp_repl.git && cd cpp_repl
@@ -160,7 +165,7 @@ prelude headers rather than the precompiled header of them
 ### Files
 
 ```sh
-cpp-repl prog.cpp            # run prog.cpp's main(), then keep the prompt
+cpp-repl prog.cpp            # run prog.cpp's main(), then keep the prompt (on a terminal)
 cpp-repl --batch prog.cpp    # run it and exit
 cpp-repl --emit prog.cpp     # print the inputs prog.cpp becomes
 cpp-repl a.repl              # a session saved with %save
@@ -217,11 +222,15 @@ cpp-repl --batch --json prog.cpp              # a JSON object per input
   - no include chains, and template backtraces of two levels;
   - for a link failure, the first three missing symbols, demangled.
 
-  A wrong `std::sort` comparator costs 15 lines instead of 233 (clang-repl 18).
+  A `std::sort` of a type with no `operator<` costs 10 lines instead of 238
+  (clang-repl 23.1.4).
   `--diagnostics full` shows everything clang prints, as at the prompt.
+- **Inputs piped in, or `--batch` with files.** `cpp-repl <<'EOF' ... EOF`
+  runs the inputs it reads, then exits with the program's status.
+  `--batch` runs files, and only files: given none, it exits 2.
 - **`-q`** leaves out the echo of each input, so that the output is the
   program's own, with the errors where they arise, and the program's stderr
-  merged in. What cpp-repl says of the configuration (a `-std` raised, a
+  merged in; cpp-repl's own notes, in brackets, stay. What cpp-repl says of the configuration (a `-std` raised, a
   `cpp-repl.toml` of another user skipped) goes to stderr; a profile's note
   is the prompt's and `%flags`'s.
 - **`--json`** writes a JSON object per input instead: `input`, `file` and
@@ -235,7 +244,8 @@ cpp-repl --batch --json prog.cpp              # a JSON object per input
   the configuration's notes, the `cpp-repl.toml` read. The last line is
   `{"exit": N, "inputs": N, "failures": N, "skipped": N}`, `skipped` being
   the inputs left unrun, those of later files included, once the program
-  ended or `--stop-on-error` stopped.
+  ended or `--stop-on-error` stopped. When cpp-repl cannot start (exit 2),
+  there is no last line, and stderr says why.
 - **The exit status is the program's:** what `main()` returned, the `N` of
   its `exit(N)`, or 128 + the signal that killed it (139 for a segfault, 134
   for `abort()` and for an exception nothing caught, which cpp-repl names:
@@ -253,13 +263,18 @@ cpp-repl --batch --json prog.cpp              # a JSON object per input
 - **A session that stays.** `cpp-repl --serve SOCKET` keeps a session
   running, its profiles loaded. `cpp-repl --connect SOCKET [FILE...]` runs
   files, or stdin, in it, and exits with the run's status. A run there takes
-  0.07 s, against about 0.15 s for a new cpp-repl whose preludes are
+  0.07 s, against about half a second for a new cpp-repl whose preludes are
   precompiled ([Start-up](#start-up)), or 2 s and more when they are not.
-  The session's names carry over from run to run.
-  `--fresh` starts a run from an empty session instead, for a program run
-  again after an edit, in the spare clang-repl the server keeps warm: 0.1 s
-  when the spare is ready, and the next spare takes a start-up to warm, so a
-  `--fresh` run sooner than that after the last waits for it. `--timeout`,
+  The session's names carry over from run to run, and a `return` from
+  `main()` ends only that run, so a program's variables can be read after
+  it. `--fresh` starts a run from an empty session instead, for a program
+  run again after an edit, in the spare clang-repl the server keeps warm,
+  and the session stays empty for the runs after it: 0.1 s when the spare
+  is ready, and the next spare takes a start-up to warm, so a `--fresh` run
+  sooner than that after the last waits for it.
+  Files go with `--connect`: `--serve` with a file exits 2. Each command
+  resolves a relative socket path against its own directory, and `%save`
+  writes relative to the server's. `--timeout`,
   `--stop-on-error`, `-q` and `--json` apply to the run, and so does
   `--diagnostics` as far as cpp-repl's own filter goes: the limits clang
   itself applies in brief mode are the server's, so a server meant to answer
@@ -393,7 +408,7 @@ between different enumeration types); `std = "gnu++20"` in the profile, or
 | `CPP_REPL_IMAGE` | the image `--docker` runs (`--image` wins) |
 | `CPP_REPL_TRACES=1` | keep LLVM's stack trace when clang-repl crashes; by default cpp-repl reports the crash in one line |
 | `NO_COLOR` | no colour, as `--no-color` |
-| `XDG_STATE_HOME` | where the state directory goes: `$XDG_STATE_HOME/cpp-repl`, default `~/.local/state/cpp-repl`. It holds the prompt's history, the completion cache, the precompiled preludes of each configuration (`pch/`), each session's input files, and the `home` and `tmp` the code sees |
+| `XDG_STATE_HOME` | where the state directory goes: `$XDG_STATE_HOME/cpp-repl`, default `~/.local/state/cpp-repl`. It holds the prompt's history, the completion cache, the precompiled preludes of each configuration (`pch/`), the library that loads a session's libraries as clang-repl starts (`preload/`), the patched TBB headers of `-p usd`, each session's input files, `--docker`'s home (`docker-home/`), and the `home` and `tmp` the code sees. A read-only one stops the start with exit 2: point it at a writable directory |
 | `LIBRARY_PATH` | directories `-l NAME` looks in, after `-L` |
 | `USD_ROOT` or `PXR_ROOT`, `EIGEN_ROOT` or `EIGEN3_INCLUDE_DIR`, `GLM_ROOT` | where a profile's library is, before pkg-config and the usual places (the usd profile reads the `CMakeCache.txt` beside `compile_commands.json` first) |
 
@@ -423,18 +438,27 @@ one line, specialise `repl::Show<T>`; for one line inside a list,
 ### With Claude Code
 
 This repository is also a [Claude Code](https://claude.com/claude-code)
-plugin. Its skills add a library to cpp-repl for you:
-- they find its headers and shared libraries;
+plugin. Its skills run C++ for an agent, and add a library to cpp-repl for
+you:
+- they run snippets and programs without a build, and read what they print;
+- they find a library's headers and shared libraries;
 - they write a profile into your project;
 - they make the library's types print;
 - they check the result with an example session.
 
 ```
-/plugin install cpp-repl --marketplace farhatnadim/cpp_repl
+/plugin marketplace add farhatnadim/cpp_repl
+/plugin install cpp-repl@cpp-repl
 ```
+
+The same from a shell: `claude plugin install cpp-repl --marketplace
+farhatnadim/cpp_repl` (Claude Code 2.1.275 or newer). `claude plugin
+marketplace update cpp-repl`, then `claude plugin update cpp-repl@cpp-repl`,
+brings in a newer one.
 
 | Skill | What it does |
 | --- | --- |
+| `/cpp-repl:run-cpp` | Runs C++ without a build and reads what it prints: what a call returns, a `.cpp` file's `main()` and its variables afterwards, a snippet's errors, a statement's timing. It picks the project's launcher, its `cpp-repl.toml` or a built-in profile, and runs cpp-repl without the prompt, which waits for a terminal an agent does not have. |
 | `/cpp-repl:add-library NAME` | Writes `.cpp-repl/NAME.toml`, a prelude with printers, and an example. Then checks them: the prelude compiles, the session starts, every input runs, the shared libraries are really used, and a `%save-cpp` of the example builds and prints the same. |
 | `/cpp-repl:add-printer` | Makes a type print well: a readable display on its own, and one line inside a list. |
 | `/cpp-repl:contribute-profile NAME` | In a clone of this repository, turns a working profile into a built-in `-p NAME`, with its tests. The `glm` profile was made this way. |
@@ -463,12 +487,17 @@ c++> cv::countNonZero(gray)
 31417
 ```
 
-- **Nothing else to install.** The plugin puts this checkout's `bin/` on
-  Claude Code's PATH, so `cpp-repl` runs as it is.
+- **cpp-repl comes with it.** The plugin puts its `bin/` on Claude Code's
+  PATH, so `cpp-repl` runs as it is. It still needs a clang-repl 23 or
+  newer, or Docker.
 - **The profile stays in your project,** in `.cpp-repl/`. Nothing is written
   to the plugin.
 - **Contributors load their own clone** with `claude --plugin-dir .`, so the
-  skills come from the working tree.
+  skills come from the working tree. With the plugin also installed, turn
+  the installed copy off in `.claude/settings.local.json`
+  (`{"enabledPlugins": {"cpp-repl@cpp-repl": false}}`).
+- **[Tutorial 05](docs/tutorials/05-claude-code.md)** walks through each
+  skill.
 
 ## Why a front end
 
@@ -633,8 +662,8 @@ module file in any of them, and cpp-repl says so.
   rest live in `repl::`): a variable of your own named `keep` fails.
 - **The first start of a configuration takes a few seconds:** the preludes
   are precompiled then ([Start-up](#start-up)). After that a session starts
-  in a few tenths of a second. The `usd` profile, `--no-pch`, and a
-  clang-repl with no clang++ beside it parse the preludes at every start:
+  in about half a second. `--no-pch`, and a clang-repl with no clang++
+  beside it, parse the preludes at every start:
   about 2 s, or 1.5 s with `--no-std`, which leaves out the standard library
   prelude; OpenUSD adds about 3 s. Docker adds about 0.15 s.
 - **Your headers must compile with your clang-repl.** OpenUSD's do not build
@@ -700,8 +729,10 @@ make parity        # openusd-tutorial's lessons through cpp-repl -p usd and comp
 make compat        # probe the host's clang-repl; make compat-docker for the images
 make compat-table  # the "Why a front end" table from the probes
 make bench-quick   # a 3-minute benchmark run (make docker-bench first)
+make tutorials     # docs/tutorials' transcripts against runs (make tutorials-update rewrites them)
 claude plugin validate .                                 # the Claude Code plugin and its skills
-claude plugin eval . --case yaml-cpp --runs 1 --ablation none   # one skill eval (real model calls)
+evals/headless.py --case yaml-cpp                        # one skill eval, headless (real model calls)
+claude plugin eval . --case yaml-cpp --runs 1 --ablation none   # the same where its sandbox runs
 ```
 
 The test suite passes on clang-repl 23.1.4 (`make test-docker`) and the 24

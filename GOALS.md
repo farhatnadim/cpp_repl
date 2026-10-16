@@ -21,9 +21,13 @@ from `openusd-tutorial/repl/usd-repl`.
 - [x] Claude Code plugin: `add-library`, `add-printer` and `contribute-profile` skills, with probe and check scripts, tests and evals
 - [x] `glm` profile, made by `contribute-profile` as the worked example of a contributed profile
 - [x] openusd-tutorial runs on cpp-repl: its `repl/usd-repl` is a launcher over the usd profile, which its CMake build fetches at a pinned commit
-- [ ] Run the eval suite under `claude plugin eval` (its sandbox needs user namespaces, which AppArmor blocks on this host; see `evals/README.md`)
+- [ ] Run the eval suite under `claude plugin eval` (its sandbox needs user namespaces, which AppArmor blocks on this host; `evals/headless.py` runs the cases meanwhile; see `evals/README.md`)
 - [ ] Build and test the `src` image (written, not built: 30 to 60 minutes of all cores)
 - [ ] Report the clang-repl 23 top-level lambda crash upstream, unless it is reported already
 - [x] clang-repl 23 and newer only; the usd profile runs there (a patched copy of TBB 2020's headers, the libraries loaded as clang-repl starts)
 - [x] Precompiled headers: the preludes precompiled once per configuration (`pch.py`), so that on clang-repl 23 a session starts in 0.5 s where it took 2 s, and in 1 s with OpenUSD where it took 5 s
+- [x] Tutorials in `docs/tutorials/`: a first session, programs, libraries, scripts and agents, the Claude Code plugin; every transcript checked against a run (`scripts/check_tutorial.py`, `make tutorials`)
+- [x] `run-cpp` skill: an agent runs C++ without a build and without the prompt (inputs piped in, `--batch`, `--json`, `--serve`/`--connect`), with two eval cases
+- [x] The plugin installs from GitHub: `claude-plugin` fast-forwarded into `main` (2026-10-16)
+- [x] `evals/headless.py`: the eval cases with `claude -p`, where `claude plugin eval`'s sandbox cannot run
 - [ ] Later: a Jupyter kernel, PyPI, CI

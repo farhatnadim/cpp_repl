@@ -10,12 +10,12 @@ the directory above holds a workspace-level `AGENTS.md`, which still applies
 whole blocks, rewrites the shapes clang-repl gets wrong, prints values, keeps a
 journal so that a crash or Ctrl-C at the prompt costs a replay, and converts between `.cpp`
 files and sessions. Profiles (`usd`, `eigen`, `glm`) and project configuration
-(`cpp-repl.toml`, `compile_commands.json`) point it at a library. Docker images
-carry the newest clang-repl.
+(`cpp-repl.toml`, `compile_commands.json`) point it at a library. It runs
+clang-repl 23 and newer, and Docker images carry the newest.
 
-The repository is also a Claude Code plugin (`.claude-plugin/`), whose skills
-add a library to cpp-repl: `add-library`, `add-printer` and
-`contribute-profile` in `skills/`.
+The repository is also a Claude Code plugin (`.claude-plugin/`). Its skills
+run C++ for an agent (`run-cpp`) and add a library to cpp-repl
+(`add-library`, `add-printer` and `contribute-profile`), in `skills/`.
 
 It began as a fork of `openusd-tutorial/repl/usd-repl` on 2026-10-13: commit
 2c41aad plus that tree's uncommitted `_source()` change. Since 2026-10-16 the
@@ -63,25 +63,58 @@ the rule above.
 | `docker/Dockerfile` | images with clang-repl from apt.llvm.org, or built from source |
 | `tests/` | unit tests, a fake clang-repl, golden sessions, compat probes |
 | `bin/` | `cpp-repl` and `cpp-repl-docker`, run from the checkout |
-| `scripts/` | `parity.py` (the tutorial's lessons against their compiled programs), `compat_table.py` |
+| `scripts/` | `parity.py` (the tutorial's lessons against their compiled programs), `compat_table.py`, `check_tutorial.py` (the tutorials' transcripts against runs) |
+| `docs/tutorials/` | five walks through cpp-repl, every transcript checked against a run |
 | `bench/` | NumPy vs Eigen in the REPL vs native Eigen |
 | `.claude-plugin/` | the Claude Code plugin and marketplace manifests; the plugin root is the repo root |
 | `skills/` | the plugin's skills; `skills/add-library/scripts/` probes libraries and checks profiles |
-| `evals/` | `claude plugin eval` cases for the skills; results go to `evals/results/` (ignored) |
+| `evals/` | `claude plugin eval` cases for the skills, and `headless.py`, which runs them with `claude -p`; results go to `evals/results/` (ignored) |
 
 ## Commands
 
 ```
 make test           # unit and fake-backend tests; no clang-repl needed
-make test-host      # everything, against the host's clang-repl
+make test-host      # everything, against the host's clang-repl (23 or newer: with an older one the backend tests skip)
+make tutorials      # docs/tutorials' transcripts against runs
 make parity         # the OpenUSD lessons through cpp-repl -p usd against their compiled programs
 make compat         # what raw clang-repl does with the inputs cpp-repl rewrites
 make docker         # build cpp-repl:llvm23 (make docker-snapshot: LLVM main)
 make test-docker    # the test suite inside the image (make test-snapshot: in the snapshot's)
 make bench-quick    # a 3-minute benchmark run in the bench image
 claude plugin validate .   # the plugin's manifests and skills
-claude plugin eval . --case <case> --runs 1 --ablation none   # one skill eval; real model calls
+evals/headless.py --case <case>   # one skill eval with claude -p; real model calls
+claude plugin eval . --case <case> --runs 1 --ablation none   # the same, where its sandbox runs
 ```
+
+## Using cpp-repl from an agent
+
+cpp-repl's prompt waits for a terminal, which an agent does not have. Run it
+one of these ways:
+
+```
+cpp-repl <<'EOF'                          # inputs piped in: each echoed, then its output
+std::vector<int> v{3, 1, 2};
+std::ranges::sort(v);
+v
+EOF
+cpp-repl --batch -q --timeout 60 prog.cpp # files: the program's output, exit status the program's
+cpp-repl --serve repl.sock > serve.log 2>&1 &   # a session that stays: --connect runs in it
+```
+
+- **`--batch` runs files only.** With none it exits 2.
+- **A `return` from `main()` ends the run,** and the files after it do not
+  run. To read a program's variables after it, run it with `--connect` in a
+  `--serve` session, then send the reads with `--connect`.
+- **`--json`** gives one object per input. The exit status is the program's:
+  2 means cpp-repl could not start.
+- **Inside this checkout, run `bin/cpp-repl`.** With the plugin installed,
+  `cpp-repl` on Claude Code's PATH is the installed copy. Load the working
+  tree with `claude --plugin-dir .`, with the installed copy turned off in
+  `.claude/settings.local.json`:
+  `{"enabledPlugins": {"cpp-repl@cpp-repl": false}}`.
+
+`skills/run-cpp/SKILL.md` has the details, and
+`docs/tutorials/04-scripts-and-agents.md` shows each with its output.
 
 ## Probing clang-repl directly
 

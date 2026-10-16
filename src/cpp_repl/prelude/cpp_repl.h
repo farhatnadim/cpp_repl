@@ -669,37 +669,88 @@ inline void started()
   std::fflush(stdout);
 }
 
-// Inside a handler: what the exception being handled is, on one line. With
-// -fno-exceptions the wrapper has no handler and nothing calls this; it is
-// still here so that the prelude compiles. Without RTTI (-fno-rtti) the type
-// of a std::exception cannot be named, so it is named std::exception.
-inline ended uncaught()
+namespace detail {
+inline std::string last_thrown;   // the whole of the last uncaught exception's what()
+}
+
+// The whole text of the last uncaught exception: the prompt shows only the
+// first line of a what() that runs over several, as libtorch's c10::Error
+// does with its backtrace.
+inline const std::string &thrown() { return detail::last_thrown; }
+
+namespace detail {
+
+// Inside a handler, or with an exception current: what it is, on one line,
+// its what() cut at the first line break, with the count of lines left out.
+// Without RTTI (-fno-rtti) the type of a std::exception cannot be named, so
+// it is named std::exception.
+inline std::string describe_current()
 {
-  ended e(abort_status);
+  std::string text;
 #if __cpp_exceptions
   try {
     throw;
   } catch (const std::exception &x) {
 #if __cpp_rtti
-    e.thrown = detail::demangled(typeid(x).name()) + ": " + x.what();
+    text = demangled(typeid(x).name()) + ": ";
 #else
-    e.thrown = std::string("std::exception: ") + x.what();
+    text = "std::exception: ";
 #endif
+    last_thrown = x.what();
+    const std::size_t cut = last_thrown.find('\n');
+    text += last_thrown.substr(0, cut);
+    if (cut != std::string::npos) {
+      std::size_t more = 0;
+      for (std::size_t i = cut; i < last_thrown.size(); ++i)
+        more += last_thrown[i] == '\n' && i + 1 < last_thrown.size();
+      text += " (" + std::to_string(more) + " more line" + (more == 1 ? "" : "s") + " in repl::thrown())";
+    }
   } catch (...) {
+    last_thrown.clear();
 #if __has_include(<cxxabi.h>)
     if (const std::type_info *type = abi::__cxa_current_exception_type())
-      e.thrown = detail::demangled(type->name());
+      text = demangled(type->name());
     else
 #endif
-      e.thrown = "of an unknown type";
+      text = "of an unknown type";
   }
 #else
-  e.thrown = "an exception, with -fno-exceptions";
+  text = "an exception, with -fno-exceptions";
 #endif
-  for (char &c : e.thrown)
-    if (c == '\n' || c == end_mark)
+  for (char &c : text)
+    if (c == end_mark || c == '\r')
       c = ' ';
+  return text;
+}
+
+}  // namespace detail
+
+// Inside a handler: what the exception being handled is, on one line. With
+// -fno-exceptions the wrapper has no handler and nothing calls this; it is
+// still here so that the prelude compiles.
+inline ended uncaught()
+{
+  ended e(abort_status);
+  e.thrown = detail::describe_current();
   return e;
+}
+
+// The terminate handler of every backend (the prologue sets it): an
+// exception that leaves a declaration's initialiser runs outside any
+// statement's handler, and ends the backend. It is named as uncaught() names
+// one, on one line, before the abort() that cpp-repl then restores from.
+[[noreturn]] inline void terminated()
+{
+#if __cpp_exceptions
+  if (std::current_exception()) {
+    std::fprintf(stderr, "[uncaught exception: %s]\n", detail::describe_current().c_str());
+    std::fflush(stderr);
+    std::abort();
+  }
+#endif
+  std::fputs("[std::terminate() called]\n", stderr);
+  std::fflush(stderr);
+  std::abort();
 }
 
 inline void finish(const ended &e, bool timed = true)

@@ -266,6 +266,33 @@ def test_an_uncaught_exception_is_named_and_the_session_goes_on(session):
     assert stream.getvalue().endswith('42\n')
 
 
+def test_an_exception_whose_message_runs_over_lines_is_named_by_its_first(session):
+    """libtorch's c10::Error puts a backtrace of thirty lines in what():
+    the prompt shows the first, and repl::thrown() keeps the whole text."""
+    s, stream = session
+    assert s.run_input('throw std::runtime_error("first\\nsecond\\nthird");')
+    assert stream.getvalue().endswith(
+        '[uncaught exception: std::runtime_error: first (2 more lines in repl::thrown())]\n')
+    assert s.run_input('repl::thrown()')
+    assert stream.getvalue().endswith('"first\\nsecond\\nthird"\n')
+    assert s.run_input('throw std::runtime_error("one\\n");')   # a trailing newline is not a line
+    assert stream.getvalue().endswith('[uncaught exception: std::runtime_error: one (0 more lines in repl::thrown())]\n')
+
+
+def test_an_exception_from_an_initialiser_is_named_before_the_rebuild(session):
+    """A declaration runs at file scope, outside any statement's handler, so
+    its exception ends clang-repl: the terminate handler names it as a
+    statement's is named, in place of libstdc++'s "terminate called"."""
+    s, stream = session
+    assert s.run_input('int a = 41;')
+    assert s.run_input('auto bad = std::stoi("abc");')
+    text = stream.getvalue()
+    assert '[uncaught exception: std::invalid_argument: stoi]\n' in text and 'terminate called' not in text
+    assert text.endswith('[clang-repl crashed (SIGABRT): restored 1 input]\n')
+    assert s.run_input('a + 1')
+    assert stream.getvalue().endswith('42\n')
+
+
 def test_names_can_be_declared_again(session):
     """A variable, a struct and a function declared again replace the old
     ones; a name a later input depends on stays, with the error."""

@@ -794,6 +794,8 @@ class Config:
         self.prologue = [f'%lib {self.runtime}'] if self.runtime else []
         self.prologue += ['prctl(PR_SET_DUMPABLE, 0, 0, 0, 0);'] if sys.platform.startswith('linux') else []
         self.prologue += ['setvbuf(stdout, nullptr, _IONBF, 0);']   # keep stdout in step with stderr
+        # An exception from a declaration's initialiser is named on one line.
+        self.prologue += ['std::set_terminate(repl::terminated);']
         self.prologue += [f'%lib {lib}' for lib in self.libs]
         if self.pch:
             # A PCH's inline functions that an input which then fails to

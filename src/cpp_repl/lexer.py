@@ -380,57 +380,96 @@ def _skip_attributes(tokens, i):
     return i
 
 
-def _declares(tokens, i):
+# Words that take an operand or head something other than a declaration, so
+# that `sizeof x`, `return x` and `true && false` declare nothing.
+_NO_TYPE_WORDS = {'return', 'throw', 'co_return', 'co_yield', 'co_await', 'delete', 'new', 'sizeof', 'alignof',
+                  'typeid', 'goto', 'case', 'default', 'else', 'do', 'using', 'namespace', 'template', 'operator',
+                  'requires', 'concept', 'static_assert', 'asm', 'true', 'false', 'nullptr', 'this'}
+
+
+def _declares(tokens, i, last=False):
     """Whether tokens[i] is a declared name: an identifier that =, {, (, [,
-    ; or , follows, or a declarator in parentheses, as in int (*f)(int)."""
+    ; or , follows, or nothing at all when last is set (`int w` typed
+    without its ';'); or a declarator in parentheses, `(*f)` or `(&r)`, that
+    a parameter list or an array bound follows, as in int (*f)(int). A call
+    such as f(*p) is none."""
     if token_is(tokens, i, '(') and (token_is(tokens, i + 1, '*') or token_is(tokens, i + 1, '&')):
-        return True
-    return (i + 1 < len(tokens) and tokens[i].kind == 'ident'
-            and tokens[i + 1].kind == 'op' and tokens[i + 1].text in ('=', '{', '(', '[', ';', ','))
+        after = match_bracket(tokens, i) + 1
+        return token_is(tokens, after, '(') or token_is(tokens, after, '[')
+    if i >= len(tokens) or tokens[i].kind != 'ident':
+        return False
+    if i + 1 == len(tokens):
+        return last
+    return tokens[i + 1].kind == 'op' and tokens[i + 1].text in ('=', '{', '(', '[', ';', ',')
 
 
-def _declarator_at(tokens):
+def _declarator_at(tokens, bare=False):
     """Where a statement that looks like a variable declaration declares its
     name: after attributes, specifiers, a type (a keyword, or a name with ::
     and <...>) and * and &, the index of the name that =, {, (, [, ; or a
-    comma follows, of the [ of a structured binding, or of the ( of a
-    declarator in parentheses. None when the statement is no declaration.
+    comma follows (or that ends the statement, after a type), of the [ of a
+    structured binding `auto [a, b]`, or of the ( of a declarator in
+    parentheses `int (*f)(int)`. None when the statement is no declaration:
+    a subscript v[0], a call f(*p), a product m * m.
+
+    bare says the statement has no ';', so a value may be wanted: then
+    `n * v[i]`, a plain name, a * or &, and a subscript or a call, is the
+    expression it usually is. With a ';' the same shape is `Foo *arr[3];`, a
+    declaration, which must stay at file scope.
+
     Directives are left out first, so the index is into the tokens without
     them."""
     tokens = [t for t in tokens if t.kind != 'directive']
     i, n = _skip_attributes(tokens, 0), len(tokens)
-    typed = False   # the specifiers hold a type word: `unsigned long n` needs no other
+    typed, type_head = False, False   # the specifiers hold a type word (`unsigned long n` needs no other); a struct/class/enum
     while i < n and tokens[i].kind == 'ident' and tokens[i].text in _SPECIFIERS:
         typed = typed or tokens[i].text in TYPE_WORDS
+        type_head = type_head or tokens[i].text in _TYPE_HEADS
         i += 1
-    if i < n and tokens[i].kind == 'ident' and not (typed and _declares(tokens, i)):
+    keyword, qualified, is_auto = typed, False, False   # what the type is made of
+    if i < n and tokens[i].kind == 'ident' and not (typed and _declares(tokens, i, last=True)):
+        if tokens[i].text in _NO_TYPE_WORDS:
+            return None
+        keyword = keyword or tokens[i].text in TYPE_WORDS or tokens[i].text == 'decltype'
+        is_auto = tokens[i].text == 'auto'
         if tokens[i].text == 'decltype' and token_is(tokens, i + 1, '('):
             i = match_bracket(tokens, i + 1) + 1
         else:
             i += 1
         while i < n:
             if token_is(tokens, i, '::') and i + 1 < n and tokens[i + 1].kind == 'ident':
-                i += 2
+                i, qualified = i + 2, True
             elif token_is(tokens, i, '<'):
-                i = angle_end(tokens, i)
+                i, qualified = angle_end(tokens, i), True
             elif tokens[i].kind == 'ident' and tokens[i].text in TYPE_WORDS:
-                i += 1
+                i, keyword = i + 1, True
             else:
                 break
     elif not typed:
         return None
+    pointer = False   # a *, & or && came between the type and the name
     while i < n and (tokens[i].text in ('*', '&', '&&') and tokens[i].kind == 'op'
                      or tokens[i].kind == 'ident' and tokens[i].text in ('const', 'volatile')):
+        pointer = pointer or tokens[i].kind == 'op'
         i += 1
-    if token_is(tokens, i, '[') or _declares(tokens, i):   # a structured binding: auto [a, b] = ...
-        return i
-    return None
+    if token_is(tokens, i, '['):   # a structured binding, auto [a, b] = ...; else a subscript
+        return i if is_auto else None
+    # A name that ends the statement is declared after a type: `int w`,
+    # `std::string s`, `Foo f`; `m * m` and `a & b` are expressions, and
+    # `class C final` heads a definition.
+    if type_head and i + 1 == n and token_is(tokens, i, 'final', 'ident'):
+        return None
+    if not _declares(tokens, i, last=keyword or qualified or not pointer):
+        return None
+    if bare and pointer and not (keyword or qualified) and tokens[i + 1].text in ('[', '('):
+        return None   # n * v[i], a & b(0): see the docstring
+    return i
 
 
-def _declaration(tokens):
+def _declaration(tokens, bare=False):
     """Whether a statement looks like a variable declaration (see
     _declarator_at)."""
-    return _declarator_at(tokens) is not None
+    return _declarator_at(tokens, bare) is not None
 
 
 def _has_body_or_end(tokens):
@@ -622,7 +661,7 @@ def _statement_shaped(toks):
     code = [t for t in toks if t.kind != 'directive']
     if not code:
         return False
-    return _declaration(code) or (code[0].kind == 'ident' and code[0].text in ('return', 'throw'))
+    return _declaration(code, bare=True) or (code[0].kind == 'ident' and code[0].text in ('return', 'throw'))
 
 
 _DEFINITION_HEADS = {'struct', 'class', 'union', 'enum', 'template', 'typedef', 'namespace', 'using',

@@ -553,9 +553,13 @@ class Session:
                 self._show_end()
                 return self._after(text, [line], output, result, kind, again=again)
             # Not something print_expr takes. The attempt failed to compile,
-            # which can leave stale instantiations behind like any error.
+            # which can leave stale instantiations behind like any error. What
+            # is no expression is a declaration the lexer did not see as one
+            # (`Foo *p`), or wrong: it goes at file scope, unwrapped, where a
+            # declaration belongs. Inside a function it would be a local,
+            # silently gone with the statement.
             self.tainted = True
-            send, kind = transform(text, fresh=self._fresh, origin=origin, as_statement=True), 'stmt'
+            send, kind = transform(text, fresh=self._fresh, origin=origin, as_statement=True, wrap=False), 'stmt'
         line = self._file(send.text) if send.via_file else send.text
         output, result = self._send(line, hold=_REDEFINED.search if redefine and kind == 'stmt' else None)
         if self.held:

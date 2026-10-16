@@ -111,6 +111,32 @@ def test_completeness(text, state):
     ('auto f = [](int a) { return a; }', 'stmt', 'auto f = [](int a) { return a; };'),
     ('return x', 'stmt', in_function('f1', 'return x;')),
     ('x = 5', 'expr', 'x = 5'),
+    # A declaration with nothing after its name is one too; what only looks
+    # like one (a subscript, a call with *p or &x, a product) has a value.
+    ('int w', 'stmt', 'int w;'),
+    ('int *p', 'stmt', 'int *p;'),
+    ('std::string s', 'stmt', 'std::string s;'),
+    ('std::vector<int> v', 'stmt', 'std::vector<int> v;'),
+    ('Foo f', 'stmt', 'Foo f;'),
+    ('unsigned long n', 'stmt', 'unsigned long n;'),
+    ('int (*fp)(int) = nullptr', 'stmt', 'int (*fp)(int) = nullptr;'),
+    ('auto [a, b] = p', 'stmt', 'auto [a, b] = p;'),
+    ('const auto &[c, d] = q', 'stmt', 'const auto &[c, d] = q;'),
+    ('v[0]', 'expr', 'v[0]'),
+    ('m["k"]', 'expr', 'm["k"]'),
+    ('grid[1][2]', 'expr', 'grid[1][2]'),
+    ('x[0] = 5', 'expr', 'x[0] = 5'),
+    ('f(*p)', 'expr', 'f(*p)'),
+    ('g(&x)', 'expr', 'g(&x)'),
+    ('std::abs(*p)', 'expr', 'std::abs(*p)'),
+    ('n * v[i]', 'expr', 'n * v[i]'),
+    ('a & b[0]', 'expr', 'a & b[0]'),
+    ('n * f(i)', 'expr', 'n * f(i)'),
+    ('m * m', 'expr', 'm * m'),
+    ('a & b', 'expr', 'a & b'),
+    ('true && false', 'expr', 'true && false'),
+    ('sizeof x', 'expr', 'sizeof x'),
+    ('Foo *q', 'expr', 'Foo *q'),   # as likely a product: the statement runs after the expression fails
     ('[](int x) { return x; }', 'expr', '[](int x) { return x; }'),
     ('S::S() : x{1} { }', 'stmt', 'S::S() : x{1} { }'),
     ('for (auto p : v) {\n  f(p);\n}', 'stmt', in_function('f1', 'for (auto p : v) { f(p); }')),
@@ -303,6 +329,8 @@ def test_what_keeps_no_place():
     send = transform('int a = \\\n  1;', origin=ORIGIN)   # a line splice: one line, as without an origin
     assert send == ('int a = 1;', 'stmt', False)
     assert transform('x', as_statement=True, fresh=fresh()).text == in_function('f1', 'x;')
+    # The session's second try of a failed expression: a statement at file scope.
+    assert transform('Foo *q', as_statement=True, wrap=False, origin=ORIGIN) == ('#line 7 "prog.cpp"\n  Foo *q;', 'stmt', True)
 
 
 def test_located():
@@ -368,6 +396,15 @@ def test_an_open_raw_string_is_unclosed():
     ('PXR_NAMESPACE_USING_DIRECTIVE;', False),
     ('[](int x) { return x; };', True),
     ('S::S() : x{1} { }', False),
+    # With its ';', what could be a declaration is one: `Foo *arr[3];` must
+    # not become a local. A subscript or a call with *p is a statement.
+    ('Foo *arr[3];', False),
+    ('int w;', False),
+    ('Foo f;', False),
+    ('v[0];', True),
+    ('f(*p);', True),
+    ('g(&x);', True),
+    ('m * m;', False),   # the shape of `Foo *p;`
 ])
 def test_needs_function(text, wrapped):
     tokens, _ = lex(text)

@@ -156,6 +156,12 @@ def test_example_sessions_run(path, tmp_path):
     result = run_cpp_repl([*args, '--no-config', '--batch', '--no-color', str(path)], tmp_path)
     assert result.returncode == 0, result.stdout + result.stderr
     assert 'error:' not in result.stdout and 'crashed' not in result.stdout
+    # A bare expression taken for a declaration runs as a statement and
+    # prints nothing; clang's -Wunused-result is the only sign, as it was
+    # for stl.repl's `groups["odd"].size()`.
+    assert 'warning:' not in result.stdout, result.stdout
+    if path.stem == 'stl':
+        assert '\nc++> groups["odd"].size()\n3\n' in result.stdout
 
 
 # -- recovery, against the real thing ----------------------------------------

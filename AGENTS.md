@@ -1,7 +1,8 @@
 # AGENTS.md
 
-Guidance for AI agents working in this repository. The workspace-level
-`../AGENTS.md` still applies; this file adds what is specific to cpp_repl.
+Guidance for AI agents working in this repository. In the author's workspace
+the directory above holds a workspace-level `AGENTS.md`, which still applies
+(a clone has none); this file adds what is specific to cpp_repl.
 
 ## What this project is
 

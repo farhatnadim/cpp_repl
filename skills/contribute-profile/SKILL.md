@@ -57,8 +57,8 @@ order. Then make it find them:
 1. **`$<NAME>_ROOT`, an install prefix.** It has to work, because it is how
    Docker users and custom installs point at the library.
 2. **pkg-config, or the package's CMake files read as text.** Never run cmake
-   at startup: cpp-repl starts in about a second, and a cmake configure takes
-   several.
+   at startup: cpp-repl starts in about two seconds, and a cmake configure
+   takes several.
 3. **The usual prefixes.**
 
 When nothing is found, raise `ConfigError` with the apt package and the

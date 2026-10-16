@@ -8,10 +8,10 @@ the toolchain does.
 | Target | Tag | What it adds |
 | --- | --- | --- |
 | `base` | — | ubuntu:24.04, Python 3.12, prompt_toolkit, Pygments, pytest, libstdc++ 13, Eigen 3.4.0, libpython3.12 |
-| `apt` | `cpp-repl:llvm23`, `cpp-repl:llvm23.1.2` | `clang-23` and `clang-tools-23` (clang-repl) from apt.llvm.org |
+| `apt` | `cpp-repl:llvm23`, `cpp-repl:llvm23.1.4` | `clang-23` and `clang-tools-23` (clang-repl) from apt.llvm.org, with `libc++-23-dev` and `libc++abi-23-dev` for `-stdlib=libc++` |
 | `bench` | `cpp-repl:bench-llvm23` | `apt` plus libomp, g++-13, a venv at `/opt/bench-venv` with NumPy (OpenBLAS wheel), threadpoolctl and matplotlib, and Eigen 5.0.1 at `$EIGEN5_ROOT` (`/opt/eigen-5.0.1`) |
-| `snapshot` | `cpp-repl:llvm-snapshot` | clang and clang-repl from apt.llvm.org's development snapshot (LLVM main; 24 in October 2026) |
-| `src` | `cpp-repl:llvm-src-<ref>` | clang and clang-repl built from llvm-project at `LLVM_REF` (default `llvmorg-23.1.3`) |
+| `snapshot` | `cpp-repl:llvm-snapshot` | clang and clang-repl from apt.llvm.org's development snapshot (LLVM main; 24 in October 2026), with its libc++ |
+| `src` | `cpp-repl:llvm-src-<ref>` | clang and clang-repl built from llvm-project at `LLVM_REF` (default `llvmorg-23.1.3`); no libc++ |
 
 In every image `clang`, `clang++` and `clang-repl` resolve without a version
 suffix. `/etc/cpp-repl-llvm-version` records the package version (or the git
@@ -48,10 +48,10 @@ On a Ryzen 9 5950X with a fast connection:
 
 | Target | Build | Size |
 | --- | --- | --- |
-| `apt` | under a minute | 691 MB |
+| `apt` | under a minute | 711 MB |
 | `bench` | a few minutes | 1.03 GB |
-| `snapshot` | under a minute | 682 MB |
-| `src` | 30–60 minutes of all cores, about 25 GB of build cache | — |
+| `snapshot` | under a minute | 702 MB |
+| `src` | an estimate: 30–60 minutes of all cores, about 25 GB of build cache; not built yet | — |
 
 ## Notes
 

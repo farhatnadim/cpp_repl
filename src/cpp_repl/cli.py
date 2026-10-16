@@ -30,17 +30,19 @@ C++ sources into sessions and sessions back into C++ programs.
 
 EPILOG = """\
 Compiler flags go to clang as they are: -I DIR, -isystem DIR, -iquote DIR,
--idirafter DIR, -D NAME[=VALUE], -U NAME, -O0 to -O3, -std=..., -stdlib=libc++,
--include FILE (a prelude of your own), -isysroot DIR, --sysroot DIR,
---gcc-toolchain=DIR, -nostdinc++, -m..., -f..., -W..., -g, -pthread. A
-cpp-repl.toml in the working directory or above adds its own (see the
-README). Inside the REPL, %help lists the commands.
+-idirafter DIR, -D NAME[=VALUE], -U NAME, -O0 to -O3 (-Os, -Oz, -Ofast),
+-std=..., -stdlib=libc++, -include FILE (a prelude of your own), -isysroot DIR,
+--sysroot DIR, --gcc-toolchain=DIR, -nostdinc, -nostdinc++, -m..., -f...,
+-W..., -w, -pedantic, -g, -pthread; -fsanitize is refused. A cpp-repl.toml in
+the working directory or above adds its own (see the README). Inside the REPL,
+%help lists the commands.
 
-Exit status after running files: 0 when every input ran; 1 when an input
-failed to compile or link; when the program crashed or called exit(N), what a
-shell reports for it: 128 + the signal (139 for SIGSEGV, 134 for abort()), or
-N; else 124 when an input ran past --timeout. 2 when cpp-repl cannot start,
-130 after Ctrl-C.
+Exit status after running files: what the program ended with, when it did:
+main()'s return value, exit(N)'s N, or 128 + the signal that killed it (139
+for SIGSEGV, 134 for abort() and an uncaught exception); else 130 when Ctrl-C
+stopped an input; else 124 when one ran past --timeout; else 1 when an input
+failed to compile or link; else 0. 2 when cpp-repl cannot start, 1 after
+SIGTERM, 141 when the reader of its output went away.
 """
 
 _WITH_VALUE = ('-I', '-isystem', '-iquote', '-idirafter', '-D', '-U', '-include', '-isysroot', '--sysroot')
@@ -76,7 +78,8 @@ def make_parser():
                         help="C++ sources (main()'s body runs one statement at a time) "
                              'or saved .repl sessions to run first')
     parser.add_argument('-p', '--profile', action='append', default=[], metavar='NAME',
-                        help=f'load a profile ({", ".join(builtin_profiles())}); repeatable')
+                        help=f'load a profile ({", ".join(builtin_profiles())}), or a cpp-repl.toml-style file by its '
+                             'path; repeatable')
     parser.add_argument('-c', '--config', action='append', default=[], metavar='FILE',
                         help='read a cpp-repl.toml-style file; repeatable')
     parser.add_argument('--no-config', action='store_true',
@@ -97,7 +100,7 @@ def make_parser():
                         help='leave out the standard-library prelude, for a faster start')
     parser.add_argument('--clang-repl', metavar='PATH',
                         help='the clang-repl to run (default: $CPP_REPL_CLANG_REPL, then the newest '
-                             'one on PATH)')
+                             'one on PATH or in /usr/lib/llvm-N/bin)')
     parser.add_argument('--batch', action='store_true',
                         help='run the files and exit (exit status: see below)')
     parser.add_argument('--stop-on-error', action='store_true',
@@ -114,8 +117,9 @@ def make_parser():
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='leave out the echo of each input run from a file or stdin')
     parser.add_argument('--json', action='store_true',
-                        help='write a JSON object per input in place of the transcript: its file, line, '
-                             'status, seconds, output and notes; a last line holds the exit status')
+                        help='write a JSON object per input in place of the transcript: input, file, line, '
+                             'status, seconds, run_seconds, output, notes and returned; between inputs {"output"} or '
+                             '{"note"}; a last line holds exit, inputs, failures and skipped')
     parser.add_argument('--no-color', action='store_true', help='plain text (NO_COLOR=1 does the same)')
     parser.add_argument('--cflags', action='store_true',
                         help='print the compiler flags that build a %%save-cpp file, and exit')
@@ -210,7 +214,7 @@ def _run(argv):
         return 0
 
     interactive = not args.batch and not args.serve and sys.stdin.isatty()
-    # A server's output goes to its clients, which paint for themselves.
+    # A server's output goes to its clients as text, unpainted.
     colour = (sys.stdout.isatty() and not args.no_color and not args.json and not args.serve
               and not os.environ.get('NO_COLOR'))
     options = options_from(args, flags, colour, interactive)

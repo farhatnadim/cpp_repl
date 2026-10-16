@@ -1,7 +1,8 @@
 # Files a built-in profile touches
 
-Paths are relative to the cpp_repl checkout. `<name>` is the profile name, a
-Python identifier; `<NAME>` is the same in upper case.
+Paths are relative to the cpp_repl checkout, except `templates/`, which is
+this skill's directory (`skills/contribute-profile/templates/`). `<name>` is the
+profile name, a Python identifier; `<NAME>` is the same in upper case.
 
 | File | Change | Why |
 | --- | --- | --- |

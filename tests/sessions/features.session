@@ -1,0 +1,101 @@
+# The C++ the README says you can type, each construct once, on clang-repl
+# 18, 23 and 24 alike (the ends of a program are integration tests). Run as
+# a golden: cpp-repl --batch runs the prompt lines and must print the rest.
+c++> template <class T> concept Num = std::is_arithmetic_v<T>;
+c++> auto add(Num auto a, Num auto b) { return a + b; }
+c++> add(2, 3.5)
+5.5
+c++> consteval int sq(int n) { return n * n; }
+c++> constinit int squared = sq(7);
+c++> squared
+49
+c++> template <class T> auto describe(T x) { if constexpr (std::is_integral_v<T>) return "integral"; else return "other"; }
+c++> describe(1)
+"integral"
+c++> describe(1.5)
+"other"
+c++> struct Version { int major, minor; auto operator<=>(const Version &) const = default; };
+c++> Version{1, 2} < Version{1, 3}
+true
+c++> auto [lo, hi] = std::minmax({4, 9, 1});
+c++> hi - lo
+8
+c++> struct Vec2 { double x, y; };
+c++> Vec2 v2{.x = 1, .y = 2};
+c++> v2.y
+2
+c++> constexpr long double operator""_km(long double x) { return x * 1000; }
+c++> 1.5_km
+1500
+c++> extern "C" int cfunc(int x) { return x + 1; }
+c++> cfunc(41)
+42
+c++> int counted() { static int calls = 0; return ++calls; }
+c++> counted(); counted(); counted()
+3
+c++> int jumps() { int n = 0; again: if (++n < 3) goto again; return n; }
+c++> jumps()
+3
+c++> std::vector<int> nums{4, 9, 1};
+c++> std::sort(nums.begin(), nums.end(), [](int a, int b) { return a > b; });
+c++> nums
+[9, 4, 1]
+c++> [](int x) { return x * x; }(6)
+36
+c++> int total = 0;
+c++> std::thread worker([] { total += 5; });
+c++> worker.join();
+c++> total
+5
+c++> std::jthread([] { total *= 2; }).join();
+c++> total
+10
+c++> template <class T> struct Box { T value; T get() const; };
+c++> template <class T> T Box<T>::get() const { return value; }
+c++> Box<int>{21}.get() * 2
+42
+c++> struct Shape { virtual double area() const { return 0; } virtual ~Shape() = default; };
+c++> struct Square : Shape { double side; Square(double s) : side(s) {} double area() const override { return side * side; } };
+c++> std::unique_ptr<Shape> shape = std::make_unique<Square>(3);
+c++> shape->area()
+9
+c++> using namespace std;
+c++> cout << "plain " << 1'000'000 << endl;
+plain 1000000
+c++> const char *shader = R"(
+...> #version 330 core
+...> void main() {}
+...> )";
+c++> std::string_view(shader).find("330")
+10
+c++> struct Counter { int n = 0; int next(this Counter &self) { return ++self.n; } };
+c++> Counter c3; c3.next(); c3.next()
+2
+c++> auto copied = auto(squared);
+c++> copied
+49
+c++> std::views::iota(1, 10) | std::views::transform([](int i) { return i * i; }) | std::views::take(4)
+[1, 4, 9, 16]
+c++> std::format("{:>6.2f}|{}", 3.14159, "pi")
+"  3.14|pi"
+c++> std::numbers::pi
+3.141592653589793
+c++> std::string_view(std::source_location::current().file_name()).ends_with(".repl")
+true
+c++> std::span<int>(nums).size()
+3
+c++> std::bit_cast<std::uint32_t>(1.0f)
+1065353216
+c++> std::atomic<int> hits{0};
+c++> hits += 2;
+c++> hits
+2
+c++> std::optional<std::string> maybe;
+c++> maybe.value_or("none")
+"none"
+c++> std::variant<int, std::string> either = 7;
+c++> std::holds_alternative<int>(either)
+true
+c++> using namespace std::chrono_literals;
+c++> 1500ms + 2s
+3500ms

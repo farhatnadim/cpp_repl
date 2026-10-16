@@ -12,7 +12,7 @@ from `openusd-tutorial/repl/usd-repl`.
 - [x] Core prelude with `Show<T>`/`Put<T>`; `usd` and `eigen` profiles
 - [x] Configuration: compiler-style flags, `cpp-repl.toml`, `compile_commands.json`
 - [x] Backend calibration, fake-backend tests, integration tests and golden sessions
-- [x] Compat probes and the "Why a front end" table for clang-repl 18.1.3, 23.1.2 and the 24 snapshot
+- [x] Compat probes and the "Why a front end" table for clang-repl 18.1.3, 23.1.4 and the 24 snapshot
 - [x] Run control flow and lambda statements inside functions (clang-repl 23 crashes on top-level lambdas)
 - [x] Docker images: clang-repl 23 from apt.llvm.org, the snapshot, the bench image; `cpp-repl --docker`
 - [x] `%time`, `%timeit`, `%flags`; Tab completion from every included header

@@ -16,7 +16,7 @@ compiled ahead of time into a library that cpp-repl calls.
 | | `eigen-native` | `matmul.cpp` built by clang++ with FLAGS |
 | | `eigen-repl` | the same `matmul.cpp` through `cpp-repl --batch` with FLAGS |
 | | `eigen-repl-aot` | cpp-repl with default flags, calling `libbench_kernel.so` (built with FLAGS) through `--lib` |
-| | `eigen-repl-default` | cpp-repl with no flags (-O0): what you get out of the box. n ≤ 1024, one round |
+| | `eigen-repl-default` | cpp-repl with `-std=c++20` alone (-O0): what you get out of the box. n ≤ 1024, one round |
 | mt, 16 threads | `numpy@16`, `eigen-native-omp`, `eigen-repl-omp`, `eigen-repl-aot-omp` | the same with OpenBLAS threads and OpenMP; the JIT arm loads libomp with `--lib` |
 | diag | `naive-native` / `naive-repl` | three plain loops, n ≤ 1024: does `-O3` reach the JIT, and is a gap the JIT's code generation or Eigen? |
 | | `eigen-repl-generic` | `-O3` without `-march=native`, the likeliest mistake at the prompt |
@@ -26,8 +26,8 @@ FLAGS is `-std=c++20 -O3 -march=native -DNDEBUG`. Every C++ arm records what
 it was built with (Eigen version, the `EIGEN_VECTORIZE_*` and `__AVX2__`-style
 macros, `NDEBUG`, `__OPTIMIZE__`, `_OPENMP`, Eigen's thread count, the
 compiler), so the configuration is checked rather than assumed. The REPL arms
-load only cpp-repl's core prelude, so no profile changes Eigen's
-configuration or hides its parse time.
+load cpp-repl's own preludes, the core and the standard library's, and no
+profile, so nothing changes Eigen's configuration or hides its parse time.
 
 ## One source, compiled and in the REPL
 

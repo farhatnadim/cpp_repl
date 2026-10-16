@@ -254,11 +254,12 @@ def format_seconds(seconds):
 
 
 _INCLUDE_NAME = re.compile(r'\s*#\s*include\s*["<]([^">]*)[">]')
-# C++23 headers that a standard library may lack yet, and which have them.
-_NEWER_HEADERS = {'print': 'libstdc++ 14 and libc++ 17', 'generator': 'libstdc++ 14',
-                  'mdspan': 'libstdc++ 14 and libc++ 18', 'flat_map': 'libstdc++ 15 and libc++ 20',
-                  'flat_set': 'libstdc++ 15 and libc++ 20', 'spanstream': 'libstdc++ 12 and libc++ 20',
-                  'stdfloat': 'libstdc++ 13', 'text_encoding': 'libstdc++ 15'}
+# Headers of C++23 and C++26 that a standard library may lack yet: the
+# standard each came with, and which libraries have it.
+_NEWER_HEADERS = {'print': ('C++23', 'libstdc++ 14 and libc++ 17'), 'generator': ('C++23', 'libstdc++ 14'),
+                  'mdspan': ('C++23', 'libstdc++ 14 and libc++ 18'), 'flat_map': ('C++23', 'libstdc++ 15 and libc++ 20'),
+                  'flat_set': ('C++23', 'libstdc++ 15 and libc++ 20'), 'spanstream': ('C++23', 'libstdc++ 12 and libc++ 20'),
+                  'stdfloat': ('C++23', 'libstdc++ 13'), 'text_encoding': ('C++26', 'libstdc++ 15')}
 # `import std;`: no clang-repl has a standard library module to import.
 _NO_MODULE = re.compile(r"fatal error: module '([^']+)' not found")
 
@@ -635,8 +636,8 @@ class Session:
         if kind == 'pp' and result == 'error' and 'file not found' in output:
             m = _INCLUDE_NAME.match(stripped)
             if m and m.group(1) in _NEWER_HEADERS:
-                self._note(f'[<{m.group(1)}> is C++23, in {_NEWER_HEADERS[m.group(1)]}: this clang-repl\'s '
-                           'standard library lacks it]')
+                standard, libraries = _NEWER_HEADERS[m.group(1)]
+                self._note(f'[<{m.group(1)}> is {standard}, in {libraries}: this clang-repl\'s standard library lacks it]')
         if result == 'error' and (m := _NO_MODULE.search(plain(output))):
             self._note(f"[clang-repl has no module '{m.group(1)}': #include the headers]")
         return self._after(journaled, [line], output, result, kind, again=again)

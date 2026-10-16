@@ -1,6 +1,6 @@
 ---
 name: add-printer
-description: Make a C++ type print well in cpp-repl, the C++ REPL on clang-repl, when it is typed as a bare expression - a readable display on its own and a one-line form inside containers. Use this when a value at the cpp-repl prompt prints as <TypeName>, as a bare 1 or an address, prints far too much (every pixel of an image, every element of a matrix), spreads across lines inside a std::vector, or when a cpp-repl profile's types need printers (the add-library skill sends you here). Works for library types, the user's own types, and the types of a built-in profile such as -p usd.
+description: Make a C++ type print well in cpp-repl, the C++ REPL on clang-repl, when it is typed as a bare expression - a readable display on its own and a one-line form inside containers. Use this when a value at the cpp-repl prompt prints as <TypeName>, prints far too much (every pixel of an image, every element of a matrix), spreads across lines inside a std::vector, or when a cpp-repl profile's types need printers (the add-library skill sends you here). Works for library types, the user's own types, and the types of a built-in profile such as -p usd.
 allowed-tools:
   - Bash(python3 "${CLAUDE_SKILL_DIR}/../add-library/scripts/check_profile.py" *)
   - Bash(cpp-repl *)
@@ -11,9 +11,10 @@ allowed-tools:
 In cpp-repl, a bare expression (no semicolon) prints its value. Which printer
 runs is decided at compile time, in this order:
 
-1. **`repl::Show<T>`, when a specialisation exists.** It is the display of a
-   value on its own, and may take several lines.
-2. **The type's `operator<<`.**
+1. **`repl::Show<T>` or `repl::Put<T>`, when a specialisation exists.** `Show`
+   is the display of a value on its own, and may take several lines; `Put`
+   is its one-line form, which a bare value takes too when there is no `Show`.
+2. **The type's non-member `operator<<`**, found by argument-dependent lookup.
 3. **The generic printer.** Numbers, strings, containers, pairs, tuples and
    optionals print as you would expect. Anything else prints as `<TypeName>`.
 

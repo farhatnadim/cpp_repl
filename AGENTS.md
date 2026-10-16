@@ -9,7 +9,7 @@ the directory above holds a workspace-level `AGENTS.md`, which still applies
 `cpp-repl` is a C++ REPL: a Python front end over LLVM's `clang-repl`. It reads
 whole blocks, rewrites the shapes clang-repl gets wrong, prints values, keeps a
 journal so that a crash or Ctrl-C at the prompt costs a replay, and converts between `.cpp`
-files and sessions. Profiles (`usd`, `eigen`, `glm`) and project configuration
+files and sessions. Profiles (`usd`, `eigen`, `glm`, `torch`) and project configuration
 (`cpp-repl.toml`, `compile_commands.json`) point it at a library. It runs
 clang-repl 23 and newer, and Docker images carry the newest.
 

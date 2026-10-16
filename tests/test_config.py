@@ -532,3 +532,43 @@ def test_the_default_standard_can_follow_another_clang_repl(tmp_path):
     assert Config(Options(cwd=tmp_path, no_config=True), backend=False, clang_version=(16, 0, 6)).std == '-std=gnu++23'
     assert Config(Options(cwd=tmp_path, no_config=True, flags=['-std=gnu++20']), backend=False,
                   clang_version=(23, 1, 4)).std == '-std=gnu++20'
+
+
+def test_torch_profile(tmp_path):
+    """The install TORCH_ROOT names, or the one cpp-repl's Python has."""
+    try:
+        cfg = Config(Options(cwd=tmp_path, profiles=['torch']), backend=False)
+    except ConfigError as e:
+        pytest.skip(str(e))   # libtorch is not installed here
+    assert cfg.preludes[-1].name == 'cpp_repl_torch.h'
+    assert cfg.profiles[0].banner.startswith('libtorch ')
+    assert [lib.name for lib in cfg.libs][:2] == ['libc10.so', 'libtorch_cpu.so'] and cfg.libs[-1].name == 'libtorch.so'
+    assert all(lib.is_file() for lib in cfg.libs)
+    assert all(Path(d).is_dir() for f, d in zip(cfg.compiler_flags, cfg.compiler_flags[1:]) if f == '-isystem')
+
+
+def test_torch_profile_root_variable(tmp_path, monkeypatch):
+    monkeypatch.setenv('TORCH_ROOT', str(tmp_path))
+    with pytest.raises(ConfigError, match='TORCH_ROOT'):
+        Config(Options(cwd=tmp_path, profiles=['torch']), backend=False)
+
+
+def test_torch_profile_root_install(tmp_path, monkeypatch):
+    """A libtorch zip, CPU only: its two include directories, its libraries
+    in load order, and the banner says so."""
+    root = tmp_path / 'libtorch'
+    api = root / 'include' / 'torch' / 'csrc' / 'api' / 'include' / 'torch'
+    api.mkdir(parents=True)
+    (api / 'torch.h').write_text('')
+    (api / 'version.h').write_text('#define TORCH_VERSION_MAJOR 2\n#define TORCH_VERSION_MINOR 9\n'
+                                   '#define TORCH_VERSION_PATCH 0\n')
+    (root / 'build-version').write_text('2.9.0+cpu\n')
+    (root / 'lib').mkdir()
+    for name in ('torch', 'torch_cpu', 'c10'):
+        (root / 'lib' / f'lib{name}.so').write_bytes(b'')
+    monkeypatch.setenv('TORCH_ROOT', str(root))
+    cfg = Config(Options(cwd=tmp_path, profiles=['torch']), backend=False)
+    assert [lib.name for lib in cfg.libs] == ['libc10.so', 'libtorch_cpu.so', 'libtorch.so']
+    assert cfg.profiles[0].flags == ['-isystem', str(root / 'include'),
+                                     '-isystem', str(root / 'include' / 'torch' / 'csrc' / 'api' / 'include')]
+    assert cfg.profiles[0].banner == 'libtorch 2.9.0+cpu, CPU only'

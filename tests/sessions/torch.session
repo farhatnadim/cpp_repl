@@ -1,0 +1,37 @@
+# A golden session. cpp-repl --batch runs the inputs (the prompt lines) and must
+# print this transcript. <any> matches one line, <any lines> any number of them;
+# addresses and input_line numbers are normalised. On the CPU, so that it
+# reads the same with and without a GPU.
+# args: -p torch
+# requires: profile=torch
+c++> torch::manual_seed(0);
+c++> auto x = torch::arange(6, torch::kFloat32).reshape({2, 3});
+c++> x
+ 0  1  2
+ 3  4  5
+[ CPUFloatType{2,3} ]
+c++> x.sizes()
+[2, 3]
+c++> x.dtype()
+float
+c++> x.device()
+cpu
+c++> x.sum().item<float>()
+15
+c++> std::optional{x}
+CPUFloatType{2,3}
+c++> torch::arange(2000)
+0  1  2  ...  1997  1998  1999  (2000 elements)
+[ CPULongType{2000} ]
+c++> torch::Tensor none;
+c++> none
+[ Tensor (undefined) ]
+c++> torch::nn::Linear lin(3, 2);
+c++> lin
+torch::nn::Linear(in_features=3, out_features=2, bias=true)
+c++> lin(x).sizes()
+[2, 2]
+c++> try { torch::matmul(x, x); } catch (const c10::Error &e) { std::cout << e.what_without_backtrace() << '\n'; }
+mat1 and mat2 shapes cannot be multiplied (2x3 and 2x3)
+c++> torch::matmul(x, x)
+<any>

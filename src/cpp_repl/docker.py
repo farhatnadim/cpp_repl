@@ -88,7 +88,7 @@ def docker_command(argv, args, options):
             '-e', f'HOME={home}', '-e', f'XDG_STATE_HOME={state.parent}', '-e', 'PYTHONDONTWRITEBYTECODE=1']
     # The terminal's, and what the profiles and -l read.
     for name in ('TERM', 'NO_COLOR', 'COLUMNS', 'LINES', 'USD_ROOT', 'PXR_ROOT', 'EIGEN_ROOT', 'EIGEN3_INCLUDE_DIR',
-                 'GLM_ROOT', 'LIBRARY_PATH'):
+                 'GLM_ROOT', 'TORCH_ROOT', 'LIBTORCH', 'CUDA_HOME', 'LIBRARY_PATH'):
         if name in os.environ:
             cmd += ['-e', name]
     # Each directory is mounted once (Docker refuses a second mount at the

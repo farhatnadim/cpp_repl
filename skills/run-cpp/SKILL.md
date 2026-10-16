@@ -26,7 +26,7 @@ Pick the first that applies:
 2. **A `cpp-repl.toml`** in the working directory or above. Plain `cpp-repl`
    reads it without saying so; `--json` names the file it read.
    `--no-config` leaves it out, for a check of the standard library alone.
-3. **A built-in profile:** `-p usd`, `-p eigen` or `-p glm`.
+3. **A built-in profile:** `-p usd`, `-p eigen`, `-p glm` or `-p torch`.
 4. **Any other library** is not set up yet. Run the add-library skill first.
 
 Inside Claude Code, the plugin's `bin/` is on PATH, so `cpp-repl` is the

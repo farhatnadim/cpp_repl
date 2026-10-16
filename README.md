@@ -314,6 +314,7 @@ precompiled header instead. On clang-repl 23.1.4:
 | --- | ---: | ---: | ---: |
 | the standard preludes | about 2 s | 0.53 s | 2.2 s |
 | `-p usd` | 4.8 s | 1.05 s | 5.6 s |
+| `-p torch`, on the host, the CUDA context included | 12 s | 3.5 s | 15 s |
 
 - A configuration is the clang-repl, the flags, the preludes' contents and
   the libraries; each has its own entry, and one unused for a month goes.
@@ -422,6 +423,7 @@ go, so `getenv("HOME")` shows them; `LD_PRELOAD` is not passed on.
 | --- | --- |
 | `-p eigen` | `<Eigen/Dense>`, found through `EIGEN_ROOT`, pkg-config or the usual places. A matrix prints with its shape; past 10 rows or columns, only the first and last three. A comma initialiser (`m << 1, 2, 3`) prints the matrix it filled; quaternions, angle-axis rotations and transforms print too. |
 | `-p glm` | `<glm/glm.hpp>` with the matrix-transform and quaternion extensions, found through `GLM_ROOT`, pkg-config or the usual prefixes. A vector prints as `vec3(1, 2, 3)`, a quaternion as `quat(w, x, y, z)`, a matrix as its rows. |
+| `-p torch` | libtorch, PyTorch's C++ API: `<torch/torch.h>`, its libraries, and the GPU when the install has CUDA (`torch::cuda::is_available()`). A tensor prints as libtorch prints it, values then `[ CUDAFloatType{2,3} ]`; past a thousand elements, its first and last values. An error prints the first line of `c10::Error`'s message, and `repl::thrown()` holds the backtrace. The install is found through `TORCH_ROOT` (the libtorch zip, or a pip install's `site-packages/torch`), then the active virtual environment, then the Python running cpp-repl. |
 | `-p usd` | OpenUSD's libraries and `using namespace pxr`. A stage prints its usda; a prim its type, properties and children; an attribute its value and time samples. `tree(stage)` prints the hierarchy. The install is found through the `CMakeCache.txt` next to `compile_commands.json`, then `USD_ROOT` or `PXR_ROOT`, then the usual places. The profile asks for C++20, since OpenUSD's headers do not build as C++23 or later; a `-std` of yours still wins. |
 
 A profile of your own is a `cpp-repl.toml`-style file, loaded with `-c`. To

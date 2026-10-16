@@ -3,10 +3,8 @@
 `cpp-repl --docker` runs the same command inside an image that holds
 clang-repl 23: `cpp-repl:llvm23`, which `make docker` builds in a cpp_repl
 checkout. Use it in two cases:
-- the host has no clang-repl;
-- the library needs clang-repl 23. That is the case for inline asm, which
-  clang-repl 18's JIT cannot assemble (Eigen's dynamic-size products and some
-  SIMD code), or for language features 18 lacks.
+- the host has no clang-repl 23 or newer, which cpp-repl needs;
+- the user asks for it.
 
 ## What the container sees
 
@@ -59,7 +57,10 @@ Notes:
   the startup and the example inside the image.
 - **The start command:**
   `cpp-repl --docker --image cpp-repl-<project>:llvm23 -c .cpp-repl/<lib>.toml`.
-- **Two limits of clang 23:**
-  - it rejects the TBB 2020 headers that some OpenUSD builds use;
+- **Two limits of clang 23, on the host as in the image:**
+  - clang 20 and newer reject an enumeration constant in TBB 2020's
+    `tbb/task.h`, which some OpenUSD builds install. The usd profile
+    (`-p usd`, or `profiles = ["usd"]`) reads a patched copy of those
+    headers; a profile that includes TBB 2020 without it fails to start;
   - it crashes on lambdas in top-level statements, which cpp-repl works
     around by running such statements inside functions.

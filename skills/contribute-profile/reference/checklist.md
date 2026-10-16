@@ -7,7 +7,7 @@ profile name, a Python identifier; `<NAME>` is the same in upper case.
 | File | Change | Why |
 | --- | --- | --- |
 | `src/cpp_repl/profiles/<name>/__init__.py` | new: `configure(ctx) -> Profile`, from `templates/profile_init.py` | `cpp-repl -p <name>` imports it. `builtin_profiles()` lists every package in `profiles/`. |
-| `src/cpp_repl/profiles/<name>/cpp_repl_<name>.h` | new: the prelude, from the user profile's `<lib>_repl.h` | Parsed once at startup, after `cpp_repl.h`. The name must end in `.h` (package data: `profiles/*/*.h`). |
+| `src/cpp_repl/profiles/<name>/cpp_repl_<name>.h` | new: the prelude, from the user profile's `<lib>_repl.h` | Precompiled once per configuration, after `cpp_repl.h`. The name must end in `.h` (package data: `profiles/*/*.h`). |
 | `src/cpp_repl/sources.py` | add `'cpp_repl_<name>.h'` to `PRELUDE_NAMES` | A saved program's `#include` of the prelude is skipped when the program runs in the REPL. |
 | `tests/sessions/<name>.session` | new: golden transcript, `# args: -p <name>`, `# requires: profile=<name>` | `make test-host` runs it, and skips it where the profile cannot start. |
 | `tests/test_config.py` | add `test_<name>_profile`, from `templates/test_snippet.py` | The profile configures without clang-repl, or skips where the library is missing. |

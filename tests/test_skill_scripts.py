@@ -1,9 +1,10 @@
 """The add-library skill's scripts (skills/add-library/scripts/): how they
 read ELF files, linker scripts, link lines and --batch transcripts, and the
 TOML they write. The tests that run cmake or read installed libraries skip
-when those are missing; the end-to-end check needs a clang-repl."""
+when those are missing; the end-to-end check needs a clang-repl 23 or newer."""
 
 import json
+import os
 import subprocess
 import sys
 import tomllib
@@ -48,6 +49,34 @@ def test_toml_text_reads_back():
 
 def test_toml_text_leaves_out_empty_keys():
     assert _common.toml_text({'libs': [], 'prelude': ['glm_repl.h'], 'std': None}) == 'prelude = ["glm_repl.h"]\n'
+
+
+def test_toml_text_writes_a_boolean():
+    text = _common.toml_text({'prelude': ['glm_repl.h'], 'pch': False})
+    assert text == 'prelude = ["glm_repl.h"]\npch = false\n'
+    assert tomllib.loads(text) == {'prelude': ['glm_repl.h'], 'pch': False}
+
+
+# -- the clang-repl -------------------------------------------------------------
+
+def test_a_clang_repl_older_than_cpp_repl_runs_is_named(tmp_path):
+    """cpp-repl refuses a clang-repl older than 23 when a session starts; the
+    scripts say so before then, in its words, with the way out."""
+    old = tmp_path / 'clang-repl'
+    old.write_text('#!/bin/sh\necho "Ubuntu LLVM version 18.1.3"\n')
+    old.chmod(0o755)
+    from cpp_repl.config import ConfigError
+    with pytest.raises(ConfigError, match=r'is clang-repl 18\.1\.3, and cpp-repl needs 23 or newer'):
+        _common.toolchain(str(old))
+    assert _common.toolchain(str(old), old_ok=True)[2] == 18
+    p = subprocess.run([sys.executable, str(SCRIPTS / 'probe_library.py'), 'env'], capture_output=True, text=True,
+                       cwd=tmp_path, timeout=600, env={**os.environ, 'CPP_REPL_CLANG_REPL': str(old)})
+    out = json.loads(p.stdout)
+    assert out['clang_repl']['major'] == 18 and out['clang_repl']['supported'] is False
+    assert out['notes'][0].startswith('clang-repl 18 is older than cpp-repl runs (23 or newer): ')
+    hints = check_profile.hints_for(_common.too_old(str(old), '18.1.3'), 'x.toml')
+    assert [h['anchor'] for h in hints] == ['old-clang-repl']
+    assert 'install clang-23 and clang-tools-23' in hints[0]['advice']
 
 
 # -- ELF files and linker scripts ---------------------------------------------

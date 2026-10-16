@@ -103,9 +103,9 @@ Eigen, OpenUSD, OpenCV and glm.
 - **Print nested values with `repl::put(os, x)`.** Numbers and strings then
   print as everywhere else in cpp-repl. Type names come from
   `repl::type_name<T>()`.
-- **Only declarations, inline functions and templates in the header.**
-  clang-repl 18 never runs a global's dynamic initialiser in an `-include`d
-  header.
+- **Only declarations, inline functions and templates in the header.** A
+  global's dynamic initialiser runs as clang-repl starts, again in every
+  clang-repl that replaces a crashed one, and a failure there stops the start.
 - **The header must compile outside the REPL.** check_profile.py's prelude
   step and the `%save-cpp` build both compile it with clang++.
 

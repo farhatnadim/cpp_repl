@@ -4,10 +4,12 @@
 // <one sentence per type: what a bare expression shows, and how it looks
 // inside a list>.
 //
-// clang-repl parses this file once, with -include, before the first input.
-// It holds declarations, inline functions and templates only: clang-repl 18
-// never runs a global's dynamic initialiser from an -include'd header. It
-// also compiles outside the REPL, for programs saved with %save-cpp.
+// cpp-repl precompiles this file once per configuration, and every session
+// starts from it, before the first input. It holds declarations, inline
+// functions and templates only: a global's dynamic initialiser would run as
+// clang-repl starts, again in every clang-repl that replaces a crashed one,
+// and a failure there stops the start. It also compiles outside the REPL, for
+// programs saved with %save-cpp.
 
 #pragma once
 

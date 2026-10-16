@@ -129,13 +129,24 @@ def scratch(prefix):
 # The compiler next to clang-repl.
 # ---------------------------------------------------------------------------
 
-def toolchain(explicit=None):
+def toolchain(explicit=None, old_ok=False):
     """(clang-repl path, version text, major, clang++ path) for the clang-repl
-    cpp-repl would run; raises cpp_repl's ConfigError when there is none."""
-    from cpp_repl.config import clang_repl_version, find_clang_repl, sibling_clang
+    cpp-repl would run; raises cpp_repl's ConfigError when there is none, and,
+    unless old_ok, when it is older than cpp-repl runs, in cpp-repl's words."""
+    from cpp_repl.config import MIN_VERSION, ConfigError, clang_repl_version, find_clang_repl, sibling_clang
     binary = find_clang_repl(explicit)
     version, text = clang_repl_version(binary)
+    if not old_ok and (0, 0, 0) < version < MIN_VERSION:
+        raise ConfigError(too_old(binary, text))
     return binary, text, version[0], sibling_clang(binary)
+
+
+def too_old(binary, text):
+    """What cpp-repl says of a clang-repl older than it runs (config.py)."""
+    from cpp_repl.config import MIN_VERSION
+    major = MIN_VERSION[0]
+    return (f'{binary} is clang-repl {text}, and cpp-repl needs {major} or newer: install clang-{major} and '
+            f'clang-tools-{major} from apt.llvm.org, or run cpp-repl --docker')
 
 
 def implicit_include_dirs(clangxx):
@@ -355,7 +366,7 @@ def toml_text(data, comments=()):
         value = data.get(key)
         if value in (None, '', []):
             continue
-        if isinstance(value, str):
+        if isinstance(value, (str, bool)):
             lines.append(f'{key} = {json.dumps(value)}')
             continue
         items = _flag_items(value) if key == 'flags' else [[v] for v in value]

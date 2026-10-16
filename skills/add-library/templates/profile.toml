@@ -13,7 +13,7 @@ defines = []
 # Every shared library the code calls directly, dependencies first. No .a files.
 libs = []
 
-# The prelude: the library's headers and its printers, parsed once at startup.
+# The prelude: the library's headers and its printers, precompiled once per configuration.
 prelude = ["<lib>_repl.h"]
 
 # The standard, when the default (the newest the clang knows: gnu++26 from clang 17)

@@ -13,7 +13,8 @@ allowed-tools:
 cpp-repl runs C++ through clang-repl's JIT. To use a library at its prompt it
 needs four things, and each one fails in its own way when it is wrong:
 
-- **the headers**, parsed once at startup from a prelude header;
+- **the headers**, from a prelude header, which cpp-repl precompiles once per
+  configuration;
 - **the shared libraries**, loaded before the first input. A static archive
   cannot be loaded at all.
 - **the library's compile definitions**. Without them, headers and binaries
@@ -46,10 +47,10 @@ Read their output rather than guessing paths or flags.
 python3 "${CLAUDE_SKILL_DIR}/scripts/probe_library.py" env
 ```
 
-- **No clang-repl and no Docker image:** stop and pass on the install hint
-  from `notes`.
-- **clang-repl 18:** it runs most libraries. Its JIT cannot assemble inline
-  asm, though. If the library needs that, use Docker (step 7).
+- **No clang-repl 23 or newer** (`clang_repl.supported` is false, or
+  `clang_repl` holds an `error`): cpp-repl refuses an older one. With a
+  cpp-repl image in `docker.images`, run everything with `--docker` (step 7).
+  Without one, stop and pass on the install hint from `notes`.
 - **Built-in profile:** if the library is in `cpp_repl.builtin_profiles`, it
   needs no profile of its own. Run
   `cpp-repl -p NAME --batch "${CLAUDE_SKILL_DIR}/../../examples/NAME.repl"`:
@@ -149,8 +150,9 @@ pins `std` only when the package names its own standard.
 - `#include "cpp_repl.h"` first.
 - Then the headers the user will reach for most: the project's own `#include`
   lines (`project_includes`), or the umbrella header of a small library.
-- Every header adds startup time. Keep the profile's cost under about 1 s
-  unless the user wants more: OpenCV's core and imgproc cost 0.8–1.4 s.
+- Every header adds to the one-time precompile and to each start. Keep the
+  profile's start-up cost, the check's `startup.delta`, under about 1 s
+  unless the user wants more.
 - Printers come later, in step 6.
 
 **`<lib>.repl`:** 6 to 12 inputs.
@@ -205,8 +207,8 @@ then catch drift after a library upgrade.
 
 ## 7. Docker
 
-Use Docker only when the user asks for it, or when the library needs
-clang-repl 23 (inline asm, or newer language features). Follow
+Use Docker only when the user asks for it, or when the host has no
+clang-repl 23 or newer (step 1). Follow
 [reference/docker.md](reference/docker.md). In short:
 1. `probe_library.py image --config .cpp-repl/<lib>.toml` lists what the image
    lacks and writes a Dockerfile.

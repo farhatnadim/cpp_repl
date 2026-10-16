@@ -70,8 +70,9 @@ HINTS = [
     (r'invalid (?:\w+ ){1,3}(?:between|of) (?:different )?enumeration type', 'older-standard',
      'cpp-repl compiles as C++26 with clang 17 and newer, and the headers use what C++26 removed: '
      'set std = "gnu++20" in the profile'),
-    (r'[Ii]nline asm', 'inline-asm',
-     "clang-repl 18's JIT cannot assemble inline asm: run the check with --docker (clang-repl 23)"),
+    (r'cpp-repl needs (\d+) or newer', 'old-clang-repl',
+     'this clang-repl is older than cpp-repl runs: install clang-{0} and clang-tools-{0} from apt.llvm.org, '
+     'or run the check with --docker'),
     (r'invalid ELF header|file too short', 'static-or-script',
      'a static archive or a linker script is listed in libs: list the shared library it stands for'),
     (r'cannot open shared object file', 'dependency-not-found',
@@ -218,7 +219,8 @@ class Checker:
         profile = read_toml(self.toml)
         data = {'flags': profile.flags, 'libs': [str(p) for p in libs], 'prelude': [str(p) for p in profile.prelude],
                 'profiles': profile.profiles,
-                'compile_commands': str(profile.compile_commands) if profile.compile_commands else None}
+                'compile_commands': str(profile.compile_commands) if profile.compile_commands else None,
+                'pch': profile.pch}
         path = self.tmp / f'variant-{len(list(self.tmp.glob("variant-*")))}.toml'
         path.write_text(toml_text(data))
         return path
@@ -227,9 +229,10 @@ class Checker:
 
     def step_config(self):
         step = {'ok': False}
-        if self.cfg is None:
-            step['error'] = self.config_error
-            self.report['hints'] += hints_for(self.config_error, self.args.config)
+        error = self.config_error if self.cfg is None else self.report.get('clang_repl', {}).get('error')
+        if error:
+            step['error'] = error
+            self.report['hints'] += hints_for(error, self.args.config)
             return step
         from cpp_repl.config import read_toml
         own = read_toml(self.toml)
@@ -296,6 +299,12 @@ class Checker:
     def step_startup(self):
         empty = self.tmp / 'empty.repl'
         empty.write_text('')
+        # The first start of a configuration precompiles its preludes, once
+        # (cpp-repl's pch.py), and an edited prelude makes a new one. One
+        # start of each, untimed, so that the runs below time the start a
+        # user waits for.
+        for extra in (['-c', str(self.toml)], []):
+            self.cpp_repl_run(['--batch', *extra, str(empty)])
         with_profile, without = [], []
         for _ in range(self.args.runs):
             code, out, err, seconds = self.cpp_repl_run(['--batch', '-c', str(self.toml), str(empty)])

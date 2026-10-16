@@ -1,13 +1,13 @@
 // cpp_repl.h: the prelude every cpp-repl session starts from.
 //
-// cpp-repl passes this file to clang-repl with -include, so it is parsed once,
-// before the first input. clang-repl 18 never runs code from an -include'd
-// file and clang-repl 23 does, so this header holds declarations, inline
-// functions and templates only: no global with a dynamic initialiser.
+// Every session starts from this file, before the first input: cpp-repl
+// precompiles it once per configuration (pch.py), or passes it to clang-repl
+// with -include. A global's dynamic initialiser here would run as clang-repl
+// starts, and again in every clang-repl that replaces a crashed one, so this
+// header holds declarations, inline functions and templates only.
 //
-// <iostream> comes first on purpose. GCC 13's <iostream> carries module-level
-// asm that clang-repl 18 cannot JIT. Parsed here, it never reaches code
-// generation, and an `#include <iostream>` typed later is a no-op.
+// <iostream> comes first: parsed here, it never reaches code generation, and
+// an `#include <iostream>` typed later is a no-op.
 //
 // The header also compiles outside the REPL, so that a session saved with
 // %save-cpp builds: clang++ $(cpp-repl --cflags) saved.cpp $(cpp-repl --libs).

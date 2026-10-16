@@ -111,8 +111,8 @@ def test_golden_session(path, tmp_path):
         pytest.skip(reason)
     args = shlex.split(header.get('args', ''))
     if 'profile=' in header.get('requires', ''):
-        # A library's own headers may not compile with this clang-repl (OpenUSD
-        # built with TBB 2020 does not, with clang-repl 23): that is a skip.
+        # A library's own headers may not compile with this clang-repl: that
+        # is a skip.
         empty = tmp_path / 'empty.repl'
         empty.write_text('')
         start = run_cpp_repl([*args, '--batch', '--no-color', str(empty)], tmp_path)

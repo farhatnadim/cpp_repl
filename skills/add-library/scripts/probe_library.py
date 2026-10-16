@@ -71,7 +71,7 @@ def similar(name, other):
 
 def cmd_env(args):
     from cpp_repl import __version__
-    from cpp_repl.config import ConfigError, builtin_profiles, find_project_file
+    from cpp_repl.config import MIN_VERSION, ConfigError, builtin_profiles, find_project_file
     cwd = Path.cwd()
     on_path = shutil.which('cpp-repl')
     # Inside Claude Code the plugin's bin/ is on PATH; a terminal has it only
@@ -81,8 +81,9 @@ def cmd_env(args):
                         'on_path': on_path, 'on_path_is_this_checkout': plugin_copy,
                         'builtin_profiles': builtin_profiles()}}
     try:
-        binary, text, major, clangxx = toolchain(args.clang_repl)
-        out['clang_repl'] = {'path': binary, 'version': text, 'major': major, 'clangxx': clangxx}
+        binary, text, major, clangxx = toolchain(args.clang_repl, old_ok=True)
+        out['clang_repl'] = {'path': binary, 'version': text, 'major': major, 'clangxx': clangxx,
+                             'supported': major >= MIN_VERSION[0]}
     except ConfigError as e:
         out['clang_repl'] = {'error': str(e)}
     docker = {'available': False, 'images': []}
@@ -105,15 +106,15 @@ def cmd_env(args):
     path, writable = state_dir_status()
     out['state_dir'] = {'path': str(path), 'writable': writable}
     notes = []
+    need = MIN_VERSION[0]
+    install = f'install clang-{need} and clang-tools-{need} from apt.llvm.org'
     major = out['clang_repl'].get('major')
-    if major and major < 23:
-        notes.append(f"clang-repl {major}'s JIT cannot assemble inline asm (Eigen's dynamic-size products, "
-                     'some SIMD code); cpp-repl --docker runs clang-repl 23')
-    if major and major >= 23:
-        notes.append('clang 23 rejects the TBB 2020 headers that some OpenUSD builds use')
-    if 'error' in out['clang_repl'] and not docker['images']:
-        notes.append('no clang-repl and no cpp-repl image: install clang-tools-18 (Ubuntu) or a newer one '
-                     f'from apt.llvm.org, or build the image with: make -C {CHECKOUT} docker')
+    host = (f'clang-repl {major} is older than cpp-repl runs ({need} or newer)' if major and major < need
+            else 'no clang-repl' if 'error' in out['clang_repl'] else None)
+    if host and docker['images']:
+        notes.append(f'{host}: run cpp-repl with --docker (images: {", ".join(docker["images"])}), or {install}')
+    elif host:
+        notes.append(f'{host} and no cpp-repl image: {install}, or build the image with: make -C {CHECKOUT} docker')
     if not writable:
         notes.append(f'{path} cannot be written: run cpp-repl with XDG_STATE_HOME set to a writable directory')
     out['notes'] = notes
@@ -733,7 +734,7 @@ def cmd_resolve(args):
     if sum(bool(x) for x in (args.cmake, args.pkg_config, args.headers)) != 1:
         emit({'error': 'give one of --cmake PKG, --pkg-config MODULE or --headers DIR'}, USAGE)
     try:
-        clangxx = toolchain(args.clang_repl)[3]
+        clangxx = toolchain(args.clang_repl, old_ok=True)[3]
     except ConfigError:
         clangxx = shutil.which('clang++') or shutil.which('c++')
     root = project_root(Path.cwd())
@@ -808,7 +809,7 @@ def included_headers(cfg):
     without the compiler's own resource headers (the image has its own)."""
     from cpp_repl.config import ConfigError
     try:
-        clangxx = toolchain()[3]
+        clangxx = toolchain(old_ok=True)[3]
     except ConfigError:
         clangxx = shutil.which('clang++')
     if not clangxx:

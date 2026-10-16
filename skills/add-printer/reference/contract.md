@@ -128,11 +128,11 @@ Constrain on something only the library's types satisfy.
 
 ## The prelude header
 
-clang-repl parses each prelude once, with `-include`, before the first input.
-So the header:
-- holds **declarations, inline functions and templates only**. clang-repl 18
-  never runs a global's dynamic initialiser in an `-include`d file, and
-  clang-repl 23 does, so code that relies on one behaves differently.
+cpp-repl precompiles the preludes once per configuration, and every session
+starts from them, before the first input. So the header:
+- holds **declarations, inline functions and templates only**. A global's
+  dynamic initialiser runs as clang-repl starts, again in every clang-repl
+  that replaces a crashed one, and a failure there stops the start.
 - **includes `cpp_repl.h` first**, then the library;
 - **compiles with clang++ on its own.** `%save-cpp` programs include it.
 - has a **unique file name.** `%save-cpp` writes `#include "<basename>"` for

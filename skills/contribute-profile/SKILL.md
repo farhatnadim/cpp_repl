@@ -57,8 +57,8 @@ order. Then make it find them:
 1. **`$<NAME>_ROOT`, an install prefix.** It has to work, because it is how
    Docker users and custom installs point at the library.
 2. **pkg-config, or the package's CMake files read as text.** Never run cmake
-   at startup: cpp-repl starts in about two seconds, and a cmake configure
-   takes several.
+   at startup: `configure()` runs at every start, which takes about half a
+   second, and a cmake configure takes several.
 3. **The usual prefixes.**
 
 When nothing is found, raise `ConfigError` with the apt package and the
@@ -86,8 +86,9 @@ Copy `<lib>_repl.h` to `src/cpp_repl/profiles/<name>/cpp_repl_<name>.h`.
     `CPP_REPL_UPDATE_GOLDEN=1 python3 -m pytest -q tests/test_integration.py -k <name>`;
   - review it by hand, and put `<any>` back on lines that vary between runs
     (timings, random values). Addresses are normalised already.
-  - Add `llvm>=23` to its `requires:` line when the library needs clang-repl
-    23.
+  - It needs clang-repl 23 or newer, as every backend test does: with an
+    older one the test skips, and `CPP_REPL_UPDATE_GOLDEN=1` writes nothing.
+    `make test-docker` runs it in the `cpp-repl:llvm23` image.
   - Keep the default `c++> ` prompt: the golden test assumes it for every
     profile but usd.
 - **A test in `tests/test_config.py`, from `templates/test_snippet.py`.** It
@@ -99,8 +100,8 @@ Copy `<lib>_repl.h` to `src/cpp_repl/profiles/<name>/cpp_repl_<name>.h`.
   how values print, and how the library is found.
 - **`examples/<name>.repl`:** from the user profile's example. Its first line
   is a comment with the command: `cpp-repl -p <name> examples/<name>.repl`.
-- **The README's "Limits":** when the library needs clang-repl 23, or has
-  another catch.
+- **The README's "Limits":** when the library has a catch, such as a
+  standard it needs (`std = "gnu++20"`).
 
 ## 6. Docker
 

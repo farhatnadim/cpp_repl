@@ -1,0 +1,11 @@
+name: Task
+description: "Work that is neither a bug nor a feature: docs, tests, CI, packaging, a release."
+labels: [task]
+projects: ["farhatnadim/18"]
+body:
+  - type: textarea
+    id: done
+    attributes:
+      label: What is true when this is done
+    validations:
+      required: true

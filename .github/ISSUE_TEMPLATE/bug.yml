@@ -1,0 +1,21 @@
+name: Bug
+description: cpp-repl does something wrong. The title is one sentence that states the fact.
+labels: [bug]
+projects: ["farhatnadim/18"]
+body:
+  - type: textarea
+    id: transcript
+    attributes:
+      label: What happens
+      description: The inputs, what cpp-repl printed, and what it should have printed. A transcript beats a description.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: cpp-repl commit and clang-repl
+      description: "`git rev-parse --short HEAD`, and the first line of `clang-repl --version`"
+      placeholder: "05feb44, Ubuntu clang-repl version 23.1.4"
+    validations:
+      required: true

@@ -1,6 +1,6 @@
 # Tutorials
 
-Five short walks through cpp-repl, each a few minutes, in this order:
+Six short walks through cpp-repl, each a few minutes, in this order:
 
 | Tutorial | What it shows |
 | --- | --- |
@@ -9,6 +9,7 @@ Five short walks through cpp-repl, each a few minutes, in this order:
 | [Libraries and your project](03-libraries.md) | the built-in profiles, compiler flags, shared libraries, `compile_commands.json`, `cpp-repl.toml`, printers, speed |
 | [Scripts and agents](04-scripts-and-agents.md) | cpp-repl without a terminal: inputs piped in, `--json`, exit statuses, `--serve` and `--connect` |
 | [With Claude Code](05-claude-code.md) | the plugin's skills: running C++, adding a library, printers, a built-in profile |
+| [libtorch on the GPU](06-libtorch.md) | `-p torch`: tensors on the GPU, a transformer block as a module, training steps, errors and what replays, timing, the saved program |
 
 For OpenUSD, the
 [openusd-tutorial walkthrough](https://github.com/farhatnadim/openusd-tutorial/blob/repl/repl/TUTORIAL.md)
@@ -19,7 +20,8 @@ explores a lesson at the prompt with `-p usd`.
 cpp-repl (a clone's `bin/cpp-repl`, `pip install -e .`, or the Claude Code
 plugin's copy) and a clang-repl 23 or newer: `clang-23` and `clang-tools-23`
 from apt.llvm.org, or `make docker` and `cpp-repl --docker`. Tutorial 03 also
-uses Eigen, glm, zlib and CMake.
+uses Eigen, glm, zlib and CMake; tutorial 06 uses libtorch (`pip install torch`, or
+the libtorch zip with `TORCH_ROOT` set), and shows the GPU where there is one.
 
 ## How the transcripts are checked
 

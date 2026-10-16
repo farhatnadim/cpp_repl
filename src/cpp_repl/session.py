@@ -13,6 +13,7 @@ from datetime import date
 from functools import partial
 from pathlib import Path
 
+from . import pch
 from .backend import ANY_ERROR, STARTUP_ERROR, Backend, BackendError, outcome, plain
 from .config import session_dir_name
 from .diagnostics import SNIPPET, Diagnostics
@@ -292,6 +293,7 @@ class Session:
         self.sources = set()   # what the inputs' origins name
         self.unprintable = {}  # type: whether a note has said how to print it
         self.diagnostics = Diagnostics(cfg.options.diagnostics == 'brief', self.sources)
+        self.pch_prepared = False   # whether the precompiled header was looked for, or built
         self.backend = self._start()
         if not self.backend.knows_errors:
             self._note(f'[clang-repl {cfg.version_text} reports errors in a way cpp-repl does not '
@@ -304,9 +306,22 @@ class Session:
 
     def _start(self, backend=None):
         """A backend that has loaded the libraries: the one given if it got
-        there, else a new one."""
-        output = ''
-        for candidate in (backend, None):
+        there, else a new one. The first start prepares the precompiled
+        header of the preludes, when the configuration wants one; a start
+        that fails because of it rebuilds it once, then goes without."""
+        cfg = self.cfg
+        if cfg.pch_wanted and not self.pch_prepared:
+            self.pch_prepared = True
+            try:
+                cfg.set_pch(pch.prepare(cfg))
+            except pch.PCHError as e:
+                cfg.set_pch(None, reason=str(e))
+                if not e.remembered:
+                    self._config_note(f'[no precompiled header: {e}; starting from the headers]')
+        output, rebuilt = '', False
+        candidates = [backend, None]
+        while candidates:
+            candidate = candidates.pop(0)
             b = candidate or self._backend()
             try:
                 output, alive = b.collect(b.ready, deadline=STARTUP_DEADLINE)
@@ -317,7 +332,35 @@ class Session:
             except BackendError as e:
                 output = str(e)
             b.kill()
+            if not cfg.pch:
+                continue
+            # A start that fails with the precompiled header: an out-of-date
+            # one is built again, once; otherwise the session starts from the
+            # headers, and the next day's starts go without it at once.
+            if pch.blamed(plain(output), cfg.pch) and not rebuilt:
+                rebuilt = True
+                try:
+                    cfg.set_pch(pch.prepare(cfg, rebuild=True))
+                    self._config_note('[the precompiled header did not load: rebuilt]')
+                except pch.PCHError as e:
+                    cfg.set_pch(None, reason=str(e))
+                    self._config_note(f'[no precompiled header: {e}; starting from the headers]')
+            else:
+                first = next((line for line in plain(output).splitlines() if 'error' in line), 'no answer')
+                reason = f'clang-repl did not start with it: {first.strip()[:200]}'
+                pch.remember_failure(cfg, reason)
+                cfg.set_pch(None, reason=reason)
+                self._config_note('[clang-repl did not start with the precompiled header: starting from the headers]')
+            candidates = [None]
         raise SessionError('clang-repl failed to start:\n' + output)
+
+    def _config_note(self, text):
+        """A note on the configuration: on stderr in a batch run, whose
+        stdout is the program's; anywhere else, as the session's notes go."""
+        if self.batch and not isinstance(self.out, JsonOutput):
+            sys.stderr.write(text + '\n')
+        else:
+            self._note(text)
 
     def close(self):
         if self.spare:
@@ -837,6 +880,10 @@ class Session:
         lines = [f'clang-repl:  {cfg.clang_repl} ({cfg.version_text})',
                  f'flags:       {shlex.join(cfg.compiler_flags)}',
                  'preludes:    ' + ('\n             '.join(str(h) for h in cfg.preludes))]
+        if cfg.pch:
+            lines.append(f'pch:         {cfg.pch.pch}')
+        else:
+            lines.append(f'pch:         none ({cfg.pch_reason})')
         if cfg.runtime:
             lines.append(f'runtime:     {cfg.runtime}')
         if cfg.libs:

@@ -179,6 +179,81 @@ def session(tmp_path):
     s.close()
 
 
+# -- the precompiled header, against the real thing ---------------------------
+
+needs_clangxx = pytest.mark.skipif(not sibling_clangxx(), reason='no clang++ beside clang-repl: no precompiled header')
+
+
+@needs_clangxx
+def test_what_the_precompiled_header_defines_links(session):
+    """Inline functions and inline variables whose definitions come from the
+    PCH, which clang-repl 18 never emitted (Symbols not found): an always_inline
+    function, std::numbers::pi bound to a reference, synth-three-way and the
+    ranges' customisation point objects."""
+    s, stream = session
+    assert s.cfg.pch and s.cfg.pch.pch.is_file() and f'pch:         {s.cfg.pch.pch}' in s.describe_flags()
+    for text, value in (('std::atomic_thread_fence(std::memory_order_seq_cst);', None),
+                        ('std::max(std::numbers::pi, 1.0)', '3.141592653589793'),
+                        ('std::vector<int>{1, 2} < std::vector<int>{1, 3}', 'true'),
+                        ('std::ranges::size(std::views::iota(1, 5) | std::views::take(3))', '3')):
+        assert s.run_input(text), stream.getvalue()
+        assert value is None or stream.getvalue().endswith(value + '\n')
+
+
+def test_a_prelude_s_initialiser_calls_into_a_library(tmp_path):
+    """clang-repl 23 runs a prelude's dynamic initialisers as it starts, as
+    OpenUSD's call into libusd_python: the session's libraries are loaded by
+    then (preload.py)."""
+    if not sibling_clangxx():
+        pytest.skip('no clang++ to build the library with')
+    (tmp_path / 'answer.cpp').write_text('int answer() { return 42; }\n')
+    built = subprocess.run([sibling_clangxx(), '-shared', '-fPIC', 'answer.cpp', '-o', 'libanswer.so'], cwd=tmp_path,
+                           capture_output=True, text=True)
+    assert built.returncode == 0, built.stderr
+    (tmp_path / 'uses.h').write_text('int answer();\ninline int cached = answer();\n')
+    (tmp_path / 'p.toml').write_text('prelude = ["uses.h"]\nlibs = ["libanswer.so"]\n')
+    (tmp_path / 'p.repl').write_text('cached\n')
+    done = run_cpp_repl(['--no-config', '-c', 'p.toml', '--batch', '-q', 'p.repl'], tmp_path)
+    assert done.returncode == 0 and done.stdout == '42\n', done.stdout + done.stderr
+
+
+@needs_clangxx
+def test_a_changed_header_rebuilds_the_precompiled_header(tmp_path):
+    """A header a prelude includes changes: clang says the PCH is out of
+    date (the prelude itself changing makes a new entry instead), and the
+    session rebuilds it once. A touch alone changes nothing: the files are
+    checked by content. -fpch-validate-input-files-content is clang's."""
+    inner = tmp_path / 'inner.h'
+    inner.write_text('inline int answer() { return 41; }\n')
+    (tmp_path / 'own.h').write_text('#include "inner.h"\n')
+    (tmp_path / 'own.toml').write_text('prelude = ["own.h"]\n')
+
+    def run():
+        s, stream = make_session(tmp_path, configs=[str(tmp_path / 'own.toml')])
+        try:
+            assert s.cfg.pch and s.run_input('answer()')
+            return stream.getvalue()
+        finally:
+            s.close()
+
+    assert run().endswith('41\n')
+    os.utime(inner, (time.time() + 5,) * 2)
+    out = run()
+    assert out.endswith('41\n') and 'precompiled header' not in out
+    inner.write_text('inline int answer() { return 42; }\n')
+    out = run()
+    assert '[the precompiled header did not load: rebuilt]' in out and out.endswith('42\n')
+
+
+def test_no_pch_starts_from_the_headers(tmp_path):
+    prog = tmp_path / 'prog.cpp'
+    prog.write_text('#include <cstdio>\nint main() { std::puts("hi"); }\n')
+    done = run_cpp_repl(['--no-config', '--no-pch', '--batch', '-q', str(prog)], tmp_path)
+    assert done.returncode == 0 and done.stdout == 'hi\n'
+
+
+# -- recovery ------------------------------------------------------------------
+
 def test_a_crash_costs_nothing(session):
     s, stream = session
     assert s.run_input('int a = 41;')

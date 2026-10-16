@@ -24,4 +24,6 @@ from `openusd-tutorial/repl/usd-repl`.
 - [ ] Run the eval suite under `claude plugin eval` (its sandbox needs user namespaces, which AppArmor blocks on this host; see `evals/README.md`)
 - [ ] Build and test the `src` image (written, not built: 30 to 60 minutes of all cores)
 - [ ] Report the clang-repl 23 top-level lambda crash upstream, unless it is reported already
-- [ ] Later: precompiled headers for startup, a Jupyter kernel, PyPI, CI
+- [x] clang-repl 23 and newer only; the usd profile runs there (a patched copy of TBB 2020's headers, the libraries loaded as clang-repl starts)
+- [x] Precompiled headers: the preludes precompiled once per configuration (`pch.py`), so that on clang-repl 23 a session starts in 0.5 s where it took 2 s, and in 1 s with OpenUSD where it took 5 s
+- [ ] Later: a Jupyter kernel, PyPI, CI

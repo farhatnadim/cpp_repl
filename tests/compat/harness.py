@@ -228,7 +228,7 @@ def probes(scratch):
         probe('goto_label', 'A `goto` to a label clang-repl never saw',
               ['#include <cstdio>', 'goto nowhere;', 'printf("after\\n");'],
               lambda out, rc, hung: common(out, rc, hung) or ('an error' if 'after' in out else 'errors'),
-              cpp_repl='the same error, or a restored session on 18'),
+              cpp_repl='the same error'),
         probe('init_capture', 'A file-scope lambda whose init-capture is not a constant',
               ['#include <cstdio>', 'int base = 10;', 'auto f = [v = base](int x) { return v + x; };',
                'printf("f %d\\n", f(1));'],

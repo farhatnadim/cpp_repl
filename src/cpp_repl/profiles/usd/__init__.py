@@ -6,12 +6,14 @@ in use (its USD_ROOT), then $USD_ROOT, then the usual places. An install is a
 directory holding include/pxr/pxr.h.
 """
 
+import hashlib
 import os
 import re
+import shutil
 import sysconfig
 from pathlib import Path
 
-from ...config import ConfigError, Profile
+from ...config import ConfigError, Profile, state_dir
 
 HERE = Path(__file__).resolve().parent
 
@@ -117,6 +119,51 @@ def defines(root):
     return list(dict.fromkeys(found + ['TBB_SUPPRESS_DEPRECATED_MESSAGES=1']))
 
 
+# TBB 2020, which OpenUSD's build_usd.py installs on Linux, declares
+# task_group_context::kind_type without a fixed underlying type, then gives a
+# static constant of it a value outside the enumeration's range: clang 20 and
+# newer reject that, and the error can no longer be turned off. The session
+# reads a copy of the TBB headers in which the enumeration is `: unsigned`,
+# the type compilers already give it, so its size and the ABI stay the same.
+# The whole tbb/ directory is copied, since its headers include one another by
+# relative path, each marked a system header, as the install's are; the copy
+# comes before every include directory (Profile.overlays), a build's
+# -isystem of the install included.
+_KIND_TYPE = 'enum kind_type {'
+_OVERLAY_FORMAT = 2   # changes when the copy is made differently
+TBB_NOTE = ("TBB 2020's headers come from a patched copy: clang 20 and newer reject an enumeration constant "
+            'in tbb/task.h')
+
+
+def tbb_overlay(root):
+    """A directory holding a patched copy of the install's tbb/ headers, to
+    put ahead of the install's own; None when its TBB needs no patch."""
+    tbb = root / 'include' / 'tbb'
+    try:
+        text = (tbb / 'task.h').read_text()
+    except OSError:
+        return None
+    if _KIND_TYPE not in text:
+        return None
+    digest = hashlib.sha256(f'{tbb}\n{text}\n{_OVERLAY_FORMAT}'.encode()).hexdigest()[:12]
+    overlay = state_dir() / 'overlay' / f'tbb-{digest}'
+    if (overlay / 'tbb' / 'task.h').is_file():
+        return overlay
+    work = overlay.with_name(f'{overlay.name}.building-{os.getpid()}')
+    shutil.rmtree(work, ignore_errors=True)
+    try:
+        shutil.copytree(tbb, work / 'tbb')
+        (work / 'tbb' / 'task.h').write_text(text.replace(_KIND_TYPE, 'enum kind_type : unsigned {', 1))
+        for header in (f for f in (work / 'tbb').rglob('*') if f.is_file() and f.suffix in ('.h', '')):
+            header.write_bytes(b'#pragma GCC system_header\n' + header.read_bytes())
+        os.rename(work, overlay)
+    except OSError:
+        shutil.rmtree(work, ignore_errors=True)
+        if not (overlay / 'tbb' / 'task.h').is_file():   # another session made it meanwhile, or nobody did
+            raise ConfigError(f'cannot write a patched copy of {tbb} under {overlay.parent}')
+    return overlay
+
+
 def libraries(root):
     lib = root / 'lib'
     monolithic = lib / 'libusd_ms.so'
@@ -131,6 +178,7 @@ def libraries(root):
 
 def configure(ctx):
     root = find_root(ctx)
+    overlay = tbb_overlay(root)
     flags = [STD, '-isystem', str(root / 'include')]
     python = python_include(root)
     if python:
@@ -140,4 +188,6 @@ def configure(ctx):
     return Profile(name='usd', flags=flags, libs=libraries(root), prelude=[HERE / 'cpp_repl_usd.h'],
                    prompt='usd> ', blocks=[(re.compile(r'#usda '), 'usd')], diagnostics=DIAGNOSTICS,
                    completion=[include / d for d in COMPLETION], help=HELP,
-                   banner=f'OpenUSD {version(root)}', mounts=[root], notes=[STD_NOTE], std=STD)
+                   banner=f'OpenUSD {version(root)}', mounts=[root],
+                   notes=[STD_NOTE] + ([TBB_NOTE] if overlay else []), std=STD,
+                   overlays=[overlay] if overlay else [])

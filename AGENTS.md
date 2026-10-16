@@ -51,6 +51,8 @@ the rule above.
 | `src/cpp_repl/lexer.py` | C++ tokens, statement boundaries, when an input is complete, what to send |
 | `src/cpp_repl/sources.py` | `.cpp` and `.repl` files as inputs |
 | `src/cpp_repl/config.py` | flags, profiles, `cpp-repl.toml`, `compile_commands.json`, the clang-repl binary |
+| `src/cpp_repl/pch.py` | the preludes as a precompiled header, built once per configuration |
+| `src/cpp_repl/preload.py` | the session's libraries loaded into clang-repl as it starts, core dumps off first |
 | `src/cpp_repl/backend.py` | one clang-repl process and the end-of-output marker protocol |
 | `src/cpp_repl/session.py` | the journal, recovery, redefinition, commands, `%save-cpp` |
 | `src/cpp_repl/server.py` | `--serve` and `--connect`: one session on a Unix socket |

@@ -330,7 +330,7 @@ def apt_owners(paths):
 # cpp-repl.toml text.
 # ---------------------------------------------------------------------------
 
-TOML_KEYS = ('std', 'compile_commands', 'profiles', 'include', 'flags', 'defines', 'libs', 'prelude')
+TOML_KEYS = ('std', 'compile_commands', 'profiles', 'include', 'flags', 'defines', 'libs', 'prelude', 'pch')
 _PAIRED = ('-I', '-isystem', '-iquote', '-idirafter', '-D', '-U')
 
 

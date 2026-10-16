@@ -16,7 +16,7 @@ Before working through the table:
 | --- | --- | --- | --- |
 | not-a-flag | `not a compiler flag cpp-repl passes on: -lfoo` | A link flag (`-l`, `-L`, `-Wl,`) or an unsupported option in `flags`. | Put libraries in `libs` as absolute `.so` paths. (`-include FILE` is accepted: cpp-repl parses the file as a prelude.) |
 | no-profile | `no profile 'x'; the profiles are: ...` | A user TOML named in `profiles`, or in `-p x`. | Load a TOML with `-c FILE`, or with `-p path/to/x.toml`. `profiles` takes built-in names only. |
-| unknown-keys | `unknown keys X; the keys are ...` | A key cpp-repl does not read. | Use only `std`, `include`, `defines`, `flags`, `libs`, `prelude`, `profiles` and `compile_commands`. |
+| unknown-keys | `unknown keys X; the keys are ...` | A key cpp-repl does not read. | Use only `std`, `include`, `defines`, `flags`, `libs`, `prelude`, `profiles`, `compile_commands` and `pch`. |
 | no-library | `no library P` or `no prelude header P` | A wrong path. Paths in a TOML are relative to the TOML. | Fix the path. Under Docker, the file may be missing from the image instead: see docker.md. |
 
 ## Starting

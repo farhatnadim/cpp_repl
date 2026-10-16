@@ -33,6 +33,9 @@ CORE_PRELUDE = PRELUDE_DIR / 'cpp_repl.h'
 STD_PRELUDE = PRELUDE_DIR / 'cpp_repl_std.h'
 PROJECT_FILE = 'cpp-repl.toml'
 PROMPT = 'c++> '
+# The oldest clang-repl cpp-repl runs: the precompiled preludes need 23
+# (pch.py), and so do OpenUSD's headers with TBB 2020 (profiles/usd).
+MIN_VERSION = (23, 0, 0)
 
 
 def default_std(version):
@@ -72,6 +75,8 @@ class Profile:
     base: Path | None = None                         # what relative paths in flags are relative to
     notes: list = field(default_factory=list)        # what the profile changed, said at the start and by %flags
     std: str | None = None                           # the -std the profile asks for, when its notes depend on it
+    pch: bool | None = None                          # a TOML's pch key: False starts from the headers (pch.py)
+    overlays: list = field(default_factory=list)     # directories searched before every other (-I, first)
 
 
 # ---------------------------------------------------------------------------
@@ -291,13 +296,13 @@ def load_profile(name, ctx):
 def read_toml(path):
     """A cpp-repl.toml file as a Profile. Relative paths in it are relative to
     the file. Its keys: std, include, defines, flags, libs, prelude, profiles,
-    compile_commands."""
+    compile_commands, pch."""
     path = Path(path).expanduser().resolve()
     try:
         data = tomllib.loads(path.read_text())
     except (OSError, tomllib.TOMLDecodeError) as e:
         raise ConfigError(f'cannot read {path}: {e}')
-    known = {'std', 'include', 'defines', 'flags', 'libs', 'prelude', 'profiles', 'compile_commands'}
+    known = {'std', 'include', 'defines', 'flags', 'libs', 'prelude', 'profiles', 'compile_commands', 'pch'}
     unknown = set(data) - known
     if unknown:
         raise ConfigError(f'{path}: unknown keys {", ".join(sorted(unknown))}; '
@@ -325,9 +330,12 @@ def read_toml(path):
     flags += ['-D' + d for d in strings('defines')]
     flags += strings('flags')
     parse_flags(flags, base)   # fail early on a bad flag
+    if 'pch' in data and not isinstance(data['pch'], bool):
+        raise ConfigError(f'{path}: pch must be true or false')
     profile = Profile(name=str(path), flags=flags, profiles=strings('profiles'),
                       libs=[resolved(p) for p in strings('libs')],
-                      prelude=[resolved(p) for p in strings('prelude')], mounts=[base], base=base)
+                      prelude=[resolved(p) for p in strings('prelude')], mounts=[base], base=base,
+                      pch=data.get('pch'))
     if 'compile_commands' in data:
         profile.compile_commands = resolved(data['compile_commands'])
     return profile
@@ -613,6 +621,7 @@ class Options:
     libs: list = field(default_factory=list)
     native: bool = False
     no_std: bool = False
+    no_pch: bool = False            # start from the prelude headers, not a precompiled header of them
     clang_repl: str | None = None
     colour: bool = False
     cwd: Path | None = None
@@ -646,6 +655,9 @@ class Config:
 
         tomls = self._read_configuration(options, cwd)
         flags, std, opt, included = merge_flags(self._flag_layers(options, tomls))
+        # A profile's overlay, a patched copy of headers, comes before every
+        # directory, a build's -I and -isystem included.
+        flags = [a for p in self.profiles for d in p.overlays for a in ('-I', str(d))] + flags
         sanitizers = [f for f in flags if f.startswith('-fsanitize=')]
         if sanitizers:
             raise ConfigError(f'{sanitizers[0]}: clang-repl\'s JIT cannot run sanitized code. Leave it out, or '
@@ -663,6 +675,10 @@ class Config:
             except ConfigError:
                 if backend:
                     raise
+            if backend and (0, 0, 0) < self.version < MIN_VERSION:
+                raise ConfigError(f'{self.clang_repl} is clang-repl {self.version_text}, and cpp-repl needs '
+                                  f'{MIN_VERSION[0]} or newer: install clang-{MIN_VERSION[0]} and '
+                                  f'clang-tools-{MIN_VERSION[0]} from apt.llvm.org, or run cpp-repl --docker')
         self.std, note = floor_std(std or default_std(self.version))
         if note:
             self.notes.append(note)
@@ -709,29 +725,81 @@ class Config:
         self.state = state_dir()
         self.home, self.tmp, self.inputs = (self.state / d for d in ('home', 'tmp', 'inputs'))
         self.history = self.state / 'history'
+        self._backend = backend
         if backend:
             for d in (self.home, self.tmp, self.inputs):
                 d.mkdir(parents=True, exist_ok=True)
             _prune(self.tmp, days=7)
             # A live session replays its inputs from here, however old it is.
             _prune(self.inputs, days=7, ended=session_ended)
-            brief = BRIEF_FLAGS if options.diagnostics == 'brief' else ()
-            self.argv = ([self.clang_repl] + ['--Xcc=' + a for a in (*brief, *self.compiler_flags)]
-                         + [a for h in self.preludes for a in ('--Xcc=-include', '--Xcc=' + str(h))]
-                         + (['--Xcc=-fcolor-diagnostics'] if options.colour else []))
         self.env = dict(os.environ, HOME=str(self.home), TMPDIR=str(self.tmp))
         self.env.pop('LD_PRELOAD', None)
-
-        # The first inputs of every backend. The standard library's own
-        # runtime, when -stdlib names one clang-repl is not linked with, comes
-        # before any code runs. Core dumps go off before any other library
-        # loads, since a crash in a library's static initialiser would
-        # otherwise leave a crash report (apport's, on Ubuntu).
+        # The standard library's own runtime, when -stdlib names one
+        # clang-repl is not linked with, loads before any code runs.
         self.runtime = stdlib_runtime(flags, self.clang_repl, self.version and self.version[0]) if backend else None
+        # clang-repl itself starts with the libraries loaded, the runtime
+        # first (preload.py): the preludes' initialisers may call into them.
+        self.backend_env = self.env
+        if backend:
+            from . import preload
+            self.backend_env = preload.environment(self, ([self.runtime] if self.runtime else []) + self.libs)
+
+        # The preludes come as a precompiled header (pch.py), which the
+        # session prepares as it starts (set_pch), when a clang++ is there to
+        # build it and neither --no-pch nor a TOML's pch = false says no.
+        self.pch = None
+        off = next((t for t in tomls if t.pch is False), None)
+        if not backend:
+            self.pch_wanted, self.pch_reason = False, 'no backend'
+        elif options.no_pch:
+            self.pch_wanted, self.pch_reason = False, '--no-pch'
+        elif off:
+            self.pch_wanted, self.pch_reason = False, f'pch = false in {off.name}'
+        elif not sibling_clang(self.clang_repl):
+            self.pch_wanted, self.pch_reason = False, 'no clang++ beside clang-repl to build one'
+        else:
+            self.pch_wanted, self.pch_reason = True, None
+        self._arm()
+
+    def set_pch(self, p, reason=None):
+        """Start from the precompiled header p (a pch.PCH), or from the
+        headers when p is None, with reason why for %flags: the backend's
+        command line and first inputs follow."""
+        self.pch = p
+        if reason:
+            self.pch_reason = reason
+        self._arm()
+
+    def _arm(self):
+        """The backend's command line and its first inputs, for the preludes
+        as headers or as the precompiled header in use."""
+        options = self.options
+        if self._backend:
+            brief = BRIEF_FLAGS if options.diagnostics == 'brief' else ()
+            if self.pch:
+                # The headers the PCH recorded are checked by content.
+                preludes = ['-fpch-validate-input-files-content', '-include-pch', str(self.pch.pch)]
+            else:
+                preludes = [a for h in self.preludes for a in ('-include', str(h))]
+            self.argv = ([self.clang_repl] + ['--Xcc=' + a for a in (*brief, *self.compiler_flags, *preludes)]
+                         + (['--Xcc=-fcolor-diagnostics'] if options.colour else []))
+        # The first inputs of every backend: the runtime; then core dumps go
+        # off before any other library loads, since a crash in a library's
+        # static initialiser would otherwise leave a crash report (apport's,
+        # on Ubuntu); then the session's libraries.
         self.prologue = [f'%lib {self.runtime}'] if self.runtime else []
         self.prologue += ['prctl(PR_SET_DUMPABLE, 0, 0, 0, 0);'] if sys.platform.startswith('linux') else []
         self.prologue += ['setvbuf(stdout, nullptr, _IONBF, 0);']   # keep stdout in step with stderr
         self.prologue += [f'%lib {lib}' for lib in self.libs]
+        if self.pch:
+            # A PCH's inline functions that an input which then fails to
+            # compile is the first to use are never emitted after, and the
+            # next input that uses them fails to link: the functions every
+            # input runs through are used once here, by a printed 0.
+            from .lexer import in_function
+            self.prologue.append(in_function('cpp_repl_0', 'struct cpp_repl_tag; '
+                                             'repl::print_expr(((0), repl::printer<cpp_repl_tag>{}));',
+                                             exceptions=self.exceptions))
 
     def _read_configuration(self, options, cwd):
         """Read the cpp-repl.toml files, load the profiles they and the

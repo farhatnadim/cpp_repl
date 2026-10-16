@@ -98,6 +98,9 @@ def make_parser():
                         help='compile for this CPU (-march=native), so that AVX and FMA are used')
     parser.add_argument('--no-std', action='store_true',
                         help='leave out the standard-library prelude, for a faster start')
+    parser.add_argument('--no-pch', action='store_true',
+                        help='start from the prelude headers, without the precompiled header cpp-repl builds '
+                             'of them once per configuration')
     parser.add_argument('--clang-repl', metavar='PATH',
                         help='the clang-repl to run (default: $CPP_REPL_CLANG_REPL, then the newest '
                              'one on PATH or in /usr/lib/llvm-N/bin)')
@@ -147,7 +150,7 @@ def make_parser():
 def options_from(args, flags, colour, interactive=False):
     return Options(files=list(args.files), profiles=args.profile, configs=args.config,
                    no_config=args.no_config, compile_commands=args.compile_commands or args.build_dir,
-                   flags=flags, libs=args.lib, native=args.native, no_std=args.no_std,
+                   flags=flags, libs=args.lib, native=args.native, no_std=args.no_std, no_pch=args.no_pch,
                    clang_repl=args.clang_repl, colour=colour, cwd=(args.cwd or Path.cwd()).resolve(),
                    diagnostics=args.diagnostics or ('full' if interactive else 'brief'),
                    stop_on_error=args.stop_on_error, timeout=args.timeout, quiet=args.quiet, json=args.json,
@@ -191,7 +194,8 @@ def _run(argv):
     if args.connect:
         from .server import connect
         if (flags or args.profile or args.config or args.compile_commands or args.build_dir or args.lib
-                or args.link_names or args.link_dirs or args.native or args.no_std or args.clang_repl or args.cwd):
+                or args.link_names or args.link_dirs or args.native or args.no_std or args.no_pch or args.clang_repl
+                or args.cwd):
             return _fail("--connect runs in the server's session, whose configuration is fixed: its flags, "
                          'profiles, libraries and directory are the server\'s. --timeout, --stop-on-error, '
                          '--diagnostics, -q, --json and --fresh apply to the run')

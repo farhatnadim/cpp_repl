@@ -176,8 +176,15 @@ def test_the_default_standard_is_the_newest_the_clang_knows(version, std):
 
 
 def test_the_default_standard_follows_the_clang_repl_found(tmp_path):
+    """Without a backend, any clang-repl found sets the standard, one older
+    than cpp-repl runs included."""
+    from cpp_repl.config import find_clang_repl
     cfg = Config(Options(cwd=tmp_path, no_config=True), backend=False)
-    expected = default_std(clang_repl_version(CLANG_REPL)[0]) if CLANG_REPL else '-std=gnu++20'
+    try:
+        found = clang_repl_version(find_clang_repl())[0]
+    except ConfigError:
+        found = None
+    expected = default_std(found) if found else '-std=gnu++20'
     assert cfg.std == expected and cfg.describe().split(', ')[1] == expected.removeprefix('-std=')
 
 

@@ -12,11 +12,11 @@ clang-repl's known problems per version; they are not repeated here.
 ## What is compared
 
 <!-- generated: versions -->
-cpp-repl at commit 496ed72, against clang-repl 18.1.3 (on the host, load 7.05 on 32 CPUs, 2026-10-16); clang-repl 23.1.4 (in a container, load 8.78 on 32 CPUs, 2026-10-16); clang-repl 24.0.0 (in a container, load 6.29 on 32 CPUs, 2026-10-16). The main column is clang-repl 23.1.4; raw clang-repl ran with `--Xcc=-std=gnu++26`, cpp-repl's default for it.
+cpp-repl at commit e16db85, against clang-repl 23.1.4 (in a container, load 9.18 on 32 CPUs, 2026-10-16); clang-repl 24.0.0 (in a container, load 3.54 on 32 CPUs, 2026-10-16). The main column is clang-repl 23.1.4; raw clang-repl ran with `--Xcc=-std=gnu++26`, cpp-repl's default for it.
 <!-- end: versions -->
 
-Raw clang-repl is the binary as apt.llvm.org (23 and the development
-snapshot) or Ubuntu 24.04 (18) ships it. cpp-repl is this checkout, driving
+Raw clang-repl is the binary as apt.llvm.org ships it (23 and the
+development snapshot). cpp-repl is this checkout, driving
 that same binary.
 
 ## How both sides were fed
@@ -42,7 +42,7 @@ clang-repl's own, which flushes at exit: the rows say "nothing yet", and the
 last row shows what came out with `%quit`. A `setvbuf(stdout, nullptr,
 _IONBF, 0)` sent first, as cpp-repl's prologue sends it, would not do: it
 made raw clang-repl lose every `std::cout` write that no `std::endl` flushed,
-on 18, 23 and 24 alike, so the generator sends none.
+on 23 and 24 alike, so the generator sends none.
 
 **cpp-repl**, through its own session, one input at a time, as the prompt runs
 it (`Session.run_inputs` with `batch` off): a crash or an exception is
@@ -57,7 +57,7 @@ input's status when it is not `ok`.
 reached raw clang-repl line by line.
 
 <!-- generated: session -->
-| # | Input | raw clang-repl 23.1.4 | cpp-repl | 18.1.3 / 24.0.0, where different |
+| # | Input | raw clang-repl 23.1.4 | cpp-repl | 24.0.0, where different |
 | --- | --- | --- | --- | --- |
 | 1 | `#include <vector>` | nothing | nothing | same |
 | 2 | `#include <map>` | nothing | nothing | same |
@@ -68,7 +68,7 @@ reached raw clang-repl line by line.
 | 7 | `x + 1` | nothing yet: the value is buffered until exit (last row) | 43 | same |
 | 8 | `std::vector<int> v{3, 1, 2};` | nothing | nothing | same |
 | 9 | `v` | nothing yet: the value is buffered until exit (last row) | [3, 1, 2] | same |
-| 10 | `v[0]` | input_line_N:1:1: warning: ignoring return value of function declared with 'nodiscard' attribute [-Wunused-result] ⏎     1 \| v[0] ⏎       \| ^~~~ | 3 | 18.1.3 raw: input_line_N:1:2: warning: ignoring return value of function declared with 'nodiscard' attribute [-Wunused-result] ⏎     1 \| v[0] ⏎       \| ~^~~ |
+| 10 | `v[0]` | input_line_N:1:1: warning: ignoring return value of function declared with 'nodiscard' attribute [-Wunused-result] ⏎     1 \| v[0] ⏎       \| ^~~~ | 3 | same |
 | 11 | `std::map<std::string, int> ages{{"ada", 36}, {"alan", 41}};` | nothing | nothing | same |
 | 12 | `ages` | nothing yet: the value is buffered until exit (last row) | {"ada": 36, "alan": 41} | same |
 | 13 | `struct P { int x, y; };` | nothing | nothing | same |
@@ -79,12 +79,12 @@ reached raw clang-repl line by line.
 | 18 | `for (int i : v) { ⏎   std::cout << i << std::endl; ⏎ }` | hangs (killed after 20 s); session lost: 20 lines of errors first | 3 ⏎ 1 ⏎ 2 | same |
 | 19 | `if (x > 40) ⏎   std::cout << "big" << std::endl; ⏎ else ⏎   std::cout << "small" << std::endl;` | (fresh process, earlier inputs replayed) <<< inputs >>>:1:1: error: expected expression | big | same |
 | 20 | `std::for_each(v.begin(), v.end(), [](int i) { std::cout << i << std::endl; });` | 3 ⏎ 1 ⏎ 2 | 3 ⏎ 1 ⏎ 2 | same |
-| 21 | `[] { std::cout << "lambda" << std::endl; }();` | crashed (SIGSEGV); session lost: Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment | lambda | 18.1.3 raw: lambda; 24.0.0 raw: lambda |
+| 21 | `[] { std::cout << "lambda" << std::endl; }();` | crashed (SIGSEGV); session lost: Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment | lambda | 24.0.0 raw: lambda |
 | 22 | `template <class T> T twice(T a) { return a + a; }` | (fresh process, earlier inputs replayed) nothing | nothing | same |
 | 23 | `twice(21)` | nothing yet: the value is buffered until exit (last row) | 42 | same |
 | 24 | `std::stoi("abc")` | crashed (SIGABRT); session lost: terminate called after throwing an instance of 'std::invalid_argument' | [uncaught exception: std::invalid_argument: stoi] status exception | same |
 | 25 | `int *p0 = nullptr;` | (fresh process, earlier inputs replayed) nothing | nothing | same |
-| 26 | `*p0 = 42;` | crashed (SIGSEGV); session lost: Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment | [clang-repl crashed (SIGSEGV): restored 25 inputs] status crash | 18.1.3 raw: crashed (SIGSEGV); session lost |
+| 26 | `*p0 = 42;` | crashed (SIGSEGV); session lost: Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment | [clang-repl crashed (SIGSEGV): restored 25 inputs] status crash | same |
 | 27 | `v` | (fresh process, earlier inputs replayed) nothing yet: the value is buffered until exit (last row) | [3, 1, 2] | same |
 | 28 | `%undo` | nothing | undo: v [undo: restored 25 inputs] | same |
 | 29 | `int x = 1;` | input_line_N:1:5: error: redefinition of 'x' | [x redefined: 24 inputs replayed] | same |
@@ -92,8 +92,8 @@ reached raw clang-repl line by line.
 | 31 | `void greet() { std::cout << "hi" << std::endl; }` | nothing | nothing | same |
 | 32 | `greet()` | nothing yet: the value is buffered until exit (last row) | hi | same |
 | 33 | `std::cout << "done" << std::endl` | done | done | same |
-| 34 | `return 3;` | crashed (SIGSEGV); session lost: Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment | [main returned 3] | 18.1.3 raw: nothing |
-| 35 | `%quit` | exited (code 0); on its way out, the values it had buffered: (int) 43 ⏎ (std::vector<int, std::allocator<int> > &) @0x… ⏎ (int) 3 ⏎ (std::map<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, int,… | status exited (code 0) | 18.1.3 raw: exited (code 1); on its way out, the values it had buffered: Not implement yet. ⏎ Not implement yet. ⏎ Not implement yet. ⏎ Not implement yet. ⏎ Not implement yet. ⏎ Not implement yet. ⏎ Not implement yet. ⏎ Not implem… |
+| 34 | `return 3;` | crashed (SIGSEGV); session lost: Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment | [main returned 3] | same |
+| 35 | `%quit` | exited (code 0); on its way out, the values it had buffered: (int) 43 ⏎ (std::vector<int, std::allocator<int> > &) @0x… ⏎ (int) 3 ⏎ (std::map<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, int,… | status exited (code 0) | same |
 <!-- end: session -->
 
 Three rows cost raw clang-repl its session on every version: the `for` whose
@@ -101,23 +101,23 @@ first line ends in an open brace, which it never finishes (every input after
 it is an error until the error limit, then it hangs); the uncaught exception,
 which terminates the process; and the write through a null pointer, which
 kills it. On 23.1.4 and 24 a fourth does: `return 3;` at top level segfaults
-them (18 ignores it in silence), where cpp-repl ends the program with 3 as
+them, where cpp-repl ends the program with 3 as
 `main()` would. After each, raw clang-repl knows nothing it was told: the
 rows marked as a fresh process have their earlier inputs replayed by the
 generator, which a person would have to type again. Of the two lambda
 statements, the one passed to `std::for_each` ran on every version; the one
-called on the spot crashed 23.1.4, as the README's probes say, where 18 and
+called on the spot crashed 23.1.4, as the README's probes say, where
 24 ran it, the crash being fixed on main.
 
 The rows for a bare value (`x + 1`, `v`, `ages`, `p`) show raw clang-repl's
 value printing in the last row: a built-in prints with its type, `(int) 43`;
 a class value prints its type and address on 23 and 24 (`(std::vector<int,
 std::allocator<int> > &) @0x…`, the same before and after the `operator<<`
-for `P` was typed); 18 prints `Not implement yet.` for each. cpp-repl prints
+for `P` was typed). cpp-repl prints
 the value in its row, and finds an `operator<<` typed after the first print.
 Its `%undo` replays the session without the last input; raw clang-repl's
 undoes it in place. The last row's exit status is 0 on 23 and 24 whatever
-failed, and 1 on 18.
+failed.
 
 ## What each can do
 
@@ -143,7 +143,7 @@ failed, and 1 on 18.
 | a crash report | Ubuntu's apport writes one (about 95 MB) unless core dumps are off | core dumps off before any library loads |
 | **Diagnostics** | | |
 | an error | clang's full text, named `input_line_N` or `<<< inputs >>>` | named by the file, line and column the input came from; brief under `--batch` (the first error, carets only in your code, three missing symbols demangled), full at the prompt |
-| the exit status of a run | 0 whatever failed (18: 1) | the program's: `main`'s return, `exit(N)`, 128 + the signal; else 130, 124, 1 or 0 (README) |
+| the exit status of a run | 0 whatever failed | the program's: `main`'s return, `exit(N)`, 128 + the signal; else 130, 124, 1 or 0 (README) |
 | **Programs** | | |
 | a `.cpp` file | `#include`-able only as a header | `main()` runs one statement at a time, after the rest of the file; `argc` and `argv` stand-ins; `return` ends it with its status |
 | a session back out | — | `%save-cpp`: a program that builds with the session's flags |
@@ -164,9 +164,11 @@ failed, and 1 on 18.
 ## What raw clang-repl has that cpp-repl lacks or costs
 
 - **Nothing between you and clang.** It starts in a few hundredths of a
-  second and answers an input in a millisecond or two; cpp-repl parses two
-  prelude headers at every start (the table below), and a bare expression or
-  a statement costs the compile of the small function it runs in.
+  second and answers an input in a millisecond or two; cpp-repl loads a
+  precompiled header of its preludes, which the first start of a
+  configuration builds in a few seconds (the table below), and a bare
+  expression or a statement costs the compile of the small function it runs
+  in.
 - **No Python.** clang-repl runs wherever LLVM does.
 - **`%undo` undoes.** It drops the last input's effects without running
   anything again. cpp-repl's `%undo` replays the journal without the last
@@ -197,20 +199,22 @@ failed, and 1 on 18.
 
 Wall time, median of three runs, on the machine and under the load the first
 table names. The raw start-up with the session's five `#include`s is the
-honest counterpart of cpp-repl's prelude, which has those headers parsed
-before the first input.
+honest counterpart of cpp-repl's `--no-pch` start, which parses its preludes
+before the first input; the default start loads them precompiled (README,
+Start-up), which the first start of a configuration builds, untimed here.
 
 <!-- generated: startup -->
-| Start-up, median of 3 runs | clang-repl 18.1.3 | clang-repl 23.1.4 | clang-repl 24.0.0 |
-| --- | --- | --- | --- |
-| raw clang-repl, `%quit` at once | 32.0 ms | 32.0 ms | 32.0 ms |
-| raw clang-repl, the session's five `#include`s first | 515.0 ms | 516.0 ms | 515.0 ms |
-| cpp-repl, an empty `--batch` run | 1.82 s | 2.02 s | 1.92 s |
-| cpp-repl `--no-std` (the core prelude alone) | 1.32 s | 1.47 s | 1.47 s |
-| cpp-repl `-p usd` | 4.87 s | — | — |
-| a run in a served session (`--connect`) | 64.0 ms | 64.0 ms | 64.0 ms |
-| a `--connect --fresh` run, the spare ready | 64.0 ms | 64.0 ms | 64.0 ms |
-| the container alone (`docker run IMAGE true`) | 214.0 ms | — | — |
+| Start-up, median of 3 runs | clang-repl 23.1.4 | clang-repl 24.0.0 |
+| --- | --- | --- |
+| raw clang-repl, `%quit` at once | 32.0 ms | 32.0 ms |
+| raw clang-repl, the session's five `#include`s first | 567.0 ms | 465.0 ms |
+| cpp-repl, an empty `--batch` run, the preludes precompiled | 667.0 ms | 565.0 ms |
+| cpp-repl `--no-pch`: the preludes parsed | 2.07 s | 1.77 s |
+| cpp-repl `--no-std` (the core prelude alone, precompiled) | 566.0 ms | 515.0 ms |
+| cpp-repl `-p usd`, precompiled | 1.27 s | 1.07 s |
+| cpp-repl `-p usd --no-pch` | 4.68 s | 4.42 s |
+| a run in a served session (`--connect`) | 64.0 ms | 64.0 ms |
+| a `--connect --fresh` run, the spare ready | 64.0 ms | 64.0 ms |
 <!-- end: startup -->
 
 The cost of one input, each kind twenty times in one session, median: raw
@@ -220,16 +224,16 @@ cpp-repl, how long the code itself ran inside that, which `%time` and
 `run_seconds` tell apart from compiling.
 
 <!-- generated: latency -->
-| One input, median of 20 | clang-repl 18.1.3 | clang-repl 23.1.4 | clang-repl 24.0.0 |
-| --- | --- | --- | --- |
-| a declaration, `int dN = N;`, raw clang-repl | 0.12 ms | 0.17 ms | 0.17 ms |
-| a declaration, `int dN = N;`, cpp-repl | 0.37 ms | 0.44 ms | 0.39 ms |
-| a bare expression, `dN + 1`, raw clang-repl | 2.04 ms | 2.07 ms | 1.93 ms |
-| a bare expression, `dN + 1`, cpp-repl | 18.4 ms | 17.1 ms | 15.6 ms |
-| a bare expression, `dN + 1`, of which the code ran (cpp-repl) | 9.0 µs | 10.8 µs | 8.0 µs |
-| a statement, `std::cout << dN << '\n';`, raw clang-repl | 1.82 ms | 1.69 ms | 1.66 ms |
-| a statement, `std::cout << dN << '\n';`, cpp-repl | 16.4 ms | 16.8 ms | 15.7 ms |
-| a statement, `std::cout << dN << '\n';`, of which the code ran (cpp-repl) | 6.0 µs | 11.2 µs | 9.6 µs |
+| One input, median of 20 | clang-repl 23.1.4 | clang-repl 24.0.0 |
+| --- | --- | --- |
+| a declaration, `int dN = N;`, raw clang-repl | 0.23 ms | 0.15 ms |
+| a declaration, `int dN = N;`, cpp-repl | 0.46 ms | 0.40 ms |
+| a bare expression, `dN + 1`, raw clang-repl | 1.93 ms | 1.82 ms |
+| a bare expression, `dN + 1`, cpp-repl | 17.3 ms | 14.1 ms |
+| a bare expression, `dN + 1`, of which the code ran (cpp-repl) | 11.4 µs | 7.6 µs |
+| a statement, `std::cout << dN << '\n';`, raw clang-repl | 1.64 ms | 1.55 ms |
+| a statement, `std::cout << dN << '\n';`, cpp-repl | 16.3 ms | 13.3 ms |
+| a statement, `std::cout << dN << '\n';`, of which the code ran (cpp-repl) | 9.9 µs | 6.3 µs |
 <!-- end: latency -->
 
 The speed of the code once it runs is the same JIT's: the
@@ -249,8 +253,7 @@ cpp-repl: for anything typed over more than one line; to look at values of
 class type; for a session that must survive a crash or an exception, as a
 session spent learning a library's API must; to run a program or a lesson
 statement by statement, with its own stdin and exit status; for an agent's
-loop, with `--json`, `--timeout` and a served session; and with clang-repl
-18, whose top-level bugs cpp-repl hides.
+loop, with `--json`, `--timeout` and a served session.
 
 ## Regenerating
 

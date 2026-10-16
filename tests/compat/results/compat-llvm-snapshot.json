@@ -161,7 +161,7 @@
    "seconds": 0.03,
    "output": "In file included from <<< inputs >>>:1:\ninput_line_3:1:6: error: use of undeclared label 'nowhere'\n    1 | goto nowhere;\n      |      ^\nerror: Parsing failed.\nafter\n\n",
    "title": "A `goto` to a label clang-repl never saw",
-   "cpp_repl": "the same error, or a restored session on 18"
+   "cpp_repl": "the same error"
   },
   "init_capture": {
    "verdict": "prints f 1: the closure holds zero",

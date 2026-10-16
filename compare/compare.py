@@ -290,17 +290,28 @@ def startup(clang_repl, std, inputs, scratch):
     empty = scratch / 'empty.repl'
     empty.write_text('')
     includes = [t for t in inputs if t.startswith('#include')]
+
+    def cpp_repl(*extra):
+        return [sys.executable, str(CPP_REPL), '--no-config', '--clang-repl', clang_repl, *extra, '--batch', '-q',
+                str(empty)]
+
+    def precompiled(*extra):
+        """The timing of a start whose preludes are precompiled: the first
+        start of a configuration builds the PCH, so one run goes untimed."""
+        subprocess.run(cpp_repl(*extra), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL, env=env, cwd=scratch, timeout=600)
+        return timed(cpp_repl(*extra), env, scratch)
+
     out = {'raw': timed([clang_repl, f'--Xcc=-std={std}'], env, scratch, b'%quit\n'),
            'raw_with_includes': timed([clang_repl, f'--Xcc=-std={std}'], env, scratch,
                                       ('\n'.join(includes) + '\n%quit\n').encode()),
-           'cpp_repl': timed([sys.executable, str(CPP_REPL), '--no-config', '--clang-repl', clang_repl, '--batch', '-q',
-                              str(empty)], env, scratch),
-           'cpp_repl_no_std': timed([sys.executable, str(CPP_REPL), '--no-config', '--no-std', '--clang-repl', clang_repl,
-                                     '--batch', '-q', str(empty)], env, scratch)}
+           'cpp_repl': precompiled(),
+           'cpp_repl_no_pch': timed(cpp_repl('--no-pch'), env, scratch),
+           'cpp_repl_no_std': precompiled('--no-std')}
     if os.environ.get('USD_ROOT'):
         try:
-            out['cpp_repl_usd'] = timed([sys.executable, str(CPP_REPL), '--no-config', '-p', 'usd', '--clang-repl',
-                                         clang_repl, '--batch', '-q', str(empty)], env, scratch)
+            out['cpp_repl_usd'] = precompiled('-p', 'usd')
+            out['cpp_repl_usd_no_pch'] = timed(cpp_repl('-p', 'usd', '--no-pch'), env, scratch)
         except subprocess.TimeoutExpired:
             pass
     # A served session: a warm run, and a fresh one in the spare.
@@ -475,9 +486,11 @@ def seconds(values):
 def startup_table(docs):
     rows = [('raw clang-repl, `%quit` at once', 'raw'),
             ("raw clang-repl, the session's five `#include`s first", 'raw_with_includes'),
-            ('cpp-repl, an empty `--batch` run', 'cpp_repl'),
-            ('cpp-repl `--no-std` (the core prelude alone)', 'cpp_repl_no_std'),
-            ('cpp-repl `-p usd`', 'cpp_repl_usd'),
+            ('cpp-repl, an empty `--batch` run, the preludes precompiled', 'cpp_repl'),
+            ('cpp-repl `--no-pch`: the preludes parsed', 'cpp_repl_no_pch'),
+            ('cpp-repl `--no-std` (the core prelude alone, precompiled)', 'cpp_repl_no_std'),
+            ('cpp-repl `-p usd`, precompiled', 'cpp_repl_usd'),
+            ('cpp-repl `-p usd --no-pch`', 'cpp_repl_usd_no_pch'),
             ('a run in a served session (`--connect`)', 'connect'),
             ('a `--connect --fresh` run, the spare ready', 'connect_fresh'),
             ('the container alone (`docker run IMAGE true`)', 'docker_container')]

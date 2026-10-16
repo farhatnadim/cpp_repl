@@ -4,9 +4,9 @@
   "cpu": "AMD Ryzen 9 5950X 16-Core Processor",
   "cpus": 32,
   "load": [
-   6.29,
-   5.38,
-   4.59
+   3.54,
+   4.57,
+   3.5
   ],
   "in_container": true
  },
@@ -17,19 +17,18 @@
   "deadline": 20
  },
  "cpp_repl": {
-  "commit": "496ed72",
+  "commit": "e16db85",
   "argv": [
    "/usr/lib/llvm-snapshot/bin/clang-repl",
    "--Xcc=-std=gnu++26",
    "--Xcc=-iquote",
    "--Xcc=/media/nadim/Data/Source/cpp_repl/src/cpp_repl/prelude",
    "--Xcc=-iquote",
-   "--Xcc=/tmp/cpp-repl-compare-66dgg56n",
+   "--Xcc=/tmp/cpp-repl-compare-8gslv07n",
    "--Xcc=-DCPP_REPL=1",
-   "--Xcc=-include",
-   "--Xcc=/media/nadim/Data/Source/cpp_repl/src/cpp_repl/prelude/cpp_repl.h",
-   "--Xcc=-include",
-   "--Xcc=/media/nadim/Data/Source/cpp_repl/src/cpp_repl/prelude/cpp_repl_std.h"
+   "--Xcc=-fpch-validate-input-files-content",
+   "--Xcc=-include-pch",
+   "--Xcc=/tmp/.local/state/cpp-repl/pch/870fdcca4707879b/preludes.pch"
   ]
  },
  "inputs": [
@@ -40,7 +39,7 @@
     "text": "#include <vector>",
     "output": "",
     "state": "ok",
-    "seconds": 0.175,
+    "seconds": 0.16,
     "fresh": false
    },
    "cpp_repl": {
@@ -58,7 +57,7 @@
     "text": "#include <map>",
     "output": "",
     "state": "ok",
-    "seconds": 0.023,
+    "seconds": 0.021,
     "fresh": false
    },
    "cpp_repl": {
@@ -66,7 +65,7 @@
     "output": "",
     "notes": [],
     "status": "ok",
-    "seconds": 0.001
+    "seconds": 0.0
    }
   },
   {
@@ -76,7 +75,7 @@
     "text": "#include <string>",
     "output": "",
     "state": "ok",
-    "seconds": 0.113,
+    "seconds": 0.101,
     "fresh": false
    },
    "cpp_repl": {
@@ -94,7 +93,7 @@
     "text": "#include <algorithm>",
     "output": "",
     "state": "ok",
-    "seconds": 0.064,
+    "seconds": 0.063,
     "fresh": false
    },
    "cpp_repl": {
@@ -112,7 +111,7 @@
     "text": "#include <iostream>",
     "output": "",
     "state": "ok",
-    "seconds": 0.078,
+    "seconds": 0.073,
     "fresh": false
    },
    "cpp_repl": {
@@ -156,8 +155,8 @@
     "output": "43\n",
     "notes": [],
     "status": "ok",
-    "seconds": 0.042,
-    "run_seconds": 1.6822e-05
+    "seconds": 0.015,
+    "run_seconds": 1.1201e-05
    }
   },
   {
@@ -167,7 +166,7 @@
     "text": "std::vector<int> v{3, 1, 2};",
     "output": "",
     "state": "ok",
-    "seconds": 0.021,
+    "seconds": 0.018,
     "fresh": false
    },
    "cpp_repl": {
@@ -175,7 +174,7 @@
     "output": "",
     "notes": [],
     "status": "ok",
-    "seconds": 0.016
+    "seconds": 0.019
    }
   },
   {
@@ -185,7 +184,7 @@
     "text": "v",
     "output": "",
     "state": "ok",
-    "seconds": 0.002,
+    "seconds": 0.001,
     "fresh": false
    },
    "cpp_repl": {
@@ -194,7 +193,7 @@
     "notes": [],
     "status": "ok",
     "seconds": 0.02,
-    "run_seconds": 1.8445e-05
+    "run_seconds": 1.7903e-05
    }
   },
   {
@@ -212,8 +211,8 @@
     "output": "3\n",
     "notes": [],
     "status": "ok",
-    "seconds": 0.016,
-    "run_seconds": 9.308e-06
+    "seconds": 0.015,
+    "run_seconds": 8.526e-06
    }
   },
   {
@@ -223,7 +222,7 @@
     "text": "std::map<std::string, int> ages{{\"ada\", 36}, {\"alan\", 41}};",
     "output": "",
     "state": "ok",
-    "seconds": 0.053,
+    "seconds": 0.046,
     "fresh": false
    },
    "cpp_repl": {
@@ -231,7 +230,7 @@
     "output": "",
     "notes": [],
     "status": "ok",
-    "seconds": 0.042
+    "seconds": 0.044
    }
   },
   {
@@ -249,8 +248,8 @@
     "output": "{\"ada\": 36, \"alan\": 41}\n",
     "notes": [],
     "status": "ok",
-    "seconds": 0.025,
-    "run_seconds": 2.3514e-05
+    "seconds": 0.024,
+    "run_seconds": 2.3424e-05
    }
   },
   {
@@ -306,8 +305,8 @@
      "P prints as <P>: an operator<<, or a repl::Put<P> specialisation, gives it a printer"
     ],
     "status": "ok",
-    "seconds": 0.022,
-    "run_seconds": 1.3886e-05
+    "seconds": 0.019,
+    "run_seconds": 1.2363e-05
    }
   },
   {
@@ -343,8 +342,8 @@
     "output": "1,2\n",
     "notes": [],
     "status": "ok",
-    "seconds": 0.016,
-    "run_seconds": 1.2003e-05
+    "seconds": 0.014,
+    "run_seconds": 9.718e-06
    }
   },
   {
@@ -362,8 +361,8 @@
     "output": "3\n1\n2\n",
     "notes": [],
     "status": "ok",
-    "seconds": 0.018,
-    "run_seconds": 1.3936e-05
+    "seconds": 0.015,
+    "run_seconds": 1.055e-05
    }
   },
   {
@@ -381,8 +380,8 @@
     "output": "big\n",
     "notes": [],
     "status": "ok",
-    "seconds": 0.017,
-    "run_seconds": 9.799e-06
+    "seconds": 0.014,
+    "run_seconds": 7.725e-06
    }
   },
   {
@@ -400,8 +399,8 @@
     "output": "3\n1\n2\n",
     "notes": [],
     "status": "ok",
-    "seconds": 0.017,
-    "run_seconds": 1.3085e-05
+    "seconds": 0.015,
+    "run_seconds": 1.3255e-05
    }
   },
   {
@@ -419,8 +418,8 @@
     "output": "lambda\n",
     "notes": [],
     "status": "ok",
-    "seconds": 0.016,
-    "run_seconds": 9.307e-06
+    "seconds": 0.014,
+    "run_seconds": 6.812e-06
    }
   },
   {
@@ -456,8 +455,8 @@
     "output": "42\n",
     "notes": [],
     "status": "ok",
-    "seconds": 0.016,
-    "run_seconds": 1.1481e-05
+    "seconds": 0.018,
+    "run_seconds": 1.2243e-05
    }
   },
   {
@@ -465,9 +464,9 @@
    "text": "std::stoi(\"abc\")",
    "raw": {
     "text": "std::stoi(\"abc\")",
-    "output": "terminate called after throwing an instance of 'std::invalid_argument'\n  what():  stoi\nStack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point to it):\n0  libLLVM.so.24.0      0x000072c56902fcef llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) + 63\n1  libLLVM.so.24.0      0x000072c56902d54b llvm::sys::RunSignalHandlers() + 43\n2  libLLVM.so.24.0      0x000072c569030823\n3  libc.so.6            0x000072c563d40330\n4  libc.so.6            0x000072c563d99c0c pthread_kill + 284\n5  libc.so.6            0x000072c563d4027e gsignal + 30\n6  libc.so.6            0x000072c563d238ff abort + 223\n7  libstdc++.so.6       0x000072c5640ccff5\n8  libstdc++.so.6       0x000072c5640e20da\n9  libstdc++.so.6       0x000072c5640cca55 std::unexpected() + 0\n10 libstdc++.so.6       0x000072c5640e2391\n11 libstdc++.so.6       0x000072c5640d0277 std::__throw_invalid_argument(char const*) + 68\n12 (error)              0x000072c56040f164\n13 (error)              0x000072c56040f0fe\n14 (error)              0x000072c56040f035\n15 (error)              0x000072c56040f2bd\n16 (error)              0x000072c56040f0ba\n17 libLLVM.so.24.0      0x000072c56b3657b2\n18 libclang-cpp.so.24.0 0x000072c570ca28d6 clang::Interpreter::ParseAndExecute(llvm::StringRef, clang::Value*) + 150\n19 clang-repl           0x00005675571295f5 main + 5797\n20 libc.so.6            0x000072c563d251ca\n21 libc.so.6            0x000072c563d2528b __libc_start_main + 139\n22 clang-repl           0x0000567557127145 _start + 37\n",
+    "output": "terminate called after throwing an instance of 'std::invalid_argument'\n  what():  stoi\nStack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point to it):\n0  libLLVM.so.24.0      0x0000780433ac1cef llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) + 63\n1  libLLVM.so.24.0      0x0000780433abf54b llvm::sys::RunSignalHandlers() + 43\n2  libLLVM.so.24.0      0x0000780433ac2823\n3  libc.so.6            0x000078042e7d2330\n4  libc.so.6            0x000078042e82bc0c pthread_kill + 284\n5  libc.so.6            0x000078042e7d227e gsignal + 30\n6  libc.so.6            0x000078042e7b58ff abort + 223\n7  libstdc++.so.6       0x000078042eb5eff5\n8  libstdc++.so.6       0x000078042eb740da\n9  libstdc++.so.6       0x000078042eb5ea55 std::unexpected() + 0\n10 libstdc++.so.6       0x000078042eb74391\n11 libstdc++.so.6       0x000078042eb62277 std::__throw_invalid_argument(char const*) + 68\n12 (error)              0x000078042aea1164\n13 (error)              0x000078042aea10fe\n14 (error)              0x000078042aea1035\n15 (error)              0x000078042aea12bd\n16 (error)              0x000078042aea10ba\n17 libLLVM.so.24.0      0x0000780435df77b2\n18 libclang-cpp.so.24.0 0x000078043b7348d6 clang::Interpreter::ParseAndExecute(llvm::StringRef, clang::Value*) + 150\n19 clang-repl           0x000064fd99da85f5 main + 5797\n20 libc.so.6            0x000078042e7b71ca\n21 libc.so.6            0x000078042e7b728b __libc_start_main + 139\n22 clang-repl           0x000064fd99da6145 _start + 37\n",
     "state": "crashed (SIGABRT)",
-    "seconds": 0.017,
+    "seconds": 0.015,
     "fresh": false
    },
    "cpp_repl": {
@@ -477,8 +476,8 @@
      "uncaught exception: std::invalid_argument: stoi"
     ],
     "status": "exception",
-    "seconds": 0.018,
-    "run_seconds": 9.2214e-05
+    "seconds": 0.017,
+    "run_seconds": 8.3547e-05
    }
   },
   {
@@ -504,9 +503,9 @@
    "text": "*p0 = 42;",
    "raw": {
     "text": "*p0 = 42;",
-    "output": "Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point to it):\n0  libLLVM.so.24.0      0x00007cd1ccea2cef llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) + 63\n1  libLLVM.so.24.0      0x00007cd1ccea054b llvm::sys::RunSignalHandlers() + 43\n2  libLLVM.so.24.0      0x00007cd1ccea3823\n3  libc.so.6            0x00007cd1c7bb3330\n4  (error)              0x00007cd1c428300a\n5  (error)              0x00007cd1c428303d\n6  (error)              0x00007cd1c428302a\n7  libLLVM.so.24.0      0x00007cd1cf1d87b2\n8  libclang-cpp.so.24.0 0x00007cd1d4b158d6 clang::Interpreter::ParseAndExecute(llvm::StringRef, clang::Value*) + 150\n9  clang-repl           0x0000604e5ef9c5f5 main + 5797\n10 libc.so.6            0x00007cd1c7b981ca\n11 libc.so.6            0x00007cd1c7b9828b __libc_start_main + 139\n12 clang-repl           0x0000604e5ef9a145 _start + 37\n",
+    "output": "Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point to it):\n0  libLLVM.so.24.0      0x00007ba7f663dcef llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) + 63\n1  libLLVM.so.24.0      0x00007ba7f663b54b llvm::sys::RunSignalHandlers() + 43\n2  libLLVM.so.24.0      0x00007ba7f663e823\n3  libc.so.6            0x00007ba7f134e330\n4  (error)              0x00007ba7eda1e00a\n5  (error)              0x00007ba7eda1e03d\n6  (error)              0x00007ba7eda1e02a\n7  libLLVM.so.24.0      0x00007ba7f89737b2\n8  libclang-cpp.so.24.0 0x00007ba7fe2b08d6 clang::Interpreter::ParseAndExecute(llvm::StringRef, clang::Value*) + 150\n9  clang-repl           0x00005dd3a547b5f5 main + 5797\n10 libc.so.6            0x00007ba7f13331ca\n11 libc.so.6            0x00007ba7f133328b __libc_start_main + 139\n12 clang-repl           0x00005dd3a5479145 _start + 37\n",
     "state": "crashed (SIGSEGV)",
-    "seconds": 0.011,
+    "seconds": 0.01,
     "fresh": false
    },
    "cpp_repl": {
@@ -516,7 +515,7 @@
      "clang-repl crashed (SIGSEGV): restored 25 inputs"
     ],
     "status": "crash",
-    "seconds": 1.885
+    "seconds": 0.452
    }
   },
   {
@@ -534,8 +533,8 @@
     "output": "[3, 1, 2]\n",
     "notes": [],
     "status": "ok",
-    "seconds": 0.018,
-    "run_seconds": 9.958e-06
+    "seconds": 0.017,
+    "run_seconds": 1.8134e-05
    }
   },
   {
@@ -555,7 +554,7 @@
      "undo: restored 25 inputs"
     ],
     "status": "ok",
-    "seconds": 2.168
+    "seconds": 0.707
    }
   },
   {
@@ -575,7 +574,7 @@
      "x redefined: 24 inputs replayed"
     ],
     "status": "ok",
-    "seconds": 2.166
+    "seconds": 0.736
    }
   },
   {
@@ -629,8 +628,8 @@
     "output": "hi\n",
     "notes": [],
     "status": "ok",
-    "seconds": 0.016,
-    "run_seconds": 9.488e-06
+    "seconds": 0.014,
+    "run_seconds": 7.374e-06
    }
   },
   {
@@ -648,8 +647,8 @@
     "output": "done\n",
     "notes": [],
     "status": "ok",
-    "seconds": 0.017,
-    "run_seconds": 8.606e-06
+    "seconds": 0.014,
+    "run_seconds": 6.452e-06
    }
   },
   {
@@ -657,7 +656,7 @@
    "text": "return 3;",
    "raw": {
     "text": "return 3;",
-    "output": "Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point to it):\n0  libLLVM.so.24.0      0x00007fb0d1be3cef llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) + 63\n1  libLLVM.so.24.0      0x00007fb0d1be154b llvm::sys::RunSignalHandlers() + 43\n2  libLLVM.so.24.0      0x00007fb0d1be4823\n3  libc.so.6            0x00007fb0cc8f4330\n4  libclang-cpp.so.24.0 0x00007fb0d7ae15a3 clang::Stmt::getEndLoc() const + 51\n5  libclang-cpp.so.24.0 0x00007fb0d7615326 clang::TopLevelStmtDecl::getSourceRange() const + 22\n6  libclang-cpp.so.24.0 0x00007fb0d895c36c clang::CodeGen::CodeGenModule::EmitTopLevelStmt(clang::TopLevelStmtDecl const*) + 828\n7  libclang-cpp.so.24.0 0x00007fb0d8a01ccc\n8  libclang-cpp.so.24.0 0x00007fb0d891f438 clang::BackendConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 200\n9  libclang-cpp.so.24.0 0x00007fb0d9176ffc clang::MultiplexConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 60\n10 libclang-cpp.so.24.0 0x00007fb0d984b322 clang::InProcessPrintingASTConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 258\n11 libclang-cpp.so.24.0 0x00007fb0d9852bcc clang::IncrementalParser::ParseOrWrapTopLevelDecl() + 764\n12 libclang-cpp.so.24.0 0x00007fb0d9853bad clang::IncrementalParser::Parse(llvm::StringRef) + 1069\n13 libclang-cpp.so.24.0 0x00007fb0d98570ef clang::Interpreter::Parse(llvm::StringRef) + 367\n14 libclang-cpp.so.24.0 0x00007fb0d9856872 clang::Interpreter::ParseAndExecute(llvm::StringRef, clang::Value*) + 50\n15 clang-repl           0x0000603fb6c545f5 main + 5797\n16 libc.so.6            0x00007fb0cc8d91ca\n17 libc.so.6            0x00007fb0cc8d928b __libc_start_main + 139\n18 clang-repl           0x0000603fb6c52145 _start + 37\n",
+    "output": "Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point to it):\n0  libLLVM.so.24.0      0x00007a7c6fa9acef llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) + 63\n1  libLLVM.so.24.0      0x00007a7c6fa9854b llvm::sys::RunSignalHandlers() + 43\n2  libLLVM.so.24.0      0x00007a7c6fa9b823\n3  libc.so.6            0x00007a7c6a7ab330\n4  libclang-cpp.so.24.0 0x00007a7c759985a3 clang::Stmt::getEndLoc() const + 51\n5  libclang-cpp.so.24.0 0x00007a7c754cc326 clang::TopLevelStmtDecl::getSourceRange() const + 22\n6  libclang-cpp.so.24.0 0x00007a7c7681336c clang::CodeGen::CodeGenModule::EmitTopLevelStmt(clang::TopLevelStmtDecl const*) + 828\n7  libclang-cpp.so.24.0 0x00007a7c768b8ccc\n8  libclang-cpp.so.24.0 0x00007a7c767d6438 clang::BackendConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 200\n9  libclang-cpp.so.24.0 0x00007a7c7702dffc clang::MultiplexConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 60\n10 libclang-cpp.so.24.0 0x00007a7c77702322 clang::InProcessPrintingASTConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 258\n11 libclang-cpp.so.24.0 0x00007a7c77709bcc clang::IncrementalParser::ParseOrWrapTopLevelDecl() + 764\n12 libclang-cpp.so.24.0 0x00007a7c7770abad clang::IncrementalParser::Parse(llvm::StringRef) + 1069\n13 libclang-cpp.so.24.0 0x00007a7c7770e0ef clang::Interpreter::Parse(llvm::StringRef) + 367\n14 libclang-cpp.so.24.0 0x00007a7c7770d872 clang::Interpreter::ParseAndExecute(llvm::StringRef, clang::Value*) + 50\n15 clang-repl           0x000065396b83d5f5 main + 5797\n16 libc.so.6            0x00007a7c6a7901ca\n17 libc.so.6            0x00007a7c6a79028b __libc_start_main + 139\n18 clang-repl           0x000065396b83b145 _start + 37\n",
     "state": "crashed (SIGSEGV)",
     "seconds": 0.012,
     "fresh": false
@@ -669,8 +668,8 @@
      "main returned 3"
     ],
     "status": "ok",
-    "seconds": 0.015,
-    "run_seconds": 5.29e-06,
+    "seconds": 0.013,
+    "run_seconds": 3.647e-06,
     "returned": 3
    }
   },
@@ -679,7 +678,7 @@
    "text": "%quit",
    "raw": {
     "text": "%quit",
-    "output": "(int) 43\n(std::vector<int, std::allocator<int> > &) @0x7100d57ff008\n(int) 3\n(std::map<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, int, std::less<std::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<const std::basic_string<char, std::char_traits<char>, std::allocator<char> >, int> > > &) @0x7100d57dd000\n(P &) @0x7100d57d3000\n(P &) @0x7100d57d3000\n(int) 42\n(std::vector<int, std::allocator<int> > &) @0x7100d57ff008\n(std::basic_ostream<char, std::char_traits<char> > &) @0x7100d964f580\n\n",
+    "output": "(int) 43\n(std::vector<int, std::allocator<int> > &) @0x717ea770a008\n(int) 3\n(std::map<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, int, std::less<std::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<const std::basic_string<char, std::char_traits<char>, std::allocator<char> >, int> > > &) @0x717ea76e8000\n(P &) @0x717ea76de000\n(P &) @0x717ea76de000\n(int) 42\n(std::vector<int, std::allocator<int> > &) @0x717ea770a008\n(std::basic_ostream<char, std::char_traits<char> > &) @0x717eab55a580\n\n",
     "state": "exited (code 0)",
     "seconds": 0,
     "fresh": true,
@@ -701,19 +700,34 @@
    0.032
   ],
   "raw_with_includes": [
-   0.514,
-   0.515,
-   0.515
+   0.464,
+   0.465,
+   0.465
   ],
   "cpp_repl": [
-   1.917,
-   1.917,
-   1.917
+   0.565,
+   0.565,
+   0.566
+  ],
+  "cpp_repl_no_pch": [
+   1.768,
+   1.767,
+   1.767
   ],
   "cpp_repl_no_std": [
-   1.467,
-   1.416,
-   1.466
+   0.515,
+   0.515,
+   0.464
+  ],
+  "cpp_repl_usd": [
+   1.066,
+   1.066,
+   1.116
+  ],
+  "cpp_repl_usd_no_pch": [
+   4.422,
+   4.422,
+   4.372
   ],
   "connect": [
    0.064,
@@ -727,183 +741,183 @@
  "latency": {
   "raw": {
    "declaration": [
-    0.0004443950019776821,
-    0.0001742170425131917,
-    0.00016564101679250598,
-    0.00017220299923792481,
-    0.000161713978741318,
-    0.00017254502745345235,
-    0.00015977997099980712,
-    0.00016183400293812156,
-    0.00015718501526862383,
-    0.00016576203051954508,
-    0.0001614530337974429,
-    0.0001720330328680575,
-    0.00016572099411860108,
-    0.00019065901869907975,
-    0.00018110097153112292,
-    0.00016721402062103152,
-    0.000231555022764951,
-    0.00021298998035490513,
-    0.00020349299302324653,
-    0.0002119879936799407
+    0.00038908200804144144,
+    0.00015591399278491735,
+    0.00014666595961898565,
+    0.00015436002286151052,
+    0.0001428989926353097,
+    0.0001414360012859106,
+    0.0001386910444125533,
+    0.00013802899047732353,
+    0.00013767898781225085,
+    0.00013532501179724932,
+    0.0001530880108475685,
+    0.00013825000496581197,
+    0.00014511297922581434,
+    0.00014680600725114346,
+    0.00014904997078701854,
+    0.00014614500105381012,
+    0.00015123398043215275,
+    0.0001463550142943859,
+    0.00014764798106625676,
+    0.00014560401905328035
    ],
    "expression": [
-    0.0031855159904807806,
-    0.0019249170436523855,
-    0.001897455018479377,
-    0.002214881998952478,
-    0.0018893309752456844,
-    0.0018813859787769616,
-    0.001890092040412128,
-    0.0022010759566910565,
-    0.0019274009973742068,
-    0.0018580920295789838,
-    0.001906312012579292,
-    0.002171239990275353,
-    0.0021577239967882633,
-    0.001924947020597756,
-    0.001948902034200728,
-    0.0020432290039025247,
-    0.0020167690236121416,
-    0.0019330520299263299,
-    0.0019345449982210994,
-    0.0020095669897273183
+    0.003129584016278386,
+    0.0018916060216724873,
+    0.0018205030355602503,
+    0.0018217949545942247,
+    0.0018051340011879802,
+    0.0018260630313307047,
+    0.0018076589913107455,
+    0.001803180028218776,
+    0.0018059259746223688,
+    0.0018098729779012501,
+    0.0018242300138808787,
+    0.0018159039900638163,
+    0.0018172169802710414,
+    0.0018160250037908554,
+    0.0018286690465174615,
+    0.0018032609950751066,
+    0.001841180957853794,
+    0.0018097219872288406,
+    0.0018214249867014587,
+    0.0018219450139440596
    ],
    "statement": [
-    0.0021013389923609793,
-    0.0016689259791746736,
-    0.0016347619821317494,
-    0.001647055963985622,
-    0.0017508100136183202,
-    0.0017210840014740825,
-    0.0016281399875879288,
-    0.0016195540083572268,
-    0.0017201120499521494,
-    0.0017794440500438213,
-    0.001710134034510702,
-    0.0016271980130113661,
-    0.0016209870227612555,
-    0.0016353229875676334,
-    0.0017413920140825212,
-    0.001690516946837306,
-    0.0016553000314161181,
-    0.0016234899521805346,
-    0.001632307015825063,
-    0.0017584339948371053
+    0.001826724037528038,
+    0.0015493429964408278,
+    0.0015552639961242676,
+    0.0015416379901580513,
+    0.001545986975543201,
+    0.001585370977409184,
+    0.001547178952023387,
+    0.0015452950028702617,
+    0.0016483899671584368,
+    0.0015445740427821875,
+    0.0015580489998683333,
+    0.001534415001515299,
+    0.0015261400258168578,
+    0.0015667160041630268,
+    0.001550505985505879,
+    0.0015472800005227327,
+    0.001535537012387067,
+    0.0015459370333701372,
+    0.0015499640139751136,
+    0.0017520439578220248
    ]
   },
   "cpp_repl": {
    "declaration": [
-    0.000635214033536613,
-    0.00042720302008092403,
-    0.000396785035263747,
-    0.00039404002018272877,
-    0.0003998909960500896,
-    0.0004071149742230773,
-    0.00045847194269299507,
-    0.00038741796743124723,
-    0.00043298397213220596,
-    0.00041641300776973367,
-    0.0003902339958585799,
-    0.00039331900188699365,
-    0.0003797329845838249,
-    0.00037767901085317135,
-    0.00038027396658435464,
-    0.00037465401692315936,
-    0.0003801040002144873,
-    0.0003698350046761334,
-    0.0003798140096478164,
-    0.0003842020523734391
+    0.0007324069738388062,
+    0.000505249947309494,
+    0.0004397269804030657,
+    0.0004231749917380512,
+    0.0004225440206937492,
+    0.0003914260305464268,
+    0.00039673602441325784,
+    0.000387438980396837,
+    0.0003828899934887886,
+    0.0003913959953933954,
+    0.0004103410174138844,
+    0.00039365998236462474,
+    0.00038895203033462167,
+    0.0003910450031980872,
+    0.0003943119663745165,
+    0.00039714702870696783,
+    0.000392557994928211,
+    0.0004022560315206647,
+    0.000398951000533998,
+    0.00040636397898197174
    ],
    "declaration_run": [],
    "expression": [
-    0.041066919977311045,
-    0.016145889996550977,
-    0.01562736602500081,
-    0.016993051976896822,
-    0.015627416025381535,
-    0.018196552991867065,
-    0.015657692041713744,
-    0.016052924969699234,
-    0.016261958051472902,
-    0.015221362991724163,
-    0.014616566011682153,
-    0.014789821987506002,
-    0.016512188012711704,
-    0.014509584987536073,
-    0.015477164008188993,
-    0.015851125994231552,
-    0.015416329028084874,
-    0.01634033495793119,
-    0.015063005033880472,
-    0.01464699296047911
+    0.015070305031258613,
+    0.014004340977407992,
+    0.01393395900959149,
+    0.015922868042252958,
+    0.014174992043990642,
+    0.013831136049702764,
+    0.014009781007189304,
+    0.013720607967115939,
+    0.014352755970321596,
+    0.014027795987203717,
+    0.016072780010290444,
+    0.014044867944903672,
+    0.013898411998525262,
+    0.013783224974758923,
+    0.014599098998587579,
+    0.014315154985524714,
+    0.013930953049566597,
+    0.014143573003821075,
+    0.014133013028185815,
+    0.014166767010465264
    ],
    "expression_run": [
-    1.7613e-05,
-    9.248e-06,
-    1.2494e-05,
-    1.3144e-05,
-    6.743e-06,
-    6.412e-06,
-    1.3085e-05,
-    1.2754e-05,
-    9.398e-06,
-    5.591e-06,
-    5.59e-06,
-    5.51e-06,
-    5.701e-06,
-    6.442e-06,
-    1.1732e-05,
-    1.081e-05,
-    1.0209e-05,
-    5.731e-06,
-    6.281e-06,
-    5.29e-06
+    9.989e-06,
+    6.462e-06,
+    7.564e-06,
+    9.828e-06,
+    8.325e-06,
+    6.723e-06,
+    7.835e-06,
+    6.783e-06,
+    6.873e-06,
+    8.596e-06,
+    1.0269e-05,
+    8.216e-06,
+    6.873e-06,
+    7.023e-06,
+    7.715e-06,
+    8.275e-06,
+    7.153e-06,
+    7.705e-06,
+    6.312e-06,
+    6.683e-06
    ],
    "statement": [
-    0.018580585019662976,
-    0.016599722031969577,
-    0.016545430989935994,
-    0.016276324982754886,
-    0.015594133001286536,
-    0.01573090098099783,
-    0.01610205799806863,
-    0.015052014961838722,
-    0.015929132991004735,
-    0.016514854039996862,
-    0.01629626302747056,
-    0.014418573991861194,
-    0.01419877097941935,
-    0.015116424998268485,
-    0.015384489030111581,
-    0.015085428021848202,
-    0.014705743989907205,
-    0.015226832998450845,
-    0.01573820400517434,
-    0.015785883995704353
+    0.013469685974996537,
+    0.013084011035971344,
+    0.013409662991762161,
+    0.013363134989049286,
+    0.013212742982432246,
+    0.014405806025024503,
+    0.0160820780438371,
+    0.01453834498533979,
+    0.014022253977600485,
+    0.013267726986669004,
+    0.013115699985064566,
+    0.01334580301772803,
+    0.01308090501697734,
+    0.013025451044086367,
+    0.0130742919864133,
+    0.013141930045094341,
+    0.012962361972313374,
+    0.012761513993609697,
+    0.014973021985497326,
+    0.013338759017642587
    ],
    "statement_run": [
-    1.1361e-05,
-    1.1031e-05,
-    1.0489e-05,
-    9.838e-06,
-    9.188e-06,
-    9.658e-06,
-    9.208e-06,
-    1.0139e-05,
-    9.758e-06,
-    9.047e-06,
-    9.007e-06,
-    8.175e-06,
-    8.977e-06,
-    9.438e-06,
-    9.478e-06,
-    9.378e-06,
-    1.2574e-05,
-    1.0049e-05,
-    1.054e-05,
-    8.877e-06
+    6.292e-06,
+    5.55e-06,
+    6.442e-06,
+    6.051e-06,
+    5.711e-06,
+    1.1752e-05,
+    1.1872e-05,
+    9.518e-06,
+    7.454e-06,
+    6.722e-06,
+    6.642e-06,
+    7.584e-06,
+    6.252e-06,
+    5.881e-06,
+    5.32e-06,
+    5.3e-06,
+    4.839e-06,
+    5.13e-06,
+    8.245e-06,
+    5.63e-06
    ]
   }
  }

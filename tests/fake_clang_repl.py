@@ -35,7 +35,11 @@ built without libedit does); FAKE_ECHO=1 echoes each input back; FAKE_SPLIT=1
 writes output one byte at a time; FAKE_MARKER is a format for the %lib error
 ({path}); FAKE_HANG_START=1 never answers at all; FAKE_START_ERROR=1 starts
 with the error clang-repl prints for a prelude that does not compile, and
-carries on as clang-repl does.
+carries on as clang-repl does. FAKE_PCH_STALE=FLAGFILE makes the first start
+(FLAGFILE absent) print what clang says of a precompiled header whose header
+changed since it was built, create FLAGFILE and die, as clang-repl 18 does;
+later starts carry on. FAKE_PCH_LINK_FAIL=1 makes a start with -include-pch
+fail to link, as clang-repl 23 does with OpenUSD's PCH.
 """
 
 import os
@@ -69,6 +73,16 @@ def main():
             time.sleep(1)
     if os.environ.get('FAKE_START_ERROR') == '1':
         out("<built-in>:1:10: fatal error: 'missing.h' file not found\n")
+    if os.environ.get('FAKE_PCH_LINK_FAIL') == '1' and '--Xcc=-include-pch' in sys.argv:
+        out('JIT session error: Symbols not found: [ _Z16registry_lookup1v ]\n'
+            "clang-repl: Failed to materialize symbols: { (main, { __orc_init_func.<<< inputs >>> }) }\n")
+        os.kill(os.getpid(), signal.SIGSEGV)
+    stale = os.environ.get('FAKE_PCH_STALE')
+    if stale and not os.path.exists(stale):
+        open(stale, 'w').close()
+        out("fatal error: file 'prelude.h' has been modified since the precompiled header 'preludes.pch' was "
+            "built: content changed\nnote: please rebuild precompiled header 'preludes.pch'\n1 error generated.\n")
+        os.kill(os.getpid(), signal.SIGSEGV)
     n = 0
     tainted = False
     declared = set()

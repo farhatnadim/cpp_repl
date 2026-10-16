@@ -90,7 +90,7 @@ class Backend:
         _no_core_dumps()
         fds = () if program_input is None else (program_input,)
         self.proc = subprocess.Popen(cfg.argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                     stderr=subprocess.STDOUT, cwd=cwd, env=cfg.env,
+                                     stderr=subprocess.STDOUT, cwd=cwd, env=cfg.backend_env,
                                      start_new_session=True, pass_fds=fds)
         self.fd = self.proc.stdout.fileno()
         self.buffer = b''

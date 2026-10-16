@@ -30,12 +30,15 @@ would inside `main()`, and:
 - **It runs at native speed.** With `-O3 --native`, Eigen typed at the prompt
   multiplies matrices as fast as clang++-compiled Eigen, and as fast as NumPy
   (see [Speed](#speed)). `%timeit` times a statement as IPython does.
+- **It starts in a tenth of a second.** The first start of a configuration
+  precompiles its preludes, a few seconds; every start after that takes
+  about 0.1 s, OpenUSD's headers included ([Start-up](#start-up)).
 - **Errors point at your lines.** An error in a file you run names its line
   and column, `prog.cpp:12:5`, as clang++ would. `--batch` keeps errors brief,
   for a coding agent that fixes the code and runs it again.
 - **It points at your project.** It takes `compile_commands.json`, a
   `cpp-repl.toml`, compiler flags and shared libraries.
-- **It works with clang-repl 18, 23 and LLVM's development snapshot (24).**
+- **It runs clang-repl 23 and LLVM's development snapshot (24).**
   It works around what each version gets wrong
   ([Why a front end](#why-a-front-end)), and Docker images carry the newest
   ones. The default standard is the newest the clang knows: gnu++26 from
@@ -83,7 +86,7 @@ Linux, Python 3.11 or newer, and either a clang-repl or Docker.
 ```sh
 git clone https://github.com/farhatnadim/cpp_repl.git && cd cpp_repl
 
-bin/cpp-repl                 # the newest clang-repl on PATH or in /usr/lib/llvm-N/bin (Ubuntu: apt install clang-tools-18)
+bin/cpp-repl                 # the newest clang-repl on PATH or in /usr/lib/llvm-N/bin: 23 or newer (apt.llvm.org: clang-23, clang-tools-23)
 make docker                  # or: an image with clang-repl 23 from apt.llvm.org, about a minute
 bin/cpp-repl-docker          # cpp-repl in that image; the same as cpp-repl --docker
 
@@ -102,8 +105,7 @@ picks another image (default `$CPP_REPL_IMAGE`, then `cpp-repl:llvm23`),
 
 | clang-repl | Where it comes from | Notes |
 | --- | --- | --- |
-| 23 | `make docker` (apt.llvm.org) | Recommended. Runs Eigen's kernels and OpenMP. cpp-repl works around its crash on lambdas at top level. |
-| 18 | Ubuntu 24.04, `clang-tools-18` | Most code works. Its JIT cannot assemble inline `asm`, so Eigen's dynamic-size products abort the backend. cpp-repl rebuilds the session, but the product cannot run. |
+| 23 | `make docker`, or `clang-23` and `clang-tools-23` from apt.llvm.org | The oldest cpp-repl runs. Runs Eigen's kernels and OpenMP. cpp-repl works around its crash on lambdas at top level. |
 | main | `make docker-snapshot` | LLVM's development snapshot, for trying fixes that are not released yet. |
 | any ref | `make docker-src LLVM_REF=...` | Built from llvm-project in 30 to 60 minutes. |
 
@@ -151,7 +153,9 @@ The other options: `--cwd DIR` is the session's working directory, where
 quoted includes are looked for and the program's files land; `--no-config`
 leaves any `cpp-repl.toml` unread; `--clang-repl PATH` names the clang-repl
 to run (default `$CPP_REPL_CLANG_REPL`, then the newest found);
-`--build-dir DIR` is `--compile-commands DIR`; `--version`.
+`--build-dir DIR` is `--compile-commands DIR`; `--no-pch` starts from the
+prelude headers rather than the precompiled header of them
+([Start-up](#start-up)); `--version`.
 
 ### Files
 
@@ -246,8 +250,9 @@ cpp-repl --batch --json prog.cpp              # a JSON object per input
 - **A session that stays.** `cpp-repl --serve SOCKET` keeps a session
   running, its profiles loaded. `cpp-repl --connect SOCKET [FILE...]` runs
   files, or stdin, in it, and exits with the run's status. A run there takes
-  0.07 s, against about 2 s for a new cpp-repl, more with a profile
-  ([Limits](#limits)). The session's names carry over from run to run.
+  0.07 s, against about 0.15 s for a new cpp-repl whose preludes are
+  precompiled ([Start-up](#start-up)), or 2 s and more when they are not.
+  The session's names carry over from run to run.
   `--fresh` starts a run from an empty session instead, for a program run
   again after an edit, in the spare clang-repl the server keeps warm: 0.1 s
   when the spare is ready, and the next spare takes a start-up to warm, so a
@@ -279,6 +284,33 @@ use.
 ```sh
 cpp-repl -p eigen -O3 --native
 ```
+
+### Start-up
+
+Parsing the prelude headers was most of a start. So the first start of a
+configuration precompiles them, with the clang++ beside clang-repl, into
+`~/.local/state/cpp-repl/pch/`, and every start after that loads the
+precompiled header instead. On clang-repl 23.1.4:
+
+| Start, inside the image | From the headers | Precompiled | The first start |
+| --- | ---: | ---: | ---: |
+| the standard preludes | about 2 s | 0.53 s | 2.2 s |
+| `-p usd` | 4.8 s | 1.05 s | 5.6 s |
+
+- A configuration is the clang-repl, the flags, the preludes' contents and
+  the libraries; each has its own entry, and one unused for a month goes.
+  `rm -r ~/.local/state/cpp-repl/pch` is always safe.
+- A header a prelude includes changing is noticed by clang, by content: the
+  session rebuilds the entry once and says `[the precompiled header did not
+  load: rebuilt]`. A build that fails, or a start that fails with the
+  precompiled header, is noted, and the session starts from the headers;
+  the failure is remembered for a day.
+- `%flags` names the precompiled header in use, or why there is none.
+- `--no-pch`, or `pch = false` in a `cpp-repl.toml`, starts from the headers.
+  Without a clang++ beside clang-repl there is no precompiled header either.
+- It needs clang-repl 23: 18 never emitted the inline functions and inline
+  variables whose definitions came from a precompiled header, so an input
+  that used one failed to link.
 
 ## Your project, your libraries
 
@@ -332,6 +364,7 @@ libs = ["build/libmylib.so"]
 prelude = ["tools/repl_prelude.h"]   # -include'd into every session
 profiles = ["eigen"]
 compile_commands = "build"
+pch = false                          # start from the headers; true, the default, precompiles them once
 ```
 
 The precedence, from lowest to highest:
@@ -357,7 +390,7 @@ between different enumeration types); `std = "gnu++20"` in the profile, or
 | `CPP_REPL_IMAGE` | the image `--docker` runs (`--image` wins) |
 | `CPP_REPL_TRACES=1` | keep LLVM's stack trace when clang-repl crashes; by default cpp-repl reports the crash in one line |
 | `NO_COLOR` | no colour, as `--no-color` |
-| `XDG_STATE_HOME` | where the state directory goes: `$XDG_STATE_HOME/cpp-repl`, default `~/.local/state/cpp-repl`. It holds the prompt's history, the completion cache, each session's input files, and the `home` and `tmp` the code sees |
+| `XDG_STATE_HOME` | where the state directory goes: `$XDG_STATE_HOME/cpp-repl`, default `~/.local/state/cpp-repl`. It holds the prompt's history, the completion cache, the precompiled preludes of each configuration (`pch/`), each session's input files, and the `home` and `tmp` the code sees |
 | `LIBRARY_PATH` | directories `-l NAME` looks in, after `-L` |
 | `USD_ROOT` or `PXR_ROOT`, `EIGEN_ROOT` or `EIGEN3_INCLUDE_DIR`, `GLM_ROOT` | where a profile's library is, before pkg-config and the usual places (the usd profile reads the `CMakeCache.txt` beside `compile_commands.json` first) |
 
@@ -443,33 +476,33 @@ misprints on everyday input. In what follows:
 - *cpp-repl* means the same input typed into cpp-repl.
 
 python3 scripts/compat_table.py tests/compat/results/*.json
-| Raw clang-repl | 18.1.3 | 23.1.4 | 24.0.0 | cpp-repl |
-| --- | --- | --- | --- | --- |
-| A line ending in an open `{` | hangs (killed after 20 s) | hangs (killed after 20 s) | hangs (killed after 20 s) | waits for the block to close |
-| Two top-level range-for loops | prints '1 1 1' and '' | works | works | runs each loop inside a function |
-| Nested top-level `for` loops (llvm#89506) | prints '00 01' | works | works | runs the loop inside a function |
-| A top-level `try`/`catch` | link error, and later inputs fail | works | works | runs it inside a function |
-| A lambda called in a top-level statement | works | crashes (SIGSEGV) | works | runs the statement inside a function |
-| A lambda passed to a template in a top-level statement | works | crashes (SIGSEGV) | works | runs the statement inside a function |
-| A bare `x + 1`, no semicolon | prints 'Not implement yet.' | prints (int) 42 | prints (int) 42 | prints 42 |
-| A bare `std::vector<int>{1, 2, 3}` | link error | link error | link error | prints [1, 2, 3] |
-| A bare call of a void function | does not run it | does not run it | does not run it | runs it |
-| Inline assembly, as in Eigen's matrix product | fatal error: no inline asm in the JIT | works | works | the same (a clang-repl limit) |
-| An `#if` region, through an `#include`d file | works | works | works | sends #if regions this way |
-| A dynamic initialiser in an `-include`d header | does not run it | runs it | runs it | keeps the prelude free of them |
-| A prompt written to a pipe | prints no prompt | prints no prompt | prints no prompt | learns it at startup and strips it |
-| The error `%lib` prints for a missing file | error: <path>: cannot open shared object file: No such file or directory | error: <path>: cannot open shared object file: No such file or directory | error: <path>: cannot open shared object file: No such file or directory | uses it as the end-of-output marker |
-| How a parse error ends | error: Parsing failed. | error: Parsing failed. | error: Parsing failed. | classifies it as an error |
-| `-Xcc -O2` in the JIT | __OPTIMIZE__ = 1 | __OPTIMIZE__ = 1 | __OPTIMIZE__ = 1 | -O2 on its command line |
-| The JIT without `-O` | __OPTIMIZE__ undefined | __OPTIMIZE__ undefined | __OPTIMIZE__ undefined | -O0 too; see %timeit's note |
-| `-Xcc -march=native` in the JIT | __AVX2__ = 1 | __AVX2__ = 1 | __AVX2__ = 1 | --native |
-| A `return 3;` at top level | ignored | crashes (SIGSEGV) | crashes (SIGSEGV) | ends the program with 3, as main() would |
-| A `goto` to a label clang-repl never saw | crashes (SIGSEGV) | an error | an error | the same error, or a restored session on 18 |
-| A file-scope lambda whose init-capture is not a constant | prints f 1: the closure holds zero | prints f 1: the closure holds zero | prints f 1: the closure holds zero | the same (a clang-repl limit, README Limits) |
-| `%help` | unknown | known | known | its own %help |
-| `%undo` | works | works | works | replays the journal without the last input |
+| Raw clang-repl | 23.1.4 | 24.0.0 | cpp-repl |
+| --- | --- | --- | --- |
+| A line ending in an open `{` | hangs (killed after 20 s) | hangs (killed after 20 s) | waits for the block to close |
+| Two top-level range-for loops | works | works | runs each loop inside a function |
+| Nested top-level `for` loops (llvm#89506) | works | works | runs the loop inside a function |
+| A top-level `try`/`catch` | works | works | runs it inside a function |
+| A lambda called in a top-level statement | crashes (SIGSEGV) | works | runs the statement inside a function |
+| A lambda passed to a template in a top-level statement | crashes (SIGSEGV) | works | runs the statement inside a function |
+| A bare `x + 1`, no semicolon | prints (int) 42 | prints (int) 42 | prints 42 |
+| A bare `std::vector<int>{1, 2, 3}` | link error | link error | prints [1, 2, 3] |
+| A bare call of a void function | does not run it | does not run it | runs it |
+| Inline assembly, as in Eigen's matrix product | works | works | the same (a clang-repl limit) |
+| An `#if` region, through an `#include`d file | works | works | sends #if regions this way |
+| A dynamic initialiser in an `-include`d header | runs it | runs it | keeps the prelude free of them |
+| A prompt written to a pipe | prints no prompt | prints no prompt | learns it at startup and strips it |
+| The error `%lib` prints for a missing file | error: <path>: cannot open shared object file: No such file or directory | error: <path>: cannot open shared object file: No such file or directory | uses it as the end-of-output marker |
+| How a parse error ends | error: Parsing failed. | error: Parsing failed. | classifies it as an error |
+| `-Xcc -O2` in the JIT | __OPTIMIZE__ = 1 | __OPTIMIZE__ = 1 | -O2 on its command line |
+| The JIT without `-O` | __OPTIMIZE__ undefined | __OPTIMIZE__ undefined | -O0 too; see %timeit's note |
+| `-Xcc -march=native` in the JIT | __AVX2__ = 1 | __AVX2__ = 1 | --native |
+| A `return 3;` at top level | crashes (SIGSEGV) | crashes (SIGSEGV) | ends the program with 3, as main() would |
+| A `goto` to a label clang-repl never saw | an error | an error | the same error |
+| A file-scope lambda whose init-capture is not a constant | prints f 1: the closure holds zero | prints f 1: the closure holds zero | the same (a clang-repl limit, README Limits) |
+| `%help` | known | known | its own %help |
+| `%undo` | works | works | replays the journal without the last input |
 
-Probed with tests/compat/harness.py: 18.1.3 on 2026-10-16, 23.1.4 on 2026-10-16, 24.0.0 on 2026-10-16.
+Probed with tests/compat/harness.py: 23.1.4 on 2026-10-16, 24.0.0 on 2026-10-16.
 
 The way around each problem:
 - **The unclosed `{`:** cpp-repl never sends an incomplete input.
@@ -482,8 +515,7 @@ The way around each problem:
   so a crash leaves no report behind (Ubuntu's apport writes them).
 - **`return` at top level:** cpp-repl runs it inside a function, where it
   ends the program with its value; typed raw, it segfaults 23.1.4 and 24.
-- **`goto` to an unknown label:** an error on 23 and 24; 18 segfaults, and
-  cpp-repl rebuilds the session.
+- **`goto` to an unknown label:** an error on 23 and 24.
 - **A file-scope lambda's init-capture:** a clang-repl limit cpp-repl cannot
   lift (README, Limits): the closure's initialiser never runs, on every
   version, unless the capture is a constant.
@@ -535,8 +567,8 @@ Everything is in [bench/](bench/README.md).
 
 ## What C++ you can type
 
-Every construct below was typed into cpp-repl on clang-repl 18.1.3, 23.1.4
-and the 24 snapshot, with the same result on each
+Every construct below was typed into cpp-repl on clang-repl 23.1.4 and the
+24 snapshot, with the same result on each
 (`tests/sessions/features.session` holds the transcript; the ends of a
 program are integration tests):
 - the C++20 language: concepts and `requires`, abbreviated templates
@@ -557,8 +589,7 @@ program are integration tests):
 - an uncaught exception, a `return` from `main()`, `exit()` and a crash,
   each ending the program as it does compiled.
 
-What a version lacks is clang-repl's own: 18's JIT cannot assemble inline
-`asm`, so Eigen's dynamic-size products abort there; `<print>` and
+What a version lacks is the standard library's: `<print>` and
 `<mdspan>` need libstdc++ 14 or libc++ (`cpp-repl --docker -stdlib=libc++`),
 `<flat_map>` libstdc++ 15 or libc++ 20, `<generator>` libstdc++ 14, and
 cpp-repl says so when an `#include` of them fails. `import std;` has no
@@ -574,7 +605,7 @@ module file in any of them, and cpp-repl says so.
   where `[x]` would have kept a copy.
 - **A lambda typed at the prompt whose init-capture is not a constant**
   (`auto f = [v = base](int x) { return v + x; };`) holds zero for `v`:
-  clang-repl 18, 23 and 24 never run that closure's initialiser. `[n = 5]`
+  clang-repl 23 and 24 never run that closure's initialiser. `[n = 5]`
   is fine, a `std::function` holding the lambda is fine, and so is any
   lambda inside a function.
 - **Rebuilding replays the journal,** file writes and other side effects
@@ -594,18 +625,21 @@ module file in any of them, and cpp-repl says so.
   header as it loads, is taken for clang's; printed by a statement, it is
   output.
 - **`[clang-repl crashed (SIGSEGV)]` covers both the program and the compiler
-  crashing**: clang-repl 18 segfaults on a `goto` to an unknown label, where
-  23 and 24 report an error.
+  crashing.**
 - **The prelude's global names** are `show` and `keep` (`timeit` and the
   rest live in `repl::`): a variable of your own named `keep` fails.
-- **Startup takes about 2 s,** or 1.5 s with `--no-std`, which leaves out
-  the standard library prelude. A profile adds its headers: Eigen about
-  1 s, OpenUSD about 3 s. Docker adds about 0.15 s.
-- **Your headers must compile with your clang-repl.**
-  - clang 23 rejects TBB 2020's headers, so the `usd` profile needs an
-    OpenUSD built against oneTBB there; and OpenUSD's headers do not build
-    as C++23 or later, so that profile compiles as C++20.
-  - clang-repl 18 can't run Eigen's dynamic-size products, as the table shows.
+- **The first start of a configuration takes a few seconds:** the preludes
+  are precompiled then ([Start-up](#start-up)). After that a session starts
+  in a few tenths of a second. The `usd` profile, `--no-pch`, and a
+  clang-repl with no clang++ beside it parse the preludes at every start:
+  about 2 s, or 1.5 s with `--no-std`, which leaves out the standard library
+  prelude; OpenUSD adds about 3 s. Docker adds about 0.15 s.
+- **Your headers must compile with your clang-repl.** OpenUSD's do not build
+  as C++23 or later, so the `usd` profile compiles as C++20. clang 20 and
+  newer reject an enumeration constant in TBB 2020's `tbb/task.h`, which
+  OpenUSD's build installs, so the profile reads a patched copy of TBB's
+  headers, the enumeration given the `unsigned` type it had; the ABI is the
+  same.
 - **C++20 is the floor.** The default is the newest standard the clang knows.
 
 ## How it works
@@ -631,6 +665,10 @@ module file in any of them, and cpp-repl says so.
   again, it replays them into a spare clang-repl started in advance.
 - **[`server.py`](src/cpp_repl/server.py)** is `--serve` and `--connect`: one
   session on a Unix socket, for a coding agent's loop.
+- **[`pch.py`](src/cpp_repl/pch.py)** precompiles the preludes once per
+  configuration ([Start-up](#start-up)), and
+  **[`preload.py`](src/cpp_repl/preload.py)** loads the session's libraries
+  into clang-repl as it starts, core dumps off first.
 - **[`prelude/cpp_repl.h`](src/cpp_repl/prelude/cpp_repl.h)** is the C++
   every session starts from: `show`, `Show<T>`/`Put<T>`, `keep` and `timeit`.
   Profiles add their own headers.
@@ -663,8 +701,9 @@ claude plugin validate .                                 # the Claude Code plugi
 claude plugin eval . --case yaml-cpp --runs 1 --ablation none   # one skill eval (real model calls)
 ```
 
-The test suite passes on clang-repl 18.1.3, 23.1.4 and the 24 snapshot
-(`make test-snapshot`):
+The test suite passes on clang-repl 23.1.4 (`make test-docker`) and the 24
+snapshot (`make test-snapshot`); `make test-host` runs it against the host's
+clang-repl, and skips what needs one when that is older than 23:
 - unit tests;
 - a fake clang-repl that prints prompts, splits its output and crashes on cue;
 - golden transcripts;

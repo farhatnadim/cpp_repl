@@ -702,12 +702,14 @@ inline ended uncaught()
   return e;
 }
 
-inline void finish(const ended &e)
+inline void finish(const ended &e, bool timed = true)
 {
   // Through stdout itself, past any redirection of std::cout. The run's
-  // nanoseconds follow a '~'; an exception's mark starts with '!' and carries
-  // the exception's name.
-  std::fprintf(stdout, "%c~%lld%c\n", end_mark, static_cast<long long>(e.run.count()), end_mark);
+  // nanoseconds follow a '~', when the call was timed (%timeit times its
+  // statement itself); an exception's mark starts with '!' and carries the
+  // exception's name.
+  if (timed)
+    std::fprintf(stdout, "%c~%lld%c\n", end_mark, static_cast<long long>(e.run.count()), end_mark);
   if (e.status)
     std::fprintf(stdout, "%c%s%d%s%c\n", end_mark, e.thrown.empty() ? "" : "!", *e.status, e.thrown.c_str(),
                  end_mark);

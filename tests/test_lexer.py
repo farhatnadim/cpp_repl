@@ -185,7 +185,7 @@ def test_in_function():
     assert in_function('f1', 'if (x) return 1;') == (
         'repl::ended f1() { repl::started(); try { if (x) return 1; } catch (...) { return repl::uncaught(); } '
         'return {}; } repl::finish(repl::timed(f1));')
-    assert in_function('f2', 'g();', timed=False).endswith(' repl::finish(f2());')
+    assert in_function('f2', 'g();', timed=False).endswith(' repl::finish(f2(), false);')   # no run mark
     # Compiled with -fno-exceptions, a try would not compile: no handler.
     assert in_function('f3', 'g();', exceptions=False) == (
         'repl::ended f3() { repl::started(); { g(); } return {}; } repl::finish(repl::timed(f3));')

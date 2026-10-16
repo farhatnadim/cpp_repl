@@ -602,6 +602,14 @@ def test_time_tells_the_run_from_the_compile(tmp_path):
     assert 'run_seconds' not in records[0]
     assert 0 < records[1]['run_seconds'] < 0.1
     assert records[2]['output'] == '499500\n' and 0 < records[2]['run_seconds'] < 0.1
+    # Two statements in one input run in two functions, and their runs add
+    # up; %timeit times its statement itself and reports no run of its own.
+    (tmp_path / 'r.repl').write_text('void nap() { std::this_thread::sleep_for(std::chrono::milliseconds(30)); }\n'
+                                     'nap(); nap();\n%timeit 1 + 1\n')
+    result = run_cpp_repl(['--no-config', '--batch', '--json', 'r.repl'], tmp_path)
+    records = [json.loads(line) for line in result.stdout.splitlines()]
+    assert records[1]['run_seconds'] >= 0.06, result.stdout
+    assert records[2]['status'] == 'ok' and 'run_seconds' not in records[2], result.stdout
 
 
 def test_import_std_is_explained(tmp_path):

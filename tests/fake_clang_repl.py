@@ -96,7 +96,7 @@ def main():
             with open(m.group(1)) as f:
                 line = ' '.join(text.strip() for text in f.read().split('\n') if not text.startswith('#line '))
         # What repl::finish writes after a statement that ran in a function.
-        mark = '\x1d~1500\x1d\n' if 'repl::finish(' in line else ''
+        mark = '\x1d~1500\x1d\n' if 'repl::finish(' in line and ', false)' not in line else ''   # %timeit: untimed
         start = '\x1d>\x1d\n' if mark else ''   # the statement is about to run: what follows is its own
         if line.startswith('#include <print>'):
             out(f"input_line_{n}:1:10: fatal error: 'print' file not found\nerror: Parsing failed.\n")

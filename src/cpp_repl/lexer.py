@@ -680,7 +680,7 @@ def in_function(name, body, timed=True, exceptions=True):
     the end to the session; repl::started() marks where the statement's own
     output begins, after the compiler's. Compiled with -fno-exceptions
     (exceptions off), the body has no handler: a try would not compile."""
-    call = f'repl::timed({name})' if timed else f'{name}()'
+    call = f'repl::timed({name})' if timed else f'{name}(), false'
     inside = f'try {{ {body} }} catch (...) {{ return repl::uncaught(); }}' if exceptions else f'{{ {body} }}'
     return f'repl::ended {name}() {{ repl::started(); {inside} return {{}}; }} repl::finish({call});'
 

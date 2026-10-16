@@ -136,6 +136,17 @@ def test_a_lambda_uses_a_global_without_capturing_it(tmp_path, monkeypatch, made
     assert s.journal[-1].text == 'auto g = [&] { return cap; };'
 
 
+def test_run_seconds_add_up_and_timeit_has_none(tmp_path, monkeypatch, made):
+    """An input of several statements runs each in a function of its own, so
+    their run marks add up; %timeit times its statement itself and leaves
+    no run mark, so --json carries no run_seconds for it."""
+    s, stream = make(tmp_path, monkeypatch)
+    made.append(s)
+    s._show('\x1d~1000\x1d\n\x1d~2000\x1d\n')
+    assert s.run_seconds == 3e-06
+    assert s.run_input('%timeit 42') and s.run_seconds is None
+
+
 def test_what_the_program_prints_is_never_a_diagnostic(tmp_path, monkeypatch, made):
     """A line of the program's own output that reads like clang's ("fatal
     error: ...", "JIT session error: ...") comes after the start mark, so it

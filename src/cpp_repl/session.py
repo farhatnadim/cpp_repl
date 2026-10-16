@@ -388,7 +388,9 @@ class Session:
         self.out.write(self.painter.feed(text) if self.painter else text)
 
     def _ran(self, m):
-        self.run_seconds = int(m.group(1)) / 1e9
+        # An input of several statements runs each in a function of its own:
+        # their runs add up.
+        self.run_seconds = (self.run_seconds or 0) + int(m.group(1)) / 1e9
         self.out.ran(self.run_seconds)
         return ''
 
@@ -631,7 +633,7 @@ class Session:
             if m and m.group(1) in _NEWER_HEADERS:
                 self._note(f'[<{m.group(1)}> is C++23, in {_NEWER_HEADERS[m.group(1)]}: this clang-repl\'s '
                            'standard library lacks it]')
-        if result == 'error' and (m := _NO_MODULE.search(output)):
+        if result == 'error' and (m := _NO_MODULE.search(plain(output))):
             self._note(f"[clang-repl has no module '{m.group(1)}': #include the headers]")
         return self._after(journaled, [line], output, result, kind, again=again)
 
@@ -900,7 +902,7 @@ class Session:
             ok = self.run_input(arg)
             wall = format_seconds(time.monotonic() - start)
             self.out.end_line()
-            if self.run_seconds is None:   # a declaration at file scope: no function ran
+            if self.run_seconds is None:   # nothing ran in a function: a declaration, a directive, a % command
                 self.out.write(f'wall time: {wall}\n')
             else:
                 self.out.write(f'wall time: {wall}, of which the code ran {format_seconds(self.run_seconds)}\n')

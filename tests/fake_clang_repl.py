@@ -17,6 +17,7 @@ It reads one input per line and answers:
                        keeps a failed input's template instantiations without their code
   stale()              "linked", or a JIT link error in a process that has seen taint()
   syntax error         anything with 'error_here' in it fails to parse
+  int NAME ..., double NAME ..., struct NAME ...   declares NAME; declared again, "redefinition of 'NAME'"
   ...repl::print_expr(((N), ...))...   prints N; with void_call() for N, the void mark
   ...return N; ... repl::finish(...)   the end mark around N, as a statement that returned from main
   ...throw_it(); ... repl::finish(...) the end mark of an uncaught std::runtime_error, "boom"
@@ -64,6 +65,7 @@ def main():
         out("<built-in>:1:10: fatal error: 'missing.h' file not found\n")
     n = 0
     tainted = False
+    declared = set()
     while True:
         out(PROMPT)
         line = sys.stdin.readline()
@@ -153,6 +155,13 @@ def main():
             continue
         if 'throw_it()' in line and 'repl::finish(' in line:
             out('\x1d!134std::runtime_error: boom\x1d\n')
+            continue
+        m = re.match(r'(?:int|double|struct) (\w+)\b', line)
+        if m:
+            if m.group(1) in declared:
+                out(f"input_line_{n}:1:8: error: redefinition of '{m.group(1)}'\nerror: Parsing failed.\n")
+            else:
+                declared.add(m.group(1))
             continue
 
 

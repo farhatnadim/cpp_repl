@@ -15,9 +15,9 @@ from pathlib import Path
 
 from .backend import _ANY_ERROR, _STARTUP_ERROR, Backend, BackendError, outcome, plain
 from .config import session_dir_name
-from .diagnostics import Diagnostics
-from .lexer import (Origin, _open_end, _unsplice, in_function, is_definition, join, lex, located,
-                    split_statements, trailing_expression, transform)
+from .diagnostics import _SNIPPET, Diagnostics
+from .lexer import (Origin, _open_end, _unsplice, declared_names, in_function, is_definition, join, lex,
+                    located, split_statements, trailing_expression, transform)
 from .sources import PRELUDE_NAMES, Input, inputs_from_file, split_directives
 
 STARTUP_DEADLINE = 300   # seconds; a large prelude on a cold disk takes a while
@@ -46,9 +46,10 @@ abort() would (status 134): the prompt says what was thrown and goes on.
   %quit           leave (or Ctrl-D)
 
 Tab completes names; Ctrl-R searches the history. Ctrl-C stops a running
-input and rebuilds the session without it, and so does a crash. Names can't be
-redefined: use a new name, assign, or %undo. The JIT compiles at -O0 unless
-cpp-repl started with -O1, -O2 or -O3 (add --native for AVX and FMA).
+input and rebuilds the session without it, and so does a crash. A name
+declared again replaces the old one: the session is rebuilt without it, and
+says so; an input that needs the old one keeps it. The JIT compiles at -O0
+unless cpp-repl started with -O1, -O2 or -O3 (add --native for AVX and FMA).
 """
 
 # text: as typed. sent: the lines clang-repl ran. kind: 'stmt', 'expr' (a bare
@@ -62,6 +63,14 @@ _UNPRINTABLE = re.compile('\x1f<(.*?)>\x1f')
 # its own: the status between two marks; after an uncaught exception, '!',
 # the status and what was thrown.
 _END_MARK = re.compile('\x1d(!?)(-?\\d+)([^\x1d]*)\x1d\n?')
+# A line of clang's diagnostics: a header, clang-repl's verdict, an include
+# chain, or a source line or carets under a header. The echo holds these
+# back until the program's own output starts, so that an error cpp-repl
+# handles itself (a redefinition) is never shown.
+_DIAGNOSTIC_LINE = re.compile(r'(?:\S[^:\n]*:\d+:\d+: )?(?:fatal error|error|warning|note|remark): '
+                              r'|In file included from |' + _SNIPPET.pattern)
+# What clang says of a name declared again.
+_REDEFINED = re.compile(r"error: redefinition of '([^']+)'")
 
 
 def printer_hint(name):
@@ -343,23 +352,39 @@ class Session:
                 self._note(printer_hint(name))
             self.unprintable[name] = True
 
-    def _send(self, line, echo=True):
+    def _send(self, line, echo=True, hold=None):
         """Run one line. Returns (output, result), result being 'ok', 'error',
-        'link', 'dead', 'interrupted' or 'timeout'."""
+        'link', 'dead', 'interrupted' or 'timeout'. The echo holds back the
+        diagnostics an input starts with until its own output begins; when
+        nothing else came and hold(text) says so, they stay held, in
+        self.held, for the caller to act on or show."""
         self.diagnostics.start()
         self.returned = self.thrown = None
+        self.held = ''
+        held, live = [], False
+
+        def show(text):
+            nonlocal live
+            if not live and all(_DIAGNOSTIC_LINE.match(plain(l)) or not l.strip() for l in text.splitlines()):
+                held.append(text)
+                return
+            live = True
+            self._show(''.join(held) + text)
+            held.clear()
+
         try:
-            output, alive = self.backend.run(line, echo=self._show if echo else None,
-                                             deadline=self.cfg.options.timeout)
-        except KeyboardInterrupt:
+            output, alive = self.backend.run(line, echo=show if echo else None, deadline=self.cfg.options.timeout)
+        except (KeyboardInterrupt, BackendError) as stop:
             self.backend.kill()
+            self._show(''.join(held))
             self._show_end()
-            return '', 'interrupted'
-        except BackendError:
-            self.backend.kill()
-            self._show_end()
-            return '', 'timeout'
+            return '', 'interrupted' if isinstance(stop, KeyboardInterrupt) else 'timeout'
         if echo:
+            text = ''.join(held)
+            if hold and text and hold(plain(text)):
+                self.held = text
+            else:
+                self._show(text)
             self._show_end()
         if not alive:
             return output, 'dead'
@@ -463,10 +488,11 @@ class Session:
         path.write_text(text + '\n')
         return f'#include "{path}"'
 
-    def run_input(self, text):
+    def run_input(self, text, redefine=True):
         """Run one complete input: an Input, which says where it comes from,
         or a str typed at the prompt. Returns False when the session should
-        stop."""
+        stop. A name the input declares again replaces the old one (see
+        _redefine), unless redefine is False."""
         stripped = text.strip()
         if not stripped:
             return True
@@ -509,13 +535,57 @@ class Session:
             self.tainted = True
             send, kind = transform(text, fresh=self._fresh, origin=origin, statement=True), 'stmt'
         line = self._file(send.text) if send.file else send.text
-        output, result = self._send(line)
+        output, result = self._send(line, hold=_REDEFINED.search if redefine and kind == 'stmt' else None)
+        if self.held:
+            held, self.held = self.held, ''   # the redefinition's own inputs reset it
+            replaced = self._redefine(_REDEFINED.search(plain(held)).group(1), text)
+            if replaced is not None:
+                return replaced
+            self._show(held)
+            self._show_end()
         if kind == 'pp' and result == 'error' and 'file not found' in output:
             m = _INCLUDE_NAME.match(stripped)
             if m and m.group(1) in _NEWER_HEADERS:
                 self._note(f'[<{m.group(1)}> is C++23, in {_NEWER_HEADERS[m.group(1)]}: this clang-repl\'s '
                            'standard library lacks it]')
         return self._after(text, [line], output, result, kind, again=again) or not self.batch
+
+    def _declares(self, entry, name):
+        return entry.kind == 'stmt' and name in declared_names(lex(_unsplice(entry.text))[0])
+
+    def _redefine(self, name, text):
+        """text declares name again: run it in the place of the newest
+        journal entry that declared name. A fresh clang-repl replays the
+        inputs before that entry, runs text, then replays the inputs after
+        it on top of the new declaration. Returns what text's run returned;
+        None when the old name is not the journal's (a prelude's, say), when
+        text fails anyway, or when a later input cannot take the new
+        declaration: the session is then as it was, and the caller shows the
+        error."""
+        at = next((i for i in range(len(self.journal) - 1, -1, -1) if self._declares(self.journal[i], name)), None)
+        if at is None:
+            return None
+        was = self.journal
+        self.restore(was[:at], 'redefinition', note=False)
+        ran = self.run_input(text, redefine=False) if len(self.journal) == at else False
+        if not self.journal or self.journal[-1].text != text:
+            self.restore(was, 'redefinition', note=False)
+            self._note(f'[{name} stays as it is: the input failed]')
+            return None
+        for entry in was[at + 1:]:
+            if not all(self._replay(line) for line in entry.sent):
+                self.restore(was, 'redefinition', note=False)
+                self._note(f'[{name} stays as it is: {entry.text.splitlines()[0]} needs the one there was]')
+                return None
+            self.journal.append(entry)
+        replayed = len(was) - 1
+        self._note(f'[{name} redefined: {replayed} input{"s" if replayed != 1 else ""} replayed]')
+        return ran
+
+    def _replay(self, line):
+        """Run a journaled line again, its output discarded: whether it ran."""
+        output, alive = self.backend.run(line)
+        return alive and outcome(output) == 'ok'
 
     def run_inputs(self, inputs, echo):
         """Run inputs in order. Returns False when the run should stop: once

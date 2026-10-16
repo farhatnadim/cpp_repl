@@ -700,6 +700,116 @@ def is_definition(text):
     return _definition(tokens)
 
 
+_DECLARATOR_ENDS = ('=', '{', '(', '[', ';', ',')
+
+
+def _declarators(tokens, i):
+    """The names declared from i on: `a`, then after each ',' at depth 0 and
+    any * or &, the next name."""
+    names, n = [], len(tokens)
+    while i < n:
+        while i < n and tokens[i].kind == 'op' and tokens[i].text in ('*', '&', '&&'):
+            i += 1
+        if i < n and tokens[i].kind == 'ident' and (i + 1 == n or tokens[i + 1].kind == 'op'
+                                                      and tokens[i + 1].text in _DECLARATOR_ENDS):
+            names.append(tokens[i].text)
+        depth = 0
+        while i < n:   # to the next ',' at depth 0, or the end
+            t = tokens[i]
+            if t.kind == 'op':
+                if t.text in '([{':
+                    depth += 1
+                elif t.text in ')]}':
+                    depth -= 1
+                elif t.text == ',' and depth == 0:
+                    i += 1
+                    break
+                elif t.text == ';' and depth == 0:
+                    return names
+            i += 1
+    return names
+
+
+def _after_type_head(tokens, i):
+    """The names a struct, class, union or enum at i declares: its own, an
+    unscoped enum's enumerators, and any declarator after the body."""
+    n, head = len(tokens), tokens[i].text
+    scoped = head == 'enum' and (_is(tokens, i + 1, 'class', 'ident') or _is(tokens, i + 1, 'struct', 'ident'))
+    j = _skip_attributes(tokens, i + 1 + scoped)
+    names = [tokens[j].text] if j < n and tokens[j].kind == 'ident' else []
+    body = next((k for k in range(j, n) if _is(tokens, k, '{')), None)
+    if body is None:
+        return names
+    end = _match(tokens, body)
+    if head == 'enum' and not scoped:
+        names += [t.text for k, t in enumerate(tokens[body + 1:end], body + 1) if t.kind == 'ident'
+                  and (k == body + 1 or _is(tokens, k - 1, ','))]
+    return names + _declarators(tokens, end + 1)
+
+
+def declared_names(tokens):
+    """The names an input declares at file scope: variables (every
+    declarator of `int a, *b;`, a structured binding's names), functions
+    (an operator's as `operator<<`), types and their unscoped enumerators,
+    namespaces, aliases and concepts. For a name clang calls redefined, the
+    newest input that declared it is the one a redefinition replaces."""
+    code = [t for t in tokens if t.kind != 'directive']
+    n = len(code)
+    i = _skip_attributes(code, 0)
+    if _is(code, i, 'template', 'ident') and _is(code, i + 1, '<'):
+        i = _angle_end(code, i + 1)
+        if _is(code, i, 'requires', 'ident'):
+            i = next((k for k in range(i + 1, n) if code[k].kind == 'ident' and (
+                code[k].text in _DEFINITION_HEADS | _TYPE_WORDS or _declarator_at(code[k:]) is not None)), n)
+    while _is(code, i, 'extern', 'ident') and i + 1 < n and code[i + 1].kind == 'str':
+        i += 2
+    while i < n and code[i].kind == 'ident' and code[i].text in ('inline', 'static', 'constexpr', 'consteval',
+                                                                 'constinit', 'export', 'friend'):
+        i += 1
+    if i >= n:
+        return []
+    head = code[i].text if code[i].kind == 'ident' else ''
+    if head in ('struct', 'class', 'union', 'enum'):
+        return _after_type_head(code, i)
+    if head in ('namespace', 'concept'):
+        return [code[i + 1].text] if i + 1 < n and code[i + 1].kind == 'ident' else []
+    if head == 'using':
+        if _is(code, i + 1, 'namespace', 'ident'):
+            return []
+        names = [t.text for k, t in enumerate(code[i + 1:], i + 1) if t.kind == 'ident'
+                 and (_is(code, k + 1, '=') or _is(code, k + 1, ';'))]
+        return names[:1]
+    if head == 'typedef':
+        last = next((t.text for t in reversed(code[i:]) if t.kind == 'ident'), None)
+        return [last] if last else []
+    for k, t in enumerate(code):
+        if t.kind == 'ident' and t.text == 'operator' and k + 1 < n:
+            end = next((m for m in range(k + 1, n) if _is(code, m, '(')), n)
+            return ['operator' + ''.join(x.text for x in code[k + 1:end])]
+    k = _declarator_at(code)
+    if k is not None:
+        if _is(code, k, '['):
+            return [t.text for t in code[k + 1:_match(code, k)] if t.kind == 'ident']
+        if _is(code, k, '('):   # int (*fp)(int)
+            return [t.text for t in code[k + 1:_match(code, k)] if t.kind == 'ident'][:1]
+        return _declarators(code, k)
+    # A function defined under a qualified name, `int S::f() {}`, or a
+    # constructor `S::S() {}`: the name before its parameter list.
+    if not _definition(code):
+        return []
+    depth = 0
+    for k, t in enumerate(code):
+        if t.kind != 'op':
+            continue
+        if t.text == '(' and depth == 0 and k and code[k - 1].kind == 'ident':
+            return [code[k - 1].text]
+        if t.text in '([{':
+            depth += 1
+        elif t.text in ')]}':
+            depth -= 1
+    return []
+
+
 def _open_end(toks, control):
     """Whether a statement ends without its ';', as a bare expression does.
     A '}' ends a block or a definition, but a '}' that closes a brace

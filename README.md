@@ -9,6 +9,9 @@ would inside `main()`, and:
   `if` waits for its `else`, a function head such as `int f()` for its body,
   and a `template <...>` line, an attribute or `struct S` for what they head,
   so C++ is typed as it is written.
+- **Names can be declared again.** `int x = 1;` then `double x = 2.5;`: the
+  session is rebuilt without the old `x` and says so. An input that needs the
+  old one keeps it.
 - **Values print.** A bare expression prints its value: containers, maps,
   tuples, optionals, variants, smart pointers and wide strings, and your own
   types through their `operator<<`. Profiles add Eigen matrices and OpenUSD

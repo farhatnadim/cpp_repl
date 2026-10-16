@@ -5,8 +5,9 @@ import pytest
 
 import itertools
 
-from cpp_repl.lexer import (Origin, completeness, in_function, is_definition, lex, located, needs_function,
-                            needs_lines, open_conditionals, split_statements, trailing_expression, transform)
+from cpp_repl.lexer import (Origin, completeness, declared_names, in_function, is_definition, lex, located,
+                            needs_function, needs_lines, open_conditionals, split_statements, trailing_expression,
+                            transform)
 
 
 def fresh():
@@ -227,6 +228,43 @@ def test_directives_belong_to_the_next_statement():
 ])
 def test_is_definition(text, definition):
     assert is_definition(text) is definition
+
+
+@pytest.mark.parametrize('text, names', [
+    ('int x = 5;', ['x']),
+    ('int a, *b = &a, c[3];', ['a', 'b', 'c']),
+    ('auto [p, q] = f();', ['p', 'q']),
+    ('int (*fp)(int) = f;', ['fp']),
+    ('static const int N = 3;', ['N']),
+    ('[[maybe_unused]] int q = 1;', ['q']),
+    ('int f(int);', ['f']),
+    ('int f() { return 1; }', ['f']),
+    ('int S::f() const { return 1; }', ['f']),
+    ('S::S() : x{1} { }', ['S']),
+    ('extern "C" int cfn() { return 9; }', ['cfn']),
+    ('std::ostream &operator<<(std::ostream &os, const P &p) { return os; }', ['operator<<']),
+    ('constexpr long double operator""_kg(long double x) { return x; }', ['operator""_kg']),
+    ('struct S { int x; };', ['S']),
+    ('struct S { } s, *t;', ['S', 's', 't']),
+    ('enum E { A, B = 3 };', ['E', 'A', 'B']),
+    ('enum class C { A };', ['C']),
+    ('namespace N { int k; }', ['N']),
+    ('namespace fs = std::filesystem;', ['fs']),
+    ('using V = std::vector<int>;', ['V']),
+    ('using std::cout;', ['cout']),
+    ('using namespace std;', []),
+    ('typedef unsigned long ulong;', ['ulong']),
+    ('template <class T> T twice(T x) { return x + x; }', ['twice']),
+    ('template <class T> requires Num<T> T cube(T x) { return x * x * x; }', ['cube']),
+    ('template <class T> struct Box { T v; };', ['Box']),
+    ('template <class T> concept Num = std::is_arithmetic_v<T>;', ['Num']),
+    ('x = 5;', []),
+    ('f(1);', []),
+    ('std::cout << x;', []),
+    ('#pragma once\nint y;', ['y']),
+])
+def test_declared_names(text, names):
+    assert declared_names(lex(text)[0]) == names
 
 
 def test_trailing_expression():

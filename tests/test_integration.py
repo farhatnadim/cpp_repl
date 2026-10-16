@@ -189,6 +189,29 @@ def test_an_uncaught_exception_is_named_and_the_session_goes_on(session):
     assert stream.getvalue().endswith('42\n')
 
 
+def test_names_can_be_declared_again(session):
+    """A variable, a struct and a function declared again replace the old
+    ones; a name a later input depends on stays, with the error."""
+    s, stream = session
+    assert s.run_input('int x = 1;')
+    assert s.run_input('double x = 2.5;')
+    assert s.run_input('x')
+    assert stream.getvalue() == '[x redefined: 0 inputs replayed]\n2.5\n'
+    assert s.run_input('struct S { int a; };')
+    assert s.run_input('struct S { int a, b; };')
+    assert s.run_input('S{1, 2}.b')
+    assert stream.getvalue().endswith('[S redefined: 2 inputs replayed]\n2\n')   # `double x` and the printed `x`
+    assert s.run_input('int f() { return 1; }') and s.run_input('int f() { return 2; }') and s.run_input('f()')
+    assert stream.getvalue().endswith('[f redefined: 4 inputs replayed]\n2\n')
+    assert s.run_input('int n = 1;') and s.run_input('int m = n + 1;') and s.run_input('int *p = &n;')
+    assert s.run_input('double n = 1.5;')   # `int m = n + 1;` takes a double; `int *p = &n;` cannot
+    out = stream.getvalue()
+    assert '[n stays as it is: int *p = &n; needs the one there was]' in out and "error: redefinition of 'n'" in out
+    assert [e.text for e in s.journal][-3:] == ['int n = 1;', 'int m = n + 1;', 'int *p = &n;']
+    assert s.run_input('*p + m')
+    assert stream.getvalue().endswith('3\n')
+
+
 def test_a_link_failure_is_undone(session):
     s, stream = session
     assert s.run_input('int defined_one() { return 1; }')

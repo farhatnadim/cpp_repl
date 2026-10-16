@@ -8,8 +8,7 @@ error: Parsing failed.
 c++> ok
 1
 c++> int ok = 2;
-<any lines>
-error: Parsing failed.
+[ok redefined: 1 input replayed]
 c++> ok = 3;
 c++> ok
 3

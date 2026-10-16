@@ -161,6 +161,26 @@ def test_a_return_ends_the_program(tmp_path, monkeypatch, made):
     assert stream.getvalue().endswith('still here\n')
 
 
+def test_a_name_declared_again_replaces_the_old(tmp_path, monkeypatch, made):
+    """`int a` then `double a`: the session is rebuilt without the old a,
+    the input runs there, and clang's error is never shown. A name the
+    journal did not declare keeps its error."""
+    s, stream = make(tmp_path, monkeypatch, batch=False)
+    made.append(s)
+    assert s.run_input('int a = 1;') and s.run_input('int b = 2;')
+    first = s.backend.proc.pid
+    assert s.run_input('double a = 1.5;')
+    assert stream.getvalue() == '[a redefined: 1 input replayed]\n'
+    # The new declaration takes the old one's place; what came after it is replayed on top.
+    assert [e.text for e in s.journal] == ['double a = 1.5;', 'int b = 2;'] and s.backend.proc.pid != first
+    assert s.run_input('say("alive");')
+    assert stream.getvalue().endswith('alive\n')
+    s.journal = [e for e in s.journal if e.text != 'int b = 2;']   # as if b were the prelude's
+    assert s.run_input('int b = 3;')
+    assert "error: redefinition of 'b'" in stream.getvalue()
+    assert [e.text for e in s.journal] == ['double a = 1.5;', 'say("alive");']
+
+
 def test_a_run_says_what_it_left_unrun(tmp_path, monkeypatch, made):
     """When the program ends before the file does, the inputs left are
     counted and said, as --stop-on-error's are; --json's last line carries

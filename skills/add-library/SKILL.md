@@ -62,7 +62,9 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/probe_library.py" env
   - **Hand back** the command that worked, and stop. Tell the user that
     `cpp-repl -p NAME prog.cpp` runs a program's `main()` one statement at a
     time and keeps the prompt open, so the project's own examples load as they
-    are.
+    are. That is on a terminal: without one, input piped in goes to the
+    program's own stdin, and the run-cpp skill reads a program's variables
+    after it with `--serve` and `--connect`.
   - **Every session in this project:** a `cpp-repl.toml` at the project root
     holding `profiles = ["NAME"]`, plus `compile_commands = "build"` when the
     build supplies the install, makes a plain `cpp-repl` do the same. Offer

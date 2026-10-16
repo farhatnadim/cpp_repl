@@ -920,8 +920,11 @@ class Config:
         return _dedupe(flags)
 
     def link_flags(self):
-        """Flags to link a %save-cpp file against the session's libraries."""
-        out = []
+        """Flags to link a %save-cpp file against the session's libraries.
+        Each is linked whether or not the program calls into it, as the
+        session loads each: a library may only register code from its static
+        initialisers, as libtorch_cuda.so registers the CUDA kernels."""
+        out = ['-Wl,--no-as-needed'] if self.libs and sys.platform.startswith('linux') else []
         for lib in self.libs:
             out += [f'-Wl,-rpath,{lib.parent}', str(lib)]
         return out

@@ -482,7 +482,8 @@ What a version lacks is clang-repl's own: 18's JIT cannot assemble inline
 `asm`, so Eigen's dynamic-size products abort there; `<print>`,
 `<generator>`, `<mdspan>` and `<flat_map>` need libstdc++ 14 or libc++
 (`cpp-repl --docker -stdlib=libc++`), and cpp-repl says so when an
-`#include` of them fails. `import std;` has no module file in any of them.
+`#include` of them fails. `import std;` has no module file in any of them,
+and cpp-repl says so.
 
 ## Limits
 

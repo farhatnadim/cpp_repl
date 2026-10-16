@@ -224,6 +224,8 @@ _NEWER_HEADERS = {'print': 'libstdc++ 14 and libc++ 17', 'generator': 'libstdc++
                   'mdspan': 'libstdc++ 14 and libc++ 18', 'flat_map': 'libstdc++ 15 and libc++ 20',
                   'flat_set': 'libstdc++ 15 and libc++ 20', 'spanstream': 'libstdc++ 12 and libc++ 20',
                   'stdfloat': 'libstdc++ 13', 'text_encoding': 'libstdc++ 15'}
+# `import std;`: no clang-repl has a standard library module to import.
+_NO_MODULE = re.compile(r"fatal error: module '([^']+)' not found")
 
 
 class Session:
@@ -568,6 +570,8 @@ class Session:
             if m and m.group(1) in _NEWER_HEADERS:
                 self._note(f'[<{m.group(1)}> is C++23, in {_NEWER_HEADERS[m.group(1)]}: this clang-repl\'s '
                            'standard library lacks it]')
+        if result == 'error' and (m := _NO_MODULE.search(output)):
+            self._note(f"[clang-repl has no module '{m.group(1)}': #include the headers]")
         return self._after(text, [line], output, result, kind, again=again)
 
     def _declares(self, entry, name):

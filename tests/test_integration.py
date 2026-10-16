@@ -510,6 +510,12 @@ def test_time_tells_the_run_from_the_compile(tmp_path):
     assert records[2]['output'] == '499500\n' and 0 < records[2]['run_seconds'] < 0.1
 
 
+def test_import_std_is_explained(tmp_path):
+    (tmp_path / 'p.repl').write_text('import std;\n')
+    result = run_cpp_repl(['--no-config', '--batch', 'p.repl'], tmp_path)
+    assert result.returncode == 1 and "[clang-repl has no module 'std': #include the headers]" in result.stdout
+
+
 def test_a_library_named_with_l(tmp_path):
     """-L DIR -l NAME loads libNAME.so, and --libs links a saved program with it."""
     clangxx = sibling_clangxx()

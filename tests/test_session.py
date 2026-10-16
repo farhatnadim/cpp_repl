@@ -110,6 +110,8 @@ def test_a_header_the_library_lacks_is_explained(tmp_path, monkeypatch, made):
     out = stream.getvalue()
     assert "fatal error: 'print' file not found" in out
     assert "[<print> is C++23, in libstdc++ 14 and libc++ 17: this clang-repl's standard library lacks it]" in out
+    assert s.run_input('import std;')
+    assert "[clang-repl has no module 'std': #include the headers]" in stream.getvalue()
     assert s.run_input('#define ANSWER 42')
     text, (sent,), kind = s.journal[-1]
     assert (text, kind) == ('#define ANSWER 42', 'pp')

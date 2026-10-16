@@ -22,6 +22,7 @@ It reads one input per line and answers:
   ...return N; ... repl::finish(...)   the end mark around N, as a statement that returned from main
   ...throw_it(); ... repl::finish(...) the end mark of an uncaught std::runtime_error, "boom"
   ...repl::finish(...)   after the output and before an end mark, the run mark: the statement ran 1.5 µs
+  import NAME;         "module 'NAME' not found"
   #include "FILE"      FILE's lines but #line directives, joined into one, and answered as above
 anything else is silently accepted.
 
@@ -94,6 +95,10 @@ def main():
         mark = '\x1d~1500\x1d\n' if 'repl::finish(' in line else ''
         if line.startswith('#include <print>'):
             out(f"input_line_{n}:1:10: fatal error: 'print' file not found\nerror: Parsing failed.\n")
+            continue
+        m = re.search(r'\bimport (\w+);', line)
+        if m:
+            out(f"input_line_{n}:1:8: fatal error: module '{m.group(1)}' not found\nerror: Parsing failed.\n")
             continue
         m = re.match(r'printf\("(.*)\\n"\);', line)
         if m:

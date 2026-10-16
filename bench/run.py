@@ -53,12 +53,14 @@ SIZES = [32, 64, 128, 256, 384, 512, 768, 1024, 1536, 2048, 3072]
 MT_EXTRA = [4096]
 QUICK_SIZES = [256, 1024]
 LATENCY_N = 256
+SESSION_LAST = 'new-instantiation'   # the last stamp of cpp/session.repl
 
 # A run's log, scanned to name what went wrong.
 _LINK = re.compile(r'Symbols not found|JIT session error|Failed to materialize symbols'
                    r'|Duplicate definition of symbol')
 _CRASH = re.compile(r'clang-repl crashed|Segmentation fault|core dumped|Aborted')
 _ERROR = re.compile(r'(?:^|\s)(?:fatal )?error[:\]]|error: ', re.I)
+_UNRUN = re.compile(r'\[[^\]\n]*not run\]')
 
 
 def note(text):
@@ -369,13 +371,17 @@ def failure_detail(run, log_text):
     line = first_error(log_text)
     if line:
         return line
+    unrun = _UNRUN.search(log_text)
+    if unrun:
+        return unrun.group(0)
     return (f"exit status {run['exit']} after {len(run['records'])} records and no done record"
             if not any(r.get('type') == 'done' for r in run['records']) else f"exit status {run['exit']}")
 
 
-def classify(arm, run, log_text):
+def classify(arm, run, log_text, session=False):
     """'ok', or what went wrong: refused, timeout, link, crash, error,
-    missing-done or wrong-config."""
+    missing-done, missing-session or wrong-config. A session run, followed
+    by session.repl, must reach that file's last stamp."""
     records = run['records']
     if any(r.get('type') == 'error' for r in records):
         return 'refused'
@@ -389,6 +395,8 @@ def classify(arm, run, log_text):
         return 'error' if first_error(log_text) else 'missing-done'
     if run['exit'] != 0:
         return 'error'
+    if session and not any(r.get('type') == 'stamp' and r.get('name') == SESSION_LAST for r in records):
+        return 'missing-session'
     return 'wrong-config' if config_problem(arm, records) else 'ok'
 
 
@@ -579,7 +587,7 @@ class Bench:
         run = launch(argv, env, cpus, log, self.args.timeout)
         samples = sampler.finish()
         log_text = log.read_text(errors='replace')
-        outcome = classify(arm, run, log_text)
+        outcome = classify(arm, run, log_text, session=session)
         problem = config_problem(arm, run['records']) if outcome == 'wrong-config' else None
         record = {
             'arm': arm.name, 'group': arm.group, 'kind': arm.kind, 'threads': arm.threads,

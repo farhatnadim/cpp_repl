@@ -14,6 +14,10 @@
 // run inside functions of their own. And the kernel is a file-scope,
 // non-inline function, so the REPL compiles Eigen's GEMM once, in the
 // kernel's cell.
+//
+// main() ends without a return. In cpp-repl a return ends the program, and
+// the latency runs follow this file with session.repl; compiled, main()
+// returns 0 all the same.
 
 #include "stamp.hpp"
 
@@ -34,5 +38,4 @@ double bench_t3 = bench_stamp("kernel", bench_kernel);
 int main()
 {
   bench::run(bench_kernel);
-  return 0;
 }

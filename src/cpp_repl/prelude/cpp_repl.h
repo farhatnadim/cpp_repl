@@ -46,7 +46,9 @@
 #include <iterator>
 #include <memory>
 #include <optional>
+#include <limits>
 #include <ostream>
+#include <streambuf>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -61,14 +63,53 @@
 #if defined(__linux__)
 #include <sys/prctl.h>   // cpp-repl's first input turns core dumps off
 #endif
-#if __has_include(<ext/stdio_sync_filebuf.h>)
-#include <ext/stdio_sync_filebuf.h>   // libstdc++'s std::cin buffer, for take_stdin()
-#endif
 #if __has_include(<cxxabi.h>)
 #include <cxxabi.h>   // the name of an uncaught exception's type
 #endif
 
 namespace repl {
+namespace detail {
+
+// A stream buffer that reads a C FILE one character at a time, so that
+// std::cin and C's stdin, reading the same FILE, stay in step. (libstdc++
+// has one of its own; this one works with libc++ as well.)
+class stdio_streambuf : public std::streambuf {
+ public:
+  explicit stdio_streambuf(std::FILE *file) : file_(file) {}
+
+ protected:
+  int_type underflow() override
+  {
+    const int c = std::getc(file_);
+    if (c == EOF)
+      return traits_type::eof();
+    std::ungetc(c, file_);
+    return c;
+  }
+
+  int_type uflow() override
+  {
+    const int c = std::getc(file_);
+    return c == EOF ? traits_type::eof() : c;
+  }
+
+  int_type pbackfail(int_type c) override
+  {
+    if (traits_type::eq_int_type(c, traits_type::eof()))
+      return traits_type::eof();
+    return std::ungetc(traits_type::to_char_type(c), file_) == EOF ? traits_type::eof() : c;
+  }
+
+  std::streamsize xsgetn(char *s, std::streamsize n) override
+  {
+    return static_cast<std::streamsize>(std::fread(s, 1, static_cast<std::size_t>(n), file_));
+  }
+
+ private:
+  std::FILE *file_;
+};
+
+}  // namespace detail
 
 // clang-repl reads the session's inputs from its stdin, so code typed at the
 // prompt reads its own input from fd: take_stdin(fd), which every session runs
@@ -80,10 +121,8 @@ inline void take_stdin(int fd)
   if (!in)
     return;
   stdin = in;
-#if __has_include(<ext/stdio_sync_filebuf.h>)
-  static __gnu_cxx::stdio_sync_filebuf<char> buffer(in);
+  static detail::stdio_streambuf buffer(in);
   std::cin.rdbuf(&buffer);
-#endif
 }
 
 // The name of T as the compiler spells it.
@@ -306,13 +345,21 @@ inline std::string demangled(const char *name)
   return out;
 }
 
-// The shortest text that reads back as the same number.
+// The shortest text that reads back as the same number. (A library without
+// to_chars for the type, as libc++ lacks it for long double, prints every
+// digit that could matter instead.)
 template <class F>
 void put_float(std::ostream &os, F x)
 {
   char buffer[64];
-  const auto result = std::to_chars(buffer, buffer + sizeof buffer, x);
-  os << std::string_view(buffer, result.ptr - buffer);
+  if constexpr (requires { std::to_chars(buffer, buffer + sizeof buffer, x); }) {
+    const auto result = std::to_chars(buffer, buffer + sizeof buffer, x);
+    os << std::string_view(buffer, static_cast<std::size_t>(result.ptr - buffer));
+  } else {
+    const auto precision = os.precision(std::numeric_limits<F>::max_digits10);
+    os << x;
+    os.precision(precision);
+  }
 }
 
 }  // namespace detail

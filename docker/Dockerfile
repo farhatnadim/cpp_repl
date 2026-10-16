@@ -5,7 +5,7 @@
 # toolchain does.
 #
 #   base      ubuntu:24.04 with Python, the UI packages, libstdc++ 13, Eigen 3.4
-#   apt       + clang and clang-repl from apt.llvm.org (LLVM_MAJOR, default 23)
+#   apt       + clang, clang-repl and libc++ from apt.llvm.org (LLVM_MAJOR, default 23)
 #   bench     + libomp, g++-13, a venv with NumPy (OpenBLAS wheel), threadpoolctl,
 #             matplotlib, and Eigen 5.0.1 in /opt for the tagged benchmark run
 #   snapshot  + clang and clang-repl from apt.llvm.org's development snapshot
@@ -64,9 +64,11 @@ ARG LLVM_MAJOR=23
 # armoured, which apt accepts from a file ending in .asc.
 ADD https://apt.llvm.org/llvm-snapshot.gpg.key /etc/apt/keyrings/apt.llvm.org.asc
 
-# Only clang (the driver, for native builds and -print-file-name) and
-# clang-tools (clang-repl). clang-N pulls in libstdc++-13-dev, libgcc-13-dev
-# and binutils, so clang selects GCC 13's installation.
+# clang (the driver, for native builds and -print-file-name), clang-tools
+# (clang-repl), and libc++ for `cpp-repl -stdlib=libc++`, whose C++23 library
+# (std::print, std::expected, std::mdspan) is ahead of libstdc++ 13's. clang-N
+# pulls in libstdc++-13-dev, libgcc-13-dev and binutils, so clang selects GCC
+# 13's installation by default.
 RUN chmod 0644 /etc/apt/keyrings/apt.llvm.org.asc \
  && echo "deb [signed-by=/etc/apt/keyrings/apt.llvm.org.asc] https://apt.llvm.org/noble/ llvm-toolchain-noble-${LLVM_MAJOR} main" \
       > /etc/apt/sources.list.d/apt.llvm.org.list \
@@ -74,6 +76,8 @@ RUN chmod 0644 /etc/apt/keyrings/apt.llvm.org.asc \
  && apt-get install -y --no-install-recommends \
       "clang-${LLVM_MAJOR}" \
       "clang-tools-${LLVM_MAJOR}" \
+      "libc++-${LLVM_MAJOR}-dev" \
+      "libc++abi-${LLVM_MAJOR}-dev" \
  && dpkg-query -W -f='${Package} ${Version}\n' "clang-tools-${LLVM_MAJOR}" > /etc/cpp-repl-llvm-version \
  && "clang-repl-${LLVM_MAJOR}" --version >> /etc/cpp-repl-llvm-version \
  && rm -rf /var/lib/apt/lists/*
@@ -148,6 +152,7 @@ RUN chmod 0644 /etc/apt/keyrings/apt.llvm.org.asc \
               | sort -n | tail -1)" \
  && test -n "${major}" \
  && apt-get install -y --no-install-recommends "clang-${major}" "clang-tools-${major}" \
+      "libc++-${major}-dev" "libc++abi-${major}-dev" \
  && ln -s "/usr/lib/llvm-${major}" /usr/lib/llvm-snapshot \
  && dpkg-query -W -f='${Package} ${Version}\n' "clang-tools-${major}" > /etc/cpp-repl-llvm-version \
  && "clang-repl-${major}" --version >> /etc/cpp-repl-llvm-version \

@@ -30,9 +30,11 @@ C++ sources into sessions and sessions back into C++ programs.
 
 EPILOG = """\
 Compiler flags go to clang as they are: -I DIR, -isystem DIR, -iquote DIR,
--idirafter DIR, -D NAME[=VALUE], -U NAME, -O0 to -O3, -std=..., -m..., -f...,
--W..., -g, -pthread. A cpp-repl.toml in the working directory or above adds
-its own (see the README). Inside the REPL, %help lists the commands.
+-idirafter DIR, -D NAME[=VALUE], -U NAME, -O0 to -O3, -std=..., -stdlib=libc++,
+-include FILE (a prelude of your own), -isysroot DIR, --sysroot DIR,
+--gcc-toolchain=DIR, -nostdinc++, -m..., -f..., -W..., -g, -pthread. A
+cpp-repl.toml in the working directory or above adds its own (see the
+README). Inside the REPL, %help lists the commands.
 
 Exit status after running files: 0 when every input ran; 1 when an input
 failed to compile or link; when the program crashed or called exit(N), what a
@@ -41,8 +43,9 @@ N; else 124 when an input ran past --timeout. 2 when cpp-repl cannot start,
 130 after Ctrl-C.
 """
 
-_WITH_VALUE = ('-I', '-isystem', '-iquote', '-idirafter', '-D', '-U')
-_PREFIXES = ('-I', '-isystem', '-iquote', '-idirafter', '-D', '-U', '-O', '-std=', '-m', '-f', '-W', '-g')
+_WITH_VALUE = ('-I', '-isystem', '-iquote', '-idirafter', '-D', '-U', '-include', '-isysroot', '--sysroot')
+_PREFIXES = ('-I', '-isystem', '-iquote', '-idirafter', '-D', '-U', '-O', '-std=', '-stdlib=', '-include',
+             '-isysroot', '--sysroot=', '--gcc-toolchain=', '-nostdinc', '-m', '-f', '-W', '-g')
 
 
 def split_compiler_flags(argv):

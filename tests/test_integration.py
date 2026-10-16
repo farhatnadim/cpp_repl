@@ -388,6 +388,32 @@ int main()
     assert result.stdout.endswith('41 hello 7\n')
 
 
+def libcxx_available():
+    """Whether clang++ beside clang-repl can compile against libc++."""
+    clangxx = sibling_clangxx()
+    if not clangxx:
+        return False
+    probe = subprocess.run([clangxx, '-stdlib=libc++', '-std=c++23', '-fsyntax-only', '-x', 'c++', '-'],
+                           input='#include <print>\nint main() { std::println("{}", 1); }\n',
+                           capture_output=True, text=True)
+    return probe.returncode == 0
+
+
+def test_libcxx_has_the_cxx23_library(tmp_path):
+    """-stdlib=libc++: std::println and std::expected from libc++, and the
+    program's stdin still read in step by std::cin and scanf (take_stdin
+    does without libstdc++'s own buffer)."""
+    if not libcxx_available():
+        pytest.skip('no libc++ for this clang')
+    (tmp_path / 'p.repl').write_text('std::println("hello {}", 1)\n'
+                                     'std::expected<int, std::string> e = 5;\ne\n'
+                                     'int n = 0; std::cin >> n;\nint m = 0; std::scanf("%d", &m);\nn * 10 + m\n')
+    result = run_cpp_repl(['--no-config', '-stdlib=libc++', '-std=c++23', '--batch', '-q', 'p.repl'], tmp_path,
+                          stdin='4 2\n')
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout == 'hello 1\n5\n42\n'
+
+
 def test_piped_inputs_leave_the_code_end_of_file(tmp_path):
     result = run_cpp_repl(['--no-config', '--no-color'], tmp_path, timeout=120,
                           stdin='int k = 5;\nstd::cin >> k;\nstd::cin.eof()\n')

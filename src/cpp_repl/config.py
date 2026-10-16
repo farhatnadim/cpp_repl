@@ -78,18 +78,24 @@ class Profile:
 # ---------------------------------------------------------------------------
 
 _INCLUDE_FLAGS = ('-isystem', '-iquote', '-idirafter', '-I')
+# Flags that take a path: a header to include first (a prelude), a sysroot.
+_PATH_FLAGS = ('-include', '-isysroot', '--sysroot')
 _OPT = re.compile(r'-O([0-3sgz]|fast)?')
+# Flags passed on as they are: -m, -f, -W, -g families, and the toolchain's.
+_PASSED = re.compile(r'-(m|f|W|g)\S*|-stdlib=\S+|--gcc-toolchain=\S+|-nostdinc(\+\+)?|-pthread|-pedantic|-w')
 
 
 def parse_flags(args, base=None):
     """Compiler flags as [(kind, (arg, ...))], kind being 'include',
-    'define', 'std', 'opt' or 'other'. A flag's value may be attached (-Ifoo)
-    or follow it (-I foo). Relative include directories are taken relative to
-    base. Raises ConfigError for anything else."""
+    'define', 'std', 'opt', 'prelude' (-include FILE: a header parsed before
+    the first input, as the preludes are) or 'other'. A flag's value may be
+    attached (-Ifoo) or follow it (-I foo). Relative paths are taken relative
+    to base. Raises ConfigError for anything else."""
     out, i = [], 0
     while i < len(args):
         a = args[i]
-        flag = next((f for f in _INCLUDE_FLAGS if a == f or a.startswith(f)), None)
+        flag = next((f for f in _INCLUDE_FLAGS + _PATH_FLAGS if a == f or a.startswith(f + ('=' if f == '--sysroot' else ''))),
+                    None)
         if flag or a in ('-D', '-U') or a.startswith(('-D', '-U')):
             flag = flag or a[:2]
             if a == flag:
@@ -97,20 +103,25 @@ def parse_flags(args, base=None):
                     raise ConfigError(f'{flag} needs a value')
                 value, i = args[i + 1], i + 2
             else:
-                value, i = a[len(flag):], i + 1
+                value, i = a[len(flag):].removeprefix('='), i + 1
             if flag in ('-D', '-U'):
                 out.append(('define', (flag + value,)))
-            else:
-                path = Path(value).expanduser()
-                if base is not None and not path.is_absolute():
-                    path = Path(base) / path
+                continue
+            path = Path(value).expanduser()
+            if base is not None and not path.is_absolute():
+                path = Path(base) / path
+            if flag in _INCLUDE_FLAGS:
                 out.append(('include', (flag, str(path))))
+            elif flag == '-include':
+                out.append(('prelude', (flag, str(path))))
+            else:
+                out.append(('other', (flag, str(path))))
             continue
         if a.startswith('-std='):
             out.append(('std', (a,)))
         elif _OPT.fullmatch(a):
             out.append(('opt', (a,)))
-        elif a.startswith(('-m', '-f', '-W', '-g')) or a in ('-pthread', '-pedantic', '-w'):
+        elif _PASSED.fullmatch(a):
             out.append(('other', (a,)))
         else:
             raise ConfigError(f'not a compiler flag cpp-repl passes on: {a}')
@@ -119,35 +130,37 @@ def parse_flags(args, base=None):
 
 
 # The flags a compile_commands.json entry contributes. -O, -g, -o and the like
-# are the build's business, not the REPL's.
+# are the build's business, not the REPL's. A header the build includes into
+# every source (-include) is a prelude of the session's.
 _KEPT_F = re.compile(r'-f(no-)?(exceptions|rtti|openmp|char8_t|signed-char|unsigned-char|'
                      r'ms-extensions|gnu-keywords|operator-names|sized-deallocation|'
                      r'aligned-new|coroutines|builtin)')
-_SKIP_WITH_VALUE = {'-o', '-MF', '-MT', '-MQ', '-include', '-imacros', '-x', '-Xclang', '-target',
-                    '--target', '-arch', '-isysroot', '--sysroot', '-main-file-name'}
+_SKIP_WITH_VALUE = {'-o', '-MF', '-MT', '-MQ', '-imacros', '-x', '-Xclang', '-target', '--target', '-arch',
+                    '-main-file-name'}
 
 
 def compile_command_flags(entry, notes=None):
     """The flags worth keeping from one compile_commands.json entry. A
-    header the build includes into every source is left out, with a note
-    in notes."""
+    macro file the build reads first (-imacros) is left out, with a note in
+    notes."""
     args = entry.get('arguments') or shlex.split(entry['command'])
     base = Path(entry.get('directory') or '.')
     kept, i = [], 1
     while i < len(args):
         a = args[i]
         if a in _SKIP_WITH_VALUE:
-            if a in ('-include', '-imacros') and i + 1 < len(args) and notes is not None:
+            if a == '-imacros' and i + 1 < len(args) and notes is not None:
                 notes.append(f'compile_commands.json\'s {a} {args[i + 1]} is left out: a cpp-repl.toml\'s '
                              'prelude includes a header in every session')
             i += 2
             continue
-        if a in _INCLUDE_FLAGS or a in ('-D', '-U'):
+        if a in _INCLUDE_FLAGS + _PATH_FLAGS or a in ('-D', '-U'):
             kept += args[i:i + 2]
             i += 2
             continue
-        if (a.startswith(_INCLUDE_FLAGS + ('-D', '-U', '-std=', '-Wno-', '-m'))
-                or a == '-pthread' or _KEPT_F.fullmatch(a)):
+        if (a.startswith(_INCLUDE_FLAGS + ('-D', '-U', '-std=', '-stdlib=', '--sysroot=', '--gcc-toolchain=',
+                                           '-Wno-', '-m'))
+                or a in ('-pthread', '-nostdinc', '-nostdinc++') or _KEPT_F.fullmatch(a)):
             kept.append(a)
         i += 1
     return parse_flags(kept, base)
@@ -201,20 +214,23 @@ def floor_std(std):
 
 def merge_flags(layers):
     """The final flag list from layers of parsed flags, lowest precedence
-    first, and the -std and -O flags it settled on."""
+    first; the -std and -O flags it settled on; and the -include headers, in
+    order, which are preludes rather than flags."""
     includes, seen = [], set()
     for layer in reversed(layers):
         for kind, flag in layer:
             if kind == 'include' and flag not in seen:
                 seen.add(flag)
                 includes.append(flag)
-    defines, other, std, opt = [], [], None, None
+    defines, other, preludes, std, opt = [], [], [], None, None
     for layer in layers:
         for kind, flag in layer:
             if kind == 'define':
                 defines.append(flag)
             elif kind == 'other':
                 other.append(flag)
+            elif kind == 'prelude':
+                preludes.append(Path(flag[1]))
             elif kind == 'std':
                 std = flag[0]
             elif kind == 'opt':
@@ -230,7 +246,7 @@ def merge_flags(layers):
 
     flags = [a for flag in includes for a in flag]
     flags += [a for flag in last_of_each(other) + last_of_each(defines) for a in flag]
-    return flags, std, opt
+    return flags, std, opt, list(dict.fromkeys(preludes))
 
 
 # ---------------------------------------------------------------------------
@@ -447,6 +463,33 @@ def clang_repl_version(binary):
     return version, '.'.join(map(str, version))
 
 
+def stdlib_runtime(flags, clang_repl, major=None):
+    """The shared library of the standard library the flags choose, for
+    clang-repl to load before any code runs: libc++.so.1 for -stdlib=libc++,
+    since clang-repl itself is linked against libstdc++ and the JIT finds
+    its symbols in the process. None when the flags choose nothing. major
+    is the clang-repl's LLVM version, for the package to name when the
+    library is missing."""
+    stdlib = next((f for f in reversed(flags) if f.startswith('-stdlib=')), None)
+    if stdlib != '-stdlib=libc++' or not clang_repl:
+        return None
+    clang = sibling_clang(clang_repl)
+    if clang:
+        try:
+            named = subprocess.run([clang, '-stdlib=libc++', '-print-file-name=libc++.so.1'], capture_output=True,
+                                   text=True, timeout=30, stdin=subprocess.DEVNULL).stdout.strip()
+        except (OSError, subprocess.TimeoutExpired):
+            named = ''
+        if named and Path(named).is_absolute() and Path(named).is_file():
+            return Path(named)
+    try:
+        return find_library('c++')
+    except ConfigError:
+        n = major or 'N'
+        raise ConfigError(f'-stdlib=libc++: no libc++.so.1 for this clang. Install libc++-{n}-dev and '
+                          f'libc++abi-{n}-dev, its LLVM\'s, or give the library with --lib')
+
+
 def sibling_clang(binary):
     """The clang++ that comes with a clang-repl, if any."""
     real = Path(binary).resolve()
@@ -583,7 +626,7 @@ class Config:
         layers += [parse_flags(t.flags, t.base) for t in tomls]
         cli = list(options.flags) + (['-march=native'] if options.native else [])
         layers.append(parse_flags(cli, self.here))
-        flags, std, opt = merge_flags(layers)
+        flags, std, opt, included = merge_flags(layers)
         sanitizers = [f for f in flags if f.startswith('-fsanitize=')]
         if sanitizers:
             raise ConfigError(f'{sanitizers[0]}: clang-repl\'s JIT cannot run sanitized code. Leave it out, or '
@@ -615,6 +658,7 @@ class Config:
         self.preludes = [CORE_PRELUDE] + ([] if options.no_std else [STD_PRELUDE])
         for p in self.profiles + tomls:
             self.preludes += [Path(h) for h in p.prelude]
+        self.preludes += included   # -include FILE, from a build or the command line
         for h in self.preludes:
             if not h.is_file():
                 raise ConfigError(f'no prelude header {h}')
@@ -651,10 +695,14 @@ class Config:
         self.env = dict(os.environ, HOME=str(self.home), TMPDIR=str(self.tmp))
         self.env.pop('LD_PRELOAD', None)
 
-        # The first inputs of every backend. Core dumps go off before any
-        # library loads, since a crash in a library's static initialiser
-        # would otherwise leave a crash report (apport's, on Ubuntu).
-        self.prologue = ['prctl(PR_SET_DUMPABLE, 0, 0, 0, 0);'] if sys.platform.startswith('linux') else []
+        # The first inputs of every backend. The standard library's own
+        # runtime, when -stdlib names one clang-repl is not linked with, comes
+        # before any code runs. Core dumps go off before any other library
+        # loads, since a crash in a library's static initialiser would
+        # otherwise leave a crash report (apport's, on Ubuntu).
+        self.runtime = stdlib_runtime(flags, self.clang_repl, self.version and self.version[0]) if backend else None
+        self.prologue = [f'%lib {self.runtime}'] if self.runtime else []
+        self.prologue += ['prctl(PR_SET_DUMPABLE, 0, 0, 0, 0);'] if sys.platform.startswith('linux') else []
         self.prologue += ['setvbuf(stdout, nullptr, _IONBF, 0);']   # keep stdout in step with stderr
         self.prologue += [f'%lib {lib}' for lib in self.libs]
 

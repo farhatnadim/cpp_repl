@@ -13,12 +13,14 @@ from conftest import CLANG_REPL
 from cpp_repl.cli import make_parser, split_compiler_flags
 from cpp_repl.config import (CORE_PRELUDE, PRELUDE_DIR, STD_PRELUDE, Config, ConfigError, Options,
                              clang_repl_version, compile_command_flags, compile_commands_entry, default_std,
-                             find_library, floor_std, merge_flags, parse_flags, read_toml)
+                             find_library, floor_std, merge_flags, parse_flags, read_toml, stdlib_runtime)
 
 
 def test_parse_flags(tmp_path):
     assert parse_flags(['-I', 'inc', '-isystem/sys', '-DX=1', '-U', 'Y', '-O2', '-std=c++23',
-                        '-march=native', '-fopenmp', '-Wno-unused', '-pthread'], tmp_path) == [
+                        '-march=native', '-fopenmp', '-Wno-unused', '-pthread', '-stdlib=libc++',
+                        '-include', 'pch.h', '--sysroot=/sr', '-isysroot', '/sr2', '--gcc-toolchain=/gcc',
+                        '-nostdinc++'], tmp_path) == [
         ('include', ('-I', str(tmp_path / 'inc'))),
         ('include', ('-isystem', '/sys')),
         ('define', ('-DX=1',)),
@@ -29,19 +31,59 @@ def test_parse_flags(tmp_path):
         ('other', ('-fopenmp',)),
         ('other', ('-Wno-unused',)),
         ('other', ('-pthread',)),
+        ('other', ('-stdlib=libc++',)),
+        ('prelude', ('-include', str(tmp_path / 'pch.h'))),
+        ('other', ('--sysroot', '/sr')),
+        ('other', ('-isysroot', '/sr2')),
+        ('other', ('--gcc-toolchain=/gcc',)),
+        ('other', ('-nostdinc++',)),
     ]
     with pytest.raises(ConfigError):
         parse_flags(['-lfoo'])
     with pytest.raises(ConfigError):
         parse_flags(['-I'])
+    with pytest.raises(ConfigError):
+        parse_flags(['-include'])
 
 
 def test_merge_flags_precedence():
-    low = parse_flags(['-I/low', '-DMODE=1', '-std=c++20', '-O1', '-Wno-a'])
-    high = parse_flags(['-I/high', '-I/low', '-DMODE=2', '-O3'])
-    flags, std, opt = merge_flags([low, high])
+    low = parse_flags(['-I/low', '-DMODE=1', '-std=c++20', '-O1', '-Wno-a', '-include', '/a.h'])
+    high = parse_flags(['-I/high', '-I/low', '-DMODE=2', '-O3', '-include', '/b.h', '-include', '/a.h'])
+    flags, std, opt, preludes = merge_flags([low, high])
     assert flags == ['-I', '/high', '-I', '/low', '-Wno-a', '-DMODE=1', '-DMODE=2']
     assert (std, opt) == ('-std=c++20', '-O3')
+    assert preludes == [Path('/a.h'), Path('/b.h')]
+
+
+def test_libcxx_needs_its_runtime(tmp_path):
+    """-stdlib=libc++ loads libc++.so.1 before any code runs, as clang-repl
+    itself is linked with libstdc++; without one installed, the start says
+    which package brings it."""
+    assert stdlib_runtime(['-O2'], '/usr/bin/clang-repl-18') is None
+    assert stdlib_runtime(['-stdlib=libc++'], None) is None
+    try:
+        installed = find_library('c++')
+    except ConfigError:
+        installed = None
+    if installed:
+        pytest.skip('libc++ is installed here')
+    fake = Path(__file__).resolve().parent / 'fake_clang_repl.py'
+    with pytest.raises(ConfigError, match=r'-stdlib=libc\+\+: no libc\+\+\.so\.1 .* libc\+\+-99-dev'):
+        Config(Options(cwd=tmp_path, no_config=True, clang_repl=str(fake), flags=['-stdlib=libc++']))
+    cfg = Config(Options(cwd=tmp_path, no_config=True, clang_repl=str(fake)))
+    assert cfg.runtime is None and not cfg.prologue[0].startswith('%lib')
+
+
+def test_a_header_included_first_is_a_prelude(tmp_path):
+    """-include FILE, on the command line or in a build's compile command,
+    is parsed before the first input like the preludes, and named by
+    --cflags for a saved program."""
+    (tmp_path / 'pch.h').write_text('inline int from_pch() { return 1; }\n')
+    cfg = Config(Options(cwd=tmp_path, no_config=True, flags=['-include', str(tmp_path / 'pch.h')]), backend=False)
+    assert cfg.preludes[-1] == tmp_path / 'pch.h' and '-include' not in cfg.compiler_flags
+    assert str(tmp_path) in cfg.cflags()
+    with pytest.raises(ConfigError, match='no prelude header'):
+        Config(Options(cwd=tmp_path, no_config=True, flags=['-include', 'missing.h']), backend=False)
 
 
 @pytest.mark.parametrize('std, raised', [
@@ -65,11 +107,15 @@ def test_floor_std(std, raised):
 def test_compile_command_flags(tmp_path):
     entry = {'directory': str(tmp_path), 'file': 'a.cpp',
              'command': 'c++ -DNDEBUG -I inc -isystem /usr/include/python3.12 -O3 -g -fPIC '
-                        '-std=gnu++20 -march=native -Wall -Wno-deprecated -fno-exceptions '
-                        '-o a.o -c a.cpp'}
-    assert compile_command_flags(entry) == parse_flags(
+                        '-std=gnu++20 -stdlib=libc++ -include pch.h -imacros m.h -march=native -Wall '
+                        '-Wno-deprecated -fno-exceptions -o a.o -c a.cpp'}
+    notes = []
+    assert compile_command_flags(entry, notes) == parse_flags(
         ['-DNDEBUG', '-I', str(tmp_path / 'inc'), '-isystem', '/usr/include/python3.12',
-         '-std=gnu++20', '-march=native', '-Wno-deprecated', '-fno-exceptions'])
+         '-std=gnu++20', '-stdlib=libc++', '-include', str(tmp_path / 'pch.h'), '-march=native', '-Wno-deprecated',
+         '-fno-exceptions'])
+    assert notes == ["compile_commands.json's -imacros m.h is left out: a cpp-repl.toml's prelude includes a "
+                     'header in every session']
 
 
 def test_compile_commands_entry_for_the_file(tmp_path):
@@ -377,11 +423,13 @@ def test_a_system_library_named_with_l():
 def test_what_the_configuration_leaves_out_is_said(tmp_path):
     build = tmp_path / 'build'
     build.mkdir()
+    (build / 'pch.h').write_text('')
     (build / 'compile_commands.json').write_text(json.dumps([{
         'directory': str(build), 'file': 'a.cpp',
-        'command': 'c++ -include pch.h -Iinc -fsanitize=address -c a.cpp'}]))
+        'command': 'c++ -include pch.h -imacros m.h -Iinc -fsanitize=address -c a.cpp'}]))
     cfg = Config(Options(cwd=tmp_path, no_config=True, compile_commands=str(build)), backend=False)
-    assert any("-include pch.h is left out" in n for n in cfg.notes)
+    assert cfg.preludes[-1] == build / 'pch.h'   # the build's forced include is a prelude of the session's
+    assert any("-imacros m.h is left out" in n for n in cfg.notes)
     assert not any(f.startswith('-fsanitize') for f in cfg.flags)   # the build's own, left out
     with pytest.raises(ConfigError, match="-fsanitize=address: clang-repl's JIT cannot run sanitized code"):
         Config(Options(cwd=tmp_path, no_config=True, flags=['-fsanitize=address']), backend=False)

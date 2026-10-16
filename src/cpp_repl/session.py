@@ -611,6 +611,8 @@ class Session:
         lines = [f'clang-repl:  {cfg.clang_repl} ({cfg.version_text})',
                  f'flags:       {shlex.join(cfg.compiler_flags)}',
                  'preludes:    ' + ('\n             '.join(str(h) for h in cfg.preludes))]
+        if cfg.runtime:
+            lines.append(f'runtime:     {cfg.runtime}')
         if cfg.libs:
             lines.append('libraries:   ' + '\n             '.join(str(lib) for lib in cfg.libs))
         lines.append(f'diagnostics: {cfg.options.diagnostics}')

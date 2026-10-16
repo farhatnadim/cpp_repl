@@ -126,13 +126,14 @@ def test_floor_std(std, raised):
 def test_compile_command_flags(tmp_path):
     entry = {'directory': str(tmp_path), 'file': 'a.cpp',
              'command': 'c++ -DNDEBUG -I inc -isystem /usr/include/python3.12 -O3 -g -fPIC '
-                        '-std=gnu++20 -stdlib=libc++ -include pch.h -imacros m.h -march=native -Wall '
-                        '-Wno-deprecated -fno-exceptions -o a.o -c a.cpp'}
+                        '-std=gnu++20 -stdlib=libc++ -include pch.h -imacros m.h -march=native -Wall -Wextra '
+                        '-Wno-deprecated -Werror -Werror=return-type -fno-exceptions -o a.o -c a.cpp'}
     notes = []
+    # The build's warnings come along; its -Werror stays out: warnings stay warnings.
     assert compile_command_flags(entry, notes) == parse_flags(
         ['-DNDEBUG', '-I', str(tmp_path / 'inc'), '-isystem', '/usr/include/python3.12',
-         '-std=gnu++20', '-stdlib=libc++', '-include', str(tmp_path / 'pch.h'), '-march=native', '-Wno-deprecated',
-         '-fno-exceptions'])
+         '-std=gnu++20', '-stdlib=libc++', '-include', str(tmp_path / 'pch.h'), '-march=native', '-Wall', '-Wextra',
+         '-Wno-deprecated', '-fno-exceptions'])
     assert notes == ["compile_commands.json's -imacros m.h is left out: a cpp-repl.toml's prelude includes a "
                      'header in every session']
 

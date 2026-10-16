@@ -175,8 +175,11 @@ def compile_command_flags(entry, notes=None):
             kept += args[i:i + 2]
             i += 2
             continue
+        # The build's warnings are the REPL's too; its -Werror is not, since
+        # warnings stay warnings at a prompt.
         if (a.startswith(_INCLUDE_FLAGS + ('-D', '-U', '-std=', '-stdlib=', '--sysroot=', '--gcc-toolchain=',
-                                           '-Wno-', '-m'))
+                                           '-W', '-m'))
+                and not a.startswith('-Werror')
                 or a in ('-pthread', '-nostdinc', '-nostdinc++') or _KEPT_F.fullmatch(a)):
             kept.append(a)
         i += 1

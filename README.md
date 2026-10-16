@@ -281,8 +281,9 @@ cpp-repl --compile-commands build      # flags as your build compiles: -I, -D, -
 
 From `compile_commands.json`, cpp-repl takes the flags of the entry for the
 file you load (or the first entry): its include directories, definitions,
-standard, `-m` flags, a forced `-include` as a prelude, and its `-Wno-`
-flags. The optimisation level stays the REPL's own.
+standard, `-m` flags, a forced `-include` as a prelude, and its `-W` flags,
+`-Werror` apart: warnings stay warnings at a prompt. The optimisation level
+stays the REPL's own.
 
 A `cpp-repl.toml` in the working directory, or any directory above it, says
 the same once for a project. `-c FILE` reads another; paths in it are relative

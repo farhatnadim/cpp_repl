@@ -457,7 +457,11 @@ void put_generic(std::ostream &os, const T &x)
   } else if constexpr (std::is_same_v<T, std::monostate>) {
     os << "monostate";
   } else if constexpr (std::is_same_v<T, std::any>) {
+#if __cpp_rtti
     os << "any(" << (x.has_value() ? demangled(x.type().name()) : std::string("empty")) << ')';
+#else
+    os << "any(" << (x.has_value() ? "a value" : "empty") << ')';   // any::type() needs -frtti
+#endif
   // The standard's wrappers come before a type's own operator<<: an atomic
   // or a reference_wrapper converts to what it holds, and a shared_ptr's
   // operator<< writes an address, where the value it points to is wanted.
@@ -654,14 +658,22 @@ inline ended timed(ended (*statement)())
 inline constexpr char end_mark = '\x1d';
 inline constexpr int abort_status = 134;   // 128 + SIGABRT
 
-// Inside a handler: what the exception being handled is, on one line.
+// Inside a handler: what the exception being handled is, on one line. With
+// -fno-exceptions the wrapper has no handler and nothing calls this; it is
+// still here so that the prelude compiles. Without RTTI (-fno-rtti) the type
+// of a std::exception cannot be named, so it is named std::exception.
 inline ended uncaught()
 {
   ended e(abort_status);
+#if __cpp_exceptions
   try {
     throw;
   } catch (const std::exception &x) {
+#if __cpp_rtti
     e.thrown = detail::demangled(typeid(x).name()) + ": " + x.what();
+#else
+    e.thrown = std::string("std::exception: ") + x.what();
+#endif
   } catch (...) {
 #if __has_include(<cxxabi.h>)
     if (const std::type_info *type = abi::__cxa_current_exception_type())
@@ -670,6 +682,9 @@ inline ended uncaught()
 #endif
       e.thrown = "of an unknown type";
   }
+#else
+  e.thrown = "an exception, with -fno-exceptions";
+#endif
   for (char &c : e.thrown)
     if (c == '\n' || c == end_mark)
       c = ' ';

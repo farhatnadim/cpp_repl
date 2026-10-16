@@ -626,6 +626,11 @@ class Config:
         self.opt_level = {None: 0, '-O': 1, '-O0': 0, '-O1': 1, '-O2': 2, '-O3': 3,
                           '-Ofast': 3, '-Os': 2, '-Oz': 2, '-Og': 1}.get(opt, -1)
         self.flags = flags
+        # Whether the code compiles with exceptions: the function a statement
+        # runs in catches an uncaught one only then (-fno-exceptions is a
+        # project flag compile_commands.json keeps).
+        self.exceptions = next((f == '-fexceptions' for f in reversed(flags) if f in ('-fexceptions', '-fno-exceptions')),
+                               True)
         # Inputs reach clang through files in the state directory, so the
         # session's own directory is named for the quoted includes typed in.
         self.cwd = cwd

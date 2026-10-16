@@ -578,30 +578,32 @@ def needs_function(tokens, control):
     return _has_lambda(code) or not (first.kind == 'ident' and _MACRO_NAME.fullmatch(first.text))
 
 
-def in_function(name, body, timed=True):
+def in_function(name, body, timed=True, exceptions=True):
     """body as the body of a new function, and a call of it. The function
     returns repl::ended, which an int converts to: `return 1;` inside body,
     as in main()'s `if (bad) return 1;`, becomes the program's exit status,
     an exception that leaves body is named and ends the program as abort()
     would, and body falling off its end returns nothing. repl::timed() times
     the call, unless timed is off, and repl::finish() reports the run and
-    the end to the session."""
+    the end to the session. Compiled with -fno-exceptions (exceptions off),
+    the body has no handler: a try would not compile."""
     call = f'repl::timed({name})' if timed else f'{name}()'
-    return (f'repl::ended {name}() {{ try {{ {body} }} catch (...) {{ return repl::uncaught(); }} return {{}}; }} '
-            f'repl::finish({call});')
+    inside = f'try {{ {body} }} catch (...) {{ return repl::uncaught(); }}' if exceptions else f'{{ {body} }}'
+    return f'repl::ended {name}() {{ {inside} return {{}}; }} repl::finish({call});'
 
 
 def _end(toks):
     return toks[-1].start + len(toks[-1].text)
 
 
-def transform(text, wrap=True, fresh=None, origin=None, as_statement=False):
+def transform(text, wrap=True, fresh=None, origin=None, as_statement=False, exceptions=True):
     """What to send to clang-repl for one input, as a Send whose kind is 'pp',
     'stmt', 'expr' or 'empty'. A statement that cannot run at top level (see
     needs_function) runs as the body of a new function named fresh()
     (cpp_repl_1, cpp_repl_2, ... for this call, when no fresh is given);
     wrap=False leaves every statement as it is, for code that goes inside a
-    function anyway. A block of preprocessor lines (an #if region), or code
+    function anyway, and exceptions says whether the function may catch (see
+    in_function). A block of preprocessor lines (an #if region), or code
     holding a directive other than a #pragma, goes through a file. With
     as_statement set, a bare expression is sent as a statement.
 
@@ -649,7 +651,7 @@ def transform(text, wrap=True, fresh=None, origin=None, as_statement=False):
         if wrap and complete and needs_function(toks, control):
             # Placed, the function's head and tail keep lines of their own,
             # out of the source lines a diagnostic shows.
-            line = in_function(fresh(), f'\n{line}\n' if origin else line)
+            line = in_function(fresh(), f'\n{line}\n' if origin else line, exceptions=exceptions)
         parts.append(line)
     return Send(('\n' if origin else ' ').join(parts), 'stmt', lines or origin is not None)
 

@@ -413,6 +413,22 @@ def test_the_exit_status_is_the_program_s(tmp_path, end, status):
     assert 'before' in result.stdout and 'after' not in result.stdout
 
 
+@pytest.mark.parametrize('flag, any_text', [('-fno-exceptions', 'any(int)'), ('-fno-rtti', 'any(a value)')])
+def test_a_project_without_exceptions_or_rtti(tmp_path, flag, any_text):
+    """Both flags are common in projects, and compile_commands.json keeps
+    them: the prelude and the function a statement runs in compile without
+    exceptions and without RTTI."""
+    script = tmp_path / 'f.repl'
+    script.write_text('int y = 1;\nfor (int i = 0; i < 2; ++i) std::cout << i + y;\ny + 1\nstd::any(5)\n')
+    result = run_cpp_repl([flag, '--no-config', '--batch', '-q', str(script)], tmp_path)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout == f'12\n2\n{any_text}\n'   # the loop's line is ended for it
+    if flag == '-fno-rtti':   # an uncaught exception is still named, by what RTTI leaves
+        script.write_text('std::stoi("abc")\n')
+        result = run_cpp_repl([flag, '--no-config', '--batch', '-q', str(script)], tmp_path)
+        assert result.returncode == 134 and '[uncaught exception: std::exception: stoi]' in result.stdout
+
+
 def test_an_endless_loop_stops_at_the_timeout(tmp_path):
     (tmp_path / 'p.repl').write_text('int n = 0;\nwhile (true) { ++n; }\nstd::puts("after");\n')
     result = run_cpp_repl(['--no-config', '--batch', '--no-color', '--timeout', '3', 'p.repl'], tmp_path)

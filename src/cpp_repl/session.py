@@ -533,7 +533,7 @@ class Session:
                        for part, start in ((statements, len(text) - len(text.lstrip())), (expression, at)))
         if origin:
             self.sources.add(str(origin.path))
-        send = transform(text, fresh=self._fresh, origin=origin)
+        send = transform(text, fresh=self._fresh, origin=origin, exceptions=self.cfg.exceptions)
         if send.kind == 'empty':
             return True
         kind = send.kind
@@ -542,7 +542,8 @@ class Session:
             # Run in a function, for the local struct that print_expr needs, and
             # because a lambda in a top-level statement crashes clang-repl 23.
             printed = in_function(self._fresh(), 'struct cpp_repl_tag; '
-                                  f'repl::print_expr((({send.text}), repl::printer<cpp_repl_tag>{{}}));')
+                                  f'repl::print_expr((({send.text}), repl::printer<cpp_repl_tag>{{}}));',
+                                  exceptions=self.cfg.exceptions)
             line = self._file(printed) if send.via_file else printed
             output, result = self._send(line, echo=False)
             if result != 'error':
@@ -559,7 +560,8 @@ class Session:
             # declaration belongs. Inside a function it would be a local,
             # silently gone with the statement.
             self.tainted = True
-            send, kind = transform(text, fresh=self._fresh, origin=origin, as_statement=True, wrap=False), 'stmt'
+            send, kind = transform(text, fresh=self._fresh, origin=origin, as_statement=True, wrap=False,
+                                  exceptions=self.cfg.exceptions), 'stmt'
         line = self._file(send.text) if send.via_file else send.text
         output, result = self._send(line, hold=_REDEFINED.search if redefine and kind == 'stmt' else None)
         if self.held:
@@ -664,7 +666,7 @@ class Session:
         else:
             body = send.text
         output, result = self._send(in_function(self._fresh(), f'repl::timeit([]{{ {body} }}, {self.cfg.opt_level});',
-                                                timed=False))
+                                                timed=False, exceptions=self.cfg.exceptions))
         return self._after(text, [], output, result, journal=False)
 
     # -- saving -----------------------------------------------------------

@@ -460,3 +460,14 @@ def test_what_the_configuration_leaves_out_is_said(tmp_path):
     assert not any(f.startswith('-fsanitize') for f in cfg.flags)   # the build's own, left out
     with pytest.raises(ConfigError, match="-fsanitize=address: clang-repl's JIT cannot run sanitized code"):
         Config(Options(cwd=tmp_path, no_config=True, flags=['-fsanitize=address']), backend=False)
+
+
+def test_exceptions_follow_the_flags(tmp_path):
+    """The function a statement runs in catches an uncaught exception only
+    when the code compiles with exceptions; the last flag wins."""
+    def exceptions(*flags):
+        return Config(Options(cwd=tmp_path, no_config=True, flags=list(flags)), backend=False).exceptions
+    assert exceptions() is True
+    assert exceptions('-fno-exceptions') is False
+    assert exceptions('-fno-exceptions', '-fexceptions') is True
+    assert exceptions('-fexceptions', '-fno-exceptions') is False

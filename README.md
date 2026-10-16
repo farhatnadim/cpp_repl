@@ -265,7 +265,9 @@ linker script, such as glibc's `libm.so`, is followed to the library it
 names. With `-stdlib=libc++`, cpp-repl loads libc++'s runtime first, since
 clang-repl itself is linked with libstdc++; the Docker images carry it, and
 with it the C++23 library (`std::println`, `std::expected`, `std::mdspan`)
-that libstdc++ 13 lacks.
+that libstdc++ 13 lacks. With `-fno-exceptions`, a statement runs without the
+handler that names an exception nothing catches; with `-fno-rtti`, such an
+exception is named `std::exception`, and a `std::any` prints `any(a value)`.
 
 ```sh
 cpp-repl -I include -DFAST=1 -L build -l mylib -O2

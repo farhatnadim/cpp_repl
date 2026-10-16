@@ -107,5 +107,20 @@ class Latency(unittest.TestCase):
         self.assertAlmostEqual(row['new_expression'], 1.92)
 
 
+class Outcomes(unittest.TestCase):
+    def test_a_warm_session_that_never_ran(self):
+        # matmul.cpp's main() ended in `return 0;` from 47c0ac7 on, and
+        # cpp-repl ran nothing after it: the latency runs had no warm session.
+        arm = {a.name: a for a in arms.all_arms()}['eigen-repl']
+        records = [{'type': 'env', 'eigen_threads': 1, 'optimize': True}, {'type': 'done'}]
+        log = 'BENCH {"type":"done"}\nc++> return 0;\n[main returned 0: bench/cpp/session.repl not run]\n'
+        ran = {'records': records, 'timed_out': False, 'exit': 0}
+        self.assertEqual(run.classify(arm, ran, log), 'ok')
+        self.assertEqual(run.classify(arm, ran, log, session=True), 'missing-session')
+        self.assertEqual(run.failure_detail(ran, log), '[main returned 0: bench/cpp/session.repl not run]')
+        records.append({'type': 'stamp', 'name': run.SESSION_LAST, 't': 1.0})
+        self.assertEqual(run.classify(arm, ran, '', session=True), 'ok')
+
+
 if __name__ == '__main__':
     unittest.main()

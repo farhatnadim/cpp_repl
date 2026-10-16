@@ -48,17 +48,15 @@ The driver keeps three rules:
 [`cpp/session.repl`](cpp/session.repl) follows `matmul.cpp` in the latency
 runs and measures a warm session: calling the compiled kernel again, and
 typing a product the session has not used yet (`A.transpose() * B`).
+`main()` therefore ends without a `return`, which in cpp-repl ends the
+program before the next file.
 
 ## Protocol
 
 - **Where:** the `cpp-repl:bench-llvm23` image is the primary target. There the JIT and clang++ are the same
   LLVM (23.1.2) and NumPy is the pip wheel with OpenBLAS.
-  - A host run uses clang++-18 with clang-repl-18 and a Python whose NumPy uses OpenBLAS (the pip wheel
-    does; `--python` names it).
-  - clang-repl 18 cannot run Eigen's kernels. Eigen 3.4 uses inline assembly for its FMA (with clang) and in
-    its GEBP kernel, and clang-repl 18 stops with "Inline asm not supported by this streamer because we
-    don't have an asm parser for this target". The host's REPL Eigen arms therefore record that error;
-    clang-repl 23 runs them.
+  - A host run uses the newest clang-repl on PATH (cpp-repl needs 23 or newer) with the clang++ of the same
+    LLVM, and a Python whose NumPy uses OpenBLAS (the pip wheel does; `--python` names it).
   - The NumPy arm refuses a NumPy linked to netlib's reference BLAS (Ubuntu's `python3-numpy`), which would
     time Fortran loops rather than NumPy.
 - **Allocator:** Eigen allocates its GEMM workspace on every call, about 0.5 MB at n = 256, which sits at

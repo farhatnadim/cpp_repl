@@ -73,7 +73,9 @@ def test_a_clang_repl_older_than_cpp_repl_runs_is_named(tmp_path):
                        cwd=tmp_path, timeout=600, env={**os.environ, 'CPP_REPL_CLANG_REPL': str(old)})
     out = json.loads(p.stdout)
     assert out['clang_repl']['major'] == 18 and out['clang_repl']['supported'] is False
-    assert out['notes'][0].startswith('clang-repl 18 is older than cpp-repl runs (23 or newer): ')
+    # The way out names the images when there are some, and how to build one when not.
+    assert out['notes'][0].startswith('clang-repl 18 is older than cpp-repl runs (23 or newer)')
+    assert 'install clang-23 and clang-tools-23 from apt.llvm.org' in out['notes'][0]
     hints = check_profile.hints_for(_common.too_old(str(old), '18.1.3'), 'x.toml')
     assert [h['anchor'] for h in hints] == ['old-clang-repl']
     assert 'install clang-23 and clang-tools-23' in hints[0]['advice']

@@ -27,6 +27,10 @@ ROOT = Path(__file__).resolve().parent.parent
 CPP_REPL = ROOT / 'bin' / 'cpp-repl'
 SESSIONS = sorted((ROOT / 'tests' / 'sessions').glob('*.session'))
 
+# A transcript is compared as the tutorials' are (scripts/check_tutorial.py).
+sys.path.insert(0, str(ROOT / 'scripts'))
+from check_tutorial import inputs_of, matches  # noqa: E402
+
 pytestmark = [pytest.mark.backend, needs_clang_repl]
 
 
@@ -51,41 +55,6 @@ def read_session(path):
         if sep and key.strip() in ('args', 'requires'):
             header[key.strip()] = value.strip()
     return header, '\n'.join(head_lines), '\n'.join(lines)
-
-
-def inputs_of(transcript, prompt, more):
-    inputs, current = [], None
-    for line in transcript.split('\n'):
-        if line.startswith(prompt):
-            if current is not None:
-                inputs.append('\n'.join(current))
-            current = [line[len(prompt):]]
-        elif current is not None and line.startswith(more):
-            current.append(line[len(more):])
-        elif current is not None:
-            inputs.append('\n'.join(current))
-            current = None
-    if current is not None:
-        inputs.append('\n'.join(current))
-    return inputs
-
-
-def normalise(text):
-    text = re.sub(r'0x[0-9a-fA-F]+', '0x…', text)
-    text = re.sub(r'input_line_\d+', 'input_line_N', text)
-    return text.rstrip('\n') + '\n'
-
-
-def matches(expected, actual):
-    pattern = ''
-    for line in normalise(expected).split('\n')[:-1]:
-        if line == '<any lines>':
-            pattern += r'(?:[^\n]*\n)*?'
-        elif line == '<any>':
-            pattern += r'[^\n]*\n'
-        else:
-            pattern += re.escape(line) + r'\n'
-    return re.fullmatch(pattern, normalise(actual)) is not None
 
 
 def unmet(requires):

@@ -18,8 +18,9 @@ DOCKER_RUN = docker run --rm --init -i --user $$(id -u):$$(id -g) -e HOME=/tmp \
 	-v $(CURDIR):$(CURDIR):ro -w $(CURDIR) \
 	$(if $(USD_ROOT),-e USD_ROOT=$(USD_ROOT) -v $(USD_ROOT):$(USD_ROOT):ro)
 
-.PHONY: help test test-host test-docker test-snapshot parity compat compat-docker compat-table \
-        compare compare-docker compare-doc docker docker-bench docker-snapshot docker-src bench bench-quick bench-host
+.PHONY: help test test-host test-docker test-snapshot parity tutorials tutorials-update compat compat-docker \
+        compat-table compare compare-docker compare-doc docker docker-bench docker-snapshot docker-src bench \
+        bench-quick bench-host
 
 help:  ## this list
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | sed -E 's/:.*## /\t/' | expand -t 18
@@ -38,6 +39,12 @@ test-snapshot:  ## every test, inside cpp-repl:llvm-snapshot (LLVM main)
 
 parity:  ## openusd-tutorial's lessons through cpp-repl -p usd and compiled, diffed
 	$(PYTHON) scripts/parity.py --tutorial $(TUTORIAL)
+
+tutorials:  ## docs/tutorials' transcripts against runs of the host's clang-repl
+	$(PYTHON) scripts/check_tutorial.py --clang-repl $(CLANG_REPL) docs/tutorials/*.md
+
+tutorials-update:  ## rewrite the tutorials' transcripts that differ from a run (read the diff)
+	$(PYTHON) scripts/check_tutorial.py --clang-repl $(CLANG_REPL) --update docs/tutorials/*.md
 
 compat:  ## probe the host's clang-repl
 	$(PYTHON) tests/compat/harness.py --clang-repl $(CLANG_REPL) \

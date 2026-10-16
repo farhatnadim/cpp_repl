@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 import signal
+import stat
 import subprocess
 import sys
 import time
@@ -381,6 +382,8 @@ def test_a_session_that_stays(tmp_path):
             if (tmp_path / 'repl.sock').exists():
                 break
             time.sleep(0.05)
+        # Whoever connects runs code as the server's user: the socket is theirs alone.
+        assert stat.S_IMODE((tmp_path / 'repl.sock').stat().st_mode) == 0o600
         (tmp_path / 'p.repl').write_text('say("one");\nerror_here;\n')
         run = client('-q', 'p.repl')
         assert run.returncode == 1 and run.stdout.startswith('one\n') and 'error_here' in run.stdout

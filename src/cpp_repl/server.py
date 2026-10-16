@@ -16,6 +16,7 @@ time. %quit stops the server.
 """
 
 import json
+import os
 import socket
 import sys
 from pathlib import Path
@@ -94,6 +95,9 @@ def serve(session, address):
             return 2
         path.unlink()
     server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    # Whoever connects runs code as this user, so the socket is this user's
+    # alone (0600) from the moment it exists; bind() creates it under the umask.
+    mask = os.umask(0o177)
     try:
         server.bind(str(path))
     except OSError as e:
@@ -101,6 +105,8 @@ def serve(session, address):
         sys.stderr.write(f'cpp-repl: cannot listen at {path}: {e.strerror or e}. A socket path holds at most '
                          '107 bytes: a relative path is shorter\n')
         return 2
+    finally:
+        os.umask(mask)
     server.listen(8)
     sys.stderr.write(f'cpp-repl: serving at {path}; cpp-repl --connect {path} [--fresh] FILE runs FILE here\n')
     sys.stderr.flush()
@@ -137,7 +143,7 @@ def connect(args, fail):
         s.connect(args.connect)
     except OSError as e:
         s.close()
-        return fail(f'no cpp-repl --serve at {args.connect}: {e.strerror}')
+        return fail(f'no cpp-repl --serve at {args.connect}: {e.strerror or e}')
     with s, s.makefile('rwb') as f:
         f.write((json.dumps(request) + '\n').encode())
         f.flush()

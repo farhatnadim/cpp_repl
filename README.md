@@ -202,7 +202,9 @@ cpp-repl --batch --json prog.cpp              # a JSON object per input
   0.06 s, against 1.3 s for a new cpp-repl, or 4 s with `-p usd`. The
   session's names carry over from run to run. `--fresh` starts a run from an
   empty session instead, for a program run again after an edit; for now it
-  costs about one start-up. `%quit` stops the server.
+  costs about one start-up. `%quit` stops the server. Whoever connects runs
+  code as the server's user, so the socket is created readable and writable
+  by that user alone.
 
   ```sh
   cpp-repl --serve repl.sock -p eigen &

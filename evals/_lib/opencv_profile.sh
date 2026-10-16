@@ -5,6 +5,7 @@ mkdir -p .cpp-repl
 {
   echo '# opencv 4.6.0 for cpp-repl. Start a session with: cpp-repl -c .cpp-repl/opencv.toml'
   echo 'flags = ["-isystem", "/usr/include/opencv4"]'
+  echo 'std = "gnu++20"   # the headers use arithmetic between enumeration types, which C++26 removed'
   echo 'libs = ['
   for m in ${OPENCV_LIBS:-core imgproc imgcodecs}; do
     echo "  \"/usr/lib/$ARCH/libopencv_$m.so\","

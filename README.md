@@ -302,7 +302,10 @@ The precedence, from lowest to highest:
 For `-I`, the first match wins; for `-D`, the last definition wins. Without
 a `-std`, the session compiles as the newest standard its clang knows:
 gnu++26 from clang 17, gnu++23 from clang 12. The prelude's templates need
-C++20, so a lower `-std` is raised, and the startup line says so.
+C++20, so a lower `-std` is raised, and the startup line says so. Headers
+that use what C++26 removed fail under the default (OpenCV 4.6: arithmetic
+between different enumeration types); `std = "gnu++20"` in the profile, or
+`-std=gnu++20`, keeps them compiling.
 
 ### Profiles
 

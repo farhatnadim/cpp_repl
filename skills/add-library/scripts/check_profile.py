@@ -65,6 +65,9 @@ HINTS = [
      "a library is missing from libs: probe_library.py symbol '{0}' --config {T} names the one that defines it"),
     (r"fatal error: '([^']+)' file not found", 'file-not-found',
      'no include directory holds {0}: add it to flags as -isystem DIR, or fix the #include'),
+    (r'invalid (?:\w+ ){1,3}(?:between|of) (?:different )?enumeration type', 'older-standard',
+     'cpp-repl compiles as C++26 with clang 17 and newer, and the headers use what C++26 removed: '
+     'set std = "gnu++20" in the profile'),
     (r'[Ii]nline asm', 'inline-asm',
      "clang-repl 18's JIT cannot assemble inline asm: run the check with --docker (clang-repl 23)"),
     (r'invalid ELF header|file too short', 'static-or-script',

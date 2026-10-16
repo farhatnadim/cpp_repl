@@ -301,6 +301,13 @@ def test_hints():
     dso =check_profile.hints_for('/usr/bin/ld: /usr/lib/x86_64-linux-gnu/libfmt.so.9: error adding symbols: '
                                   'DSO missing from command line', 'x.toml')
     assert dso[0]['anchor'] == 'dso-missing' and 'libfmt.so.9' in dso[0]['advice']
+    # Headers that use what C++26 removed, under cpp-repl's default standard.
+    for text in ("mat.inl.hpp:281:22: error: invalid arithmetic between different enumeration types "
+                 "('cv::_InputArray::KindFlag' and 'cv::AccessFlag')",
+                 'error: invalid bitwise operation between different enumeration types',
+                 "error: invalid arithmetic between enumeration type 'E' and floating-point type 'double'"):
+        assert [h['anchor'] for h in check_profile.hints_for(text, 'x.toml')] == ['older-standard']
+
 
 def test_golden_patterns():
     assert check_profile.matches('a\n<any>\nc\n', 'a\nb\nc\n')

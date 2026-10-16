@@ -139,6 +139,10 @@ Start from the templates in `${CLAUDE_SKILL_DIR}/templates/`.
   would also find a dependency through the library that needs it. The native
   build of a `%save-cpp` file does not: it needs every library on its link
   line.
+- **`std = "gnu++20"` when the headers fail under C++26**, cpp-repl's default
+  with clang 17 and newer. The check's prelude step shows the error; OpenCV
+  4.6 gives `invalid arithmetic between different enumeration types`.
+
 **`<lib>_repl.h`:**
 - `#include "cpp_repl.h"` first.
 - Then the headers the user will reach for most: the project's own `#include`

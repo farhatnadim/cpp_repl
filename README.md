@@ -480,6 +480,17 @@ The way around each problem:
   class values print in every version.
 - **Crash reports:** cpp-repl turns core dumps off before any library loads,
   so a crash leaves no report behind (Ubuntu's apport writes them).
+- **`return` at top level:** cpp-repl runs it inside a function, where it
+  ends the program with its value; typed raw, it segfaults 23.1.4 and 24.
+- **`goto` to an unknown label:** an error on 23 and 24; 18 segfaults, and
+  cpp-repl rebuilds the session.
+- **A file-scope lambda's init-capture:** a clang-repl limit cpp-repl cannot
+  lift (README, Limits): the closure's initialiser never runs, on every
+  version, unless the capture is a constant.
+
+[compare/](compare/README.md) types one whole session into raw clang-repl
+23.1.4 and into cpp-repl and shows both answers, side by side, with the
+start-up and the cost of an input measured on each clang-repl.
 
 ## Speed
 

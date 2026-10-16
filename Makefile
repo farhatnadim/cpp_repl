@@ -19,7 +19,7 @@ DOCKER_RUN = docker run --rm --init -i --user $$(id -u):$$(id -g) -e HOME=/tmp \
 	$(if $(USD_ROOT),-e USD_ROOT=$(USD_ROOT) -v $(USD_ROOT):$(USD_ROOT):ro)
 
 .PHONY: help test test-host test-docker test-snapshot parity compat compat-docker compat-table \
-        docker docker-bench docker-snapshot docker-src bench bench-quick bench-host
+        compare compare-docker compare-doc docker docker-bench docker-snapshot docker-src bench bench-quick bench-host
 
 help:  ## this list
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | sed -E 's/:.*## /\t/' | expand -t 18
@@ -50,6 +50,17 @@ compat-docker:  ## probe the clang-repl of the llvm23 and snapshot images
 
 compat-table:  ## the README's "Why a front end" table, from the probes
 	$(PYTHON) scripts/compat_table.py tests/compat/results/*.json
+
+compare:  ## raw clang-repl against cpp-repl, the host's clang-repl: compare/results/compare-N.json
+	$(PYTHON) compare/compare.py run \
+	  > compare/results/compare-$$($(CLANG_REPL) --version | sed -n 's/.*LLVM version \([0-9]*\).*/\1/p').json
+
+compare-docker:  ## the same inside the llvm23 and snapshot images
+	$(DOCKER_RUN) $(IMAGE) python3 compare/compare.py run > compare/results/compare-llvm$(LLVM).json
+	$(DOCKER_RUN) cpp-repl:llvm-snapshot python3 compare/compare.py run > compare/results/compare-llvm-snapshot.json
+
+compare-doc:  ## the tables of compare/README.md, from every run
+	$(PYTHON) compare/compare.py render compare/results/compare-*.json
 
 docker:  ## build cpp-repl:llvm23: clang-repl from apt.llvm.org (LLVM=23)
 	$(DOCKER_BUILD) --target apt --build-arg LLVM_MAJOR=$(LLVM) -t $(IMAGE) docker/

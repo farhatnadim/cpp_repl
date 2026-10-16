@@ -1,0 +1,40 @@
+#include <vector>
+#include <map>
+#include <string>
+#include <algorithm>
+#include <iostream>
+int x = 42;
+x + 1
+std::vector<int> v{3, 1, 2};
+v
+v[0]
+std::map<std::string, int> ages{{"ada", 36}, {"alan", 41}};
+ages
+struct P { int x, y; };
+P p{1, 2};
+p
+std::ostream &operator<<(std::ostream &os, const P &q) { return os << q.x << "," << q.y; }
+p
+for (int i : v) {
+  std::cout << i << std::endl;
+}
+if (x > 40)
+  std::cout << "big" << std::endl;
+else
+  std::cout << "small" << std::endl;
+std::for_each(v.begin(), v.end(), [](int i) { std::cout << i << std::endl; });
+[] { std::cout << "lambda" << std::endl; }();
+template <class T> T twice(T a) { return a + a; }
+twice(21)
+std::stoi("abc")
+int *p0 = nullptr;
+*p0 = 42;
+v
+%undo
+int x = 1;
+#include <nosuch.h>
+void greet() { std::cout << "hi" << std::endl; }
+greet()
+std::cout << "done" << std::endl
+return 3;
+%quit

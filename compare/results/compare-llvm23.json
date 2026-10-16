@@ -1,0 +1,910 @@
+{
+ "date": "2026-10-16",
+ "machine": {
+  "cpu": "AMD Ryzen 9 5950X 16-Core Processor",
+  "cpus": 32,
+  "load": [
+   8.78,
+   5.62,
+   4.63
+  ],
+  "in_container": true
+ },
+ "raw": {
+  "clang_repl": "/usr/lib/llvm-23/bin/clang-repl",
+  "version": "23.1.4",
+  "std": "gnu++26",
+  "deadline": 20
+ },
+ "cpp_repl": {
+  "commit": "496ed72",
+  "argv": [
+   "/usr/lib/llvm-23/bin/clang-repl",
+   "--Xcc=-std=gnu++26",
+   "--Xcc=-iquote",
+   "--Xcc=/media/nadim/Data/Source/cpp_repl/src/cpp_repl/prelude",
+   "--Xcc=-iquote",
+   "--Xcc=/tmp/cpp-repl-compare-ueu4m5it",
+   "--Xcc=-DCPP_REPL=1",
+   "--Xcc=-include",
+   "--Xcc=/media/nadim/Data/Source/cpp_repl/src/cpp_repl/prelude/cpp_repl.h",
+   "--Xcc=-include",
+   "--Xcc=/media/nadim/Data/Source/cpp_repl/src/cpp_repl/prelude/cpp_repl_std.h"
+  ]
+ },
+ "inputs": [
+  {
+   "n": 1,
+   "text": "#include <vector>",
+   "raw": {
+    "text": "#include <vector>",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.174,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "#include <vector>",
+    "output": "",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.001
+   }
+  },
+  {
+   "n": 2,
+   "text": "#include <map>",
+   "raw": {
+    "text": "#include <map>",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.021,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "#include <map>",
+    "output": "",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.0
+   }
+  },
+  {
+   "n": 3,
+   "text": "#include <string>",
+   "raw": {
+    "text": "#include <string>",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.124,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "#include <string>",
+    "output": "",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.0
+   }
+  },
+  {
+   "n": 4,
+   "text": "#include <algorithm>",
+   "raw": {
+    "text": "#include <algorithm>",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.066,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "#include <algorithm>",
+    "output": "",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.0
+   }
+  },
+  {
+   "n": 5,
+   "text": "#include <iostream>",
+   "raw": {
+    "text": "#include <iostream>",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.074,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "#include <iostream>",
+    "output": "",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.0
+   }
+  },
+  {
+   "n": 6,
+   "text": "int x = 42;",
+   "raw": {
+    "text": "int x = 42;",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.001,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "int x = 42;",
+    "output": "",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.0
+   }
+  },
+  {
+   "n": 7,
+   "text": "x + 1",
+   "raw": {
+    "text": "x + 1",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.003,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "x + 1",
+    "output": "43\n",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.043,
+    "run_seconds": 1.7654e-05
+   }
+  },
+  {
+   "n": 8,
+   "text": "std::vector<int> v{3, 1, 2};",
+   "raw": {
+    "text": "std::vector<int> v{3, 1, 2};",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.02,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "std::vector<int> v{3, 1, 2};",
+    "output": "",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.017
+   }
+  },
+  {
+   "n": 9,
+   "text": "v",
+   "raw": {
+    "text": "v",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.002,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "v",
+    "output": "[3, 1, 2]\n",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.021,
+    "run_seconds": 1.8294e-05
+   }
+  },
+  {
+   "n": 10,
+   "text": "v[0]",
+   "raw": {
+    "text": "v[0]",
+    "output": "In file included from <<< inputs >>>:1:\ninput_line_11:1:1: warning: ignoring return value of function declared with 'nodiscard' attribute [-Wunused-result]\n    1 | v[0]\n      | ^~~~\n",
+    "state": "ok",
+    "seconds": 0.002,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "v[0]",
+    "output": "3\n",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.016,
+    "run_seconds": 8.856e-06
+   }
+  },
+  {
+   "n": 11,
+   "text": "std::map<std::string, int> ages{{\"ada\", 36}, {\"alan\", 41}};",
+   "raw": {
+    "text": "std::map<std::string, int> ages{{\"ada\", 36}, {\"alan\", 41}};",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.052,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "std::map<std::string, int> ages{{\"ada\", 36}, {\"alan\", 41}};",
+    "output": "",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.044
+   }
+  },
+  {
+   "n": 12,
+   "text": "ages",
+   "raw": {
+    "text": "ages",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.002,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "ages",
+    "output": "{\"ada\": 36, \"alan\": 41}\n",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.026,
+    "run_seconds": 2.1159e-05
+   }
+  },
+  {
+   "n": 13,
+   "text": "struct P { int x, y; };",
+   "raw": {
+    "text": "struct P { int x, y; };",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.0,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "struct P { int x, y; };",
+    "output": "",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.001
+   }
+  },
+  {
+   "n": 14,
+   "text": "P p{1, 2};",
+   "raw": {
+    "text": "P p{1, 2};",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.0,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "P p{1, 2};",
+    "output": "",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.001
+   }
+  },
+  {
+   "n": 15,
+   "text": "p",
+   "raw": {
+    "text": "p",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.002,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "p",
+    "output": "<P>\n",
+    "notes": [
+     "P prints as <P>: an operator<<, or a repl::Put<P> specialisation, gives it a printer"
+    ],
+    "status": "ok",
+    "seconds": 0.022,
+    "run_seconds": 1.3445e-05
+   }
+  },
+  {
+   "n": 16,
+   "text": "std::ostream &operator<<(std::ostream &os, const P &q) { return os << q.x << \",\" << q.y; }",
+   "raw": {
+    "text": "std::ostream &operator<<(std::ostream &os, const P &q) { return os << q.x << \",\" << q.y; }",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.001,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "std::ostream &operator<<(std::ostream &os, const P &q) { return os << q.x << \",\" << q.y; }",
+    "output": "",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.002
+   }
+  },
+  {
+   "n": 17,
+   "text": "p",
+   "raw": {
+    "text": "p",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.002,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "p",
+    "output": "1,2\n",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.017,
+    "run_seconds": 1.04e-05
+   }
+  },
+  {
+   "n": 18,
+   "text": "for (int i : v) {\n  std::cout << i << std::endl;\n}",
+   "raw": {
+    "text": "for (int i : v) {\n  std::cout << i << std::endl;\n}",
+    "output": "<<< inputs >>>:1:1: error: expected expression\n<<< inputs >>>:1:1: error: expected expression\n<<< inputs >>>:1:1: error: expected expression\n<<< inputs >>>:1:1: error: expected expression\n<<< inputs >>>:1:1: error: expected expression\n<<< inputs >>>:1:1: error: expected expression\n<<< inputs >>>:1:1: error: expected expression\n<<< inputs >>>:1:1: error: expected expression\n<<< inputs >>>:1:1: error: expected expression\n<<< inputs >>>:1:1: error: expected expression\n<<< inputs >>>:1:1: error: expected expression\n<<< inputs >>>:1:1: error: expected expression\n<<< inputs >>>:1:1: error: expected expression\n<<< inputs >>>:1:1: error: expected expression\n<<< inputs >>>:1:1: error: expected expression\n<<< inputs >>>:1:1: error: expected expression\n<<< inputs >>>:1:1: error: expected expression\n<<< inputs >>>:1:1: error: expected expression\n<<< inputs >>>:1:1: error: expected expression\nfatal error: too many errors emitted, stopping now [-ferror-limit=]\n",
+    "state": "hung",
+    "seconds": 20.027,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "for (int i : v) {\n  std::cout << i << std::endl;\n}",
+    "output": "3\n1\n2\n",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.018,
+    "run_seconds": 1.2534e-05
+   }
+  },
+  {
+   "n": 19,
+   "text": "if (x > 40)\n  std::cout << \"big\" << std::endl;\nelse\n  std::cout << \"small\" << std::endl;",
+   "raw": {
+    "text": "if (x > 40)\n  std::cout << \"big\" << std::endl;\nelse\n  std::cout << \"small\" << std::endl;",
+    "output": "<<< inputs >>>:1:1: error: expected expression\nerror: Parsing failed.\nbig\nIn file included from <<< inputs >>>:1:\ninput_line_21:1:1: error: expected expression\n    1 | else\n      | ^\nerror: Parsing failed.\nsmall\n",
+    "state": "ok",
+    "seconds": 0.004,
+    "fresh": true
+   },
+   "cpp_repl": {
+    "text": "if (x > 40)\n  std::cout << \"big\" << std::endl;\nelse\n  std::cout << \"small\" << std::endl;",
+    "output": "big\n",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.016,
+    "run_seconds": 8.767e-06
+   }
+  },
+  {
+   "n": 20,
+   "text": "std::for_each(v.begin(), v.end(), [](int i) { std::cout << i << std::endl; });",
+   "raw": {
+    "text": "std::for_each(v.begin(), v.end(), [](int i) { std::cout << i << std::endl; });",
+    "output": "3\n1\n2\n",
+    "state": "ok",
+    "seconds": 0.004,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "std::for_each(v.begin(), v.end(), [](int i) { std::cout << i << std::endl; });",
+    "output": "3\n1\n2\n",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.018,
+    "run_seconds": 1.2233e-05
+   }
+  },
+  {
+   "n": 21,
+   "text": "[] { std::cout << \"lambda\" << std::endl; }();",
+   "raw": {
+    "text": "[] { std::cout << \"lambda\" << std::endl; }();",
+    "output": "Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point to it):\n0  libLLVM.so.23.1      0x000076b9797ecc5f llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) + 63\n1  libLLVM.so.23.1      0x000076b9797ea4bb llvm::sys::RunSignalHandlers() + 43\n2  libLLVM.so.23.1      0x000076b9797edb03\n3  libc.so.6            0x000076b97422f330\n4  libclang-cpp.so.23.1 0x000076b97f7f44b7\n5  libclang-cpp.so.23.1 0x000076b97f7f7230\n6  libclang-cpp.so.23.1 0x000076b97f7f71ff\n7  libclang-cpp.so.23.1 0x000076b97f7f3b2c\n8  libclang-cpp.so.23.1 0x000076b97f7e282b\n9  libclang-cpp.so.23.1 0x000076b97f7e158a\n10 libclang-cpp.so.23.1 0x000076b97f7dd6c7\n11 libclang-cpp.so.23.1 0x000076b9806c328d\n12 libclang-cpp.so.23.1 0x000076b9806ba471 clang::CodeGen::CodeGenModule::getMangledName(clang::GlobalDecl) + 385\n13 libclang-cpp.so.23.1 0x000076b9806d5317 clang::CodeGen::CodeGenModule::GetAddrOfFunction(clang::GlobalDecl, llvm::Type*, bool, bool, clang::CodeGen::ForDefinition_t) + 471\n14 libclang-cpp.so.23.1 0x000076b9804d5b5c clang::CodeGen::CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(clang::CallExpr const*, clang::CXXMethodDecl const*, clang::CodeGen::ReturnValueSlot, bool, clang::NestedNameSpecifier, bool, clang::Expr const*, llvm::CallBase**) + 4172\n15 libclang-cpp.so.23.1 0x000076b9804d6140 clang::CodeGen::CodeGenFunction::EmitCXXOperatorMemberCallExpr(clang::CXXOperatorCallExpr const*, clang::CXXMethodDecl const*, clang::CodeGen::ReturnValueSlot, llvm::CallBase**) + 96\n16 libclang-cpp.so.23.1 0x000076b9804be228 clang::CodeGen::CodeGenFunction::EmitCallExpr(clang::CallExpr const*, clang::CodeGen::ReturnValueSlot, llvm::CallBase**) + 488\n17 libclang-cpp.so.23.1 0x000076b980509fde\n18 libclang-cpp.so.23.1 0x000076b980509275\n19 libclang-cpp.so.23.1 0x000076b9804f8b71 clang::CodeGen::CodeGenFunction::EmitScalarExpr(clang::Expr const*, bool) + 97\n20 libclang-cpp.so.23.1 0x000076b9804999f1 clang::CodeGen::CodeGenFunction::EmitIgnoredExpr(clang::Expr const*) + 449\n21 libclang-cpp.so.23.1 0x000076b980641102 clang::CodeGen::CodeGenFunction::EmitStmt(clang::Stmt const*, llvm::ArrayRef<clang::Attr const*>) + 434\n22 libclang-cpp.so.23.1 0x000076b9806d97b0 clang::CodeGen::CodeGenModule::EmitTopLevelStmt(clang::TopLevelStmtDecl const*) + 1168\n23 libclang-cpp.so.23.1 0x000076b98077dd8c\n24 libclang-cpp.so.23.1 0x000076b98069bc08 clang::BackendConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 200\n25 libclang-cpp.so.23.1 0x000076b980ef4d3c clang::MultiplexConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 60\n26 libclang-cpp.so.23.1 0x000076b9815b4232 clang::InProcessPrintingASTConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 258\n27 libclang-cpp.so.23.1 0x000076b9815bacac clang::IncrementalParser::ParseOrWrapTopLevelDecl() + 716\n28 libclang-cpp.so.23.1 0x000076b9815bb32d clang::IncrementalParser::Parse(llvm::StringRef) + 1069\n29 libclang-cpp.so.23.1 0x000076b9815bf4ff clang::Interpreter::Parse(llvm::StringRef) + 367\n30 libclang-cpp.so.23.1 0x000076b9815bec82 clang::Interpreter::ParseAndExecute(llvm::StringRef, clang::Value*) + 50\n31 clang-repl           0x0000643848951935 main + 5797\n32 libc.so.6            0x000076b9742141ca\n33 libc.so.6            0x000076b97421428b __libc_start_main + 139\n34 clang-repl           0x000064384894f435 _start + 37\n",
+    "state": "crashed (SIGSEGV)",
+    "seconds": 0.019,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "[] { std::cout << \"lambda\" << std::endl; }();",
+    "output": "lambda\n",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.016,
+    "run_seconds": 9.097e-06
+   }
+  },
+  {
+   "n": 22,
+   "text": "template <class T> T twice(T a) { return a + a; }",
+   "raw": {
+    "text": "template <class T> T twice(T a) { return a + a; }",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.0,
+    "fresh": true
+   },
+   "cpp_repl": {
+    "text": "template <class T> T twice(T a) { return a + a; }",
+    "output": "",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.001
+   }
+  },
+  {
+   "n": 23,
+   "text": "twice(21)",
+   "raw": {
+    "text": "twice(21)",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.002,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "twice(21)",
+    "output": "42\n",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.018,
+    "run_seconds": 1.095e-05
+   }
+  },
+  {
+   "n": 24,
+   "text": "std::stoi(\"abc\")",
+   "raw": {
+    "text": "std::stoi(\"abc\")",
+    "output": "terminate called after throwing an instance of 'std::invalid_argument'\n  what():  stoi\nStack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point to it):\n0  libLLVM.so.23.1      0x00007a477602ec5f llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) + 63\n1  libLLVM.so.23.1      0x00007a477602c4bb llvm::sys::RunSignalHandlers() + 43\n2  libLLVM.so.23.1      0x00007a477602fb03\n3  libc.so.6            0x00007a4770a71330\n4  libc.so.6            0x00007a4770acac0c pthread_kill + 284\n5  libc.so.6            0x00007a4770a7127e gsignal + 30\n6  libc.so.6            0x00007a4770a548ff abort + 223\n7  libstdc++.so.6       0x00007a4770dfdff5\n8  libstdc++.so.6       0x00007a4770e130da\n9  libstdc++.so.6       0x00007a4770dfda55 std::unexpected() + 0\n10 libstdc++.so.6       0x00007a4770e13391\n11 libstdc++.so.6       0x00007a4770e01277 std::__throw_invalid_argument(char const*) + 68\n12 (error)              0x00007a476d1c2164\n13 (error)              0x00007a476d1c20fe\n14 (error)              0x00007a476d1c2035\n15 (error)              0x00007a476d1c22bd\n16 (error)              0x00007a476d1c20ba\n17 libLLVM.so.23.1      0x00007a47782f6e52\n18 libclang-cpp.so.23.1 0x00007a477de00ce6 clang::Interpreter::ParseAndExecute(llvm::StringRef, clang::Value*) + 150\n19 clang-repl           0x00005ab06f9e8935 main + 5797\n20 libc.so.6            0x00007a4770a561ca\n21 libc.so.6            0x00007a4770a5628b __libc_start_main + 139\n22 clang-repl           0x00005ab06f9e6435 _start + 37\n",
+    "state": "crashed (SIGABRT)",
+    "seconds": 0.017,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "std::stoi(\"abc\")",
+    "output": "",
+    "notes": [
+     "uncaught exception: std::invalid_argument: stoi"
+    ],
+    "status": "exception",
+    "seconds": 0.02,
+    "run_seconds": 0.000106851
+   }
+  },
+  {
+   "n": 25,
+   "text": "int *p0 = nullptr;",
+   "raw": {
+    "text": "int *p0 = nullptr;",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.0,
+    "fresh": true
+   },
+   "cpp_repl": {
+    "text": "int *p0 = nullptr;",
+    "output": "",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.001
+   }
+  },
+  {
+   "n": 26,
+   "text": "*p0 = 42;",
+   "raw": {
+    "text": "*p0 = 42;",
+    "output": "Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point to it):\n0  libLLVM.so.23.1      0x00007e492d0cac5f llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) + 63\n1  libLLVM.so.23.1      0x00007e492d0c84bb llvm::sys::RunSignalHandlers() + 43\n2  libLLVM.so.23.1      0x00007e492d0cbb03\n3  libc.so.6            0x00007e4927b0d330\n4  (error)              0x00007e492425f00a\n5  (error)              0x00007e492425f03d\n6  (error)              0x00007e492425f02a\n7  libLLVM.so.23.1      0x00007e492f392e52\n8  libclang-cpp.so.23.1 0x00007e4934e9cce6 clang::Interpreter::ParseAndExecute(llvm::StringRef, clang::Value*) + 150\n9  clang-repl           0x00005b4b6cc8a935 main + 5797\n10 libc.so.6            0x00007e4927af21ca\n11 libc.so.6            0x00007e4927af228b __libc_start_main + 139\n12 clang-repl           0x00005b4b6cc88435 _start + 37\n",
+    "state": "crashed (SIGSEGV)",
+    "seconds": 0.011,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "*p0 = 42;",
+    "output": "",
+    "notes": [
+     "clang-repl crashed (SIGSEGV): restored 25 inputs"
+    ],
+    "status": "crash",
+    "seconds": 1.91
+   }
+  },
+  {
+   "n": 27,
+   "text": "v",
+   "raw": {
+    "text": "v",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.001,
+    "fresh": true
+   },
+   "cpp_repl": {
+    "text": "v",
+    "output": "[3, 1, 2]\n",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.02,
+    "run_seconds": 1.613e-05
+   }
+  },
+  {
+   "n": 28,
+   "text": "%undo",
+   "raw": {
+    "text": "%undo",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.0,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "%undo",
+    "output": "undo: v\n",
+    "notes": [
+     "undo: restored 25 inputs"
+    ],
+    "status": "ok",
+    "seconds": 2.103
+   }
+  },
+  {
+   "n": 29,
+   "text": "int x = 1;",
+   "raw": {
+    "text": "int x = 1;",
+    "output": "input_line_28:1:5: error: redefinition of 'x'\n    1 | int x = 1;\n      |     ^\ninput_line_7:1:5: note: previous definition is here\n    1 | int x = 42;\n      |     ^\nerror: Parsing failed.\n",
+    "state": "ok",
+    "seconds": 0.0,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "int x = 1;",
+    "output": "",
+    "notes": [
+     "x redefined: 24 inputs replayed"
+    ],
+    "status": "ok",
+    "seconds": 2.123
+   }
+  },
+  {
+   "n": 30,
+   "text": "#include <nosuch.h>",
+   "raw": {
+    "text": "#include <nosuch.h>",
+    "output": "input_line_29:1:10: fatal error: 'nosuch.h' file not found\n    1 | #include <nosuch.h>\n      |          ^~~~~~~~~~\nerror: Parsing failed.\n",
+    "state": "ok",
+    "seconds": 0.0,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "#include <nosuch.h>",
+    "output": "<input>:1:10: fatal error: 'nosuch.h' file not found\n    1 | #include <nosuch.h>\n      |          ^~~~~~~~~~\nerror: Parsing failed.\n",
+    "notes": [],
+    "status": "error",
+    "seconds": 0.001
+   }
+  },
+  {
+   "n": 31,
+   "text": "void greet() { std::cout << \"hi\" << std::endl; }",
+   "raw": {
+    "text": "void greet() { std::cout << \"hi\" << std::endl; }",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.001,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "void greet() { std::cout << \"hi\" << std::endl; }",
+    "output": "",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.001
+   }
+  },
+  {
+   "n": 32,
+   "text": "greet()",
+   "raw": {
+    "text": "greet()",
+    "output": "",
+    "state": "ok",
+    "seconds": 0.001,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "greet()",
+    "output": "hi\n",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.016,
+    "run_seconds": 1.0439e-05
+   }
+  },
+  {
+   "n": 33,
+   "text": "std::cout << \"done\" << std::endl",
+   "raw": {
+    "text": "std::cout << \"done\" << std::endl",
+    "output": "done\n",
+    "state": "ok",
+    "seconds": 0.002,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "std::cout << \"done\" << std::endl",
+    "output": "done\n",
+    "notes": [],
+    "status": "ok",
+    "seconds": 0.016,
+    "run_seconds": 1.0189e-05
+   }
+  },
+  {
+   "n": 34,
+   "text": "return 3;",
+   "raw": {
+    "text": "return 3;",
+    "output": "Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point to it):\n0  libLLVM.so.23.1      0x00007a30998fdc5f llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) + 63\n1  libLLVM.so.23.1      0x00007a30998fb4bb llvm::sys::RunSignalHandlers() + 43\n2  libLLVM.so.23.1      0x00007a30998feb03\n3  libc.so.6            0x00007a3094340330\n4  libclang-cpp.so.23.1 0x00007a309f9991a3 clang::Stmt::getEndLoc() const + 51\n5  libclang-cpp.so.23.1 0x00007a309f51ff66 clang::TopLevelStmtDecl::getSourceRange() const + 22\n6  libclang-cpp.so.23.1 0x00007a30a07ea65c clang::CodeGen::CodeGenModule::EmitTopLevelStmt(clang::TopLevelStmtDecl const*) + 828\n7  libclang-cpp.so.23.1 0x00007a30a088ed8c\n8  libclang-cpp.so.23.1 0x00007a30a07acc08 clang::BackendConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 200\n9  libclang-cpp.so.23.1 0x00007a30a1005d3c clang::MultiplexConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 60\n10 libclang-cpp.so.23.1 0x00007a30a16c5232 clang::InProcessPrintingASTConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 258\n11 libclang-cpp.so.23.1 0x00007a30a16cbcac clang::IncrementalParser::ParseOrWrapTopLevelDecl() + 716\n12 libclang-cpp.so.23.1 0x00007a30a16cc32d clang::IncrementalParser::Parse(llvm::StringRef) + 1069\n13 libclang-cpp.so.23.1 0x00007a30a16d04ff clang::Interpreter::Parse(llvm::StringRef) + 367\n14 libclang-cpp.so.23.1 0x00007a30a16cfc82 clang::Interpreter::ParseAndExecute(llvm::StringRef, clang::Value*) + 50\n15 clang-repl           0x00005c3f16955935 main + 5797\n16 libc.so.6            0x00007a30943251ca\n17 libc.so.6            0x00007a309432528b __libc_start_main + 139\n18 clang-repl           0x00005c3f16953435 _start + 37\n",
+    "state": "crashed (SIGSEGV)",
+    "seconds": 0.012,
+    "fresh": false
+   },
+   "cpp_repl": {
+    "text": "return 3;",
+    "output": "",
+    "notes": [
+     "main returned 3"
+    ],
+    "status": "ok",
+    "seconds": 0.015,
+    "run_seconds": 5.621e-06,
+    "returned": 3
+   }
+  },
+  {
+   "n": 35,
+   "text": "%quit",
+   "raw": {
+    "text": "%quit",
+    "output": "(int) 43\n(std::vector<int, std::allocator<int> > &) @0x77c694c1d008\n(int) 3\n(std::map<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, int, std::less<std::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<const std::basic_string<char, std::char_traits<char>, std::allocator<char> >, int> > > &) @0x77c694bfb000\n(P &) @0x77c694bf1000\n(P &) @0x77c694bf1000\n(int) 42\n(std::vector<int, std::allocator<int> > &) @0x77c694c1d008\n(std::basic_ostream<char, std::char_traits<char> > &) @0x77c6989ee580\n\n",
+    "state": "exited (code 0)",
+    "seconds": 0,
+    "fresh": true,
+    "at_exit": true
+   },
+   "cpp_repl": {
+    "text": "%quit",
+    "output": "",
+    "notes": [],
+    "status": "exited (code 0)",
+    "seconds": 0.0
+   }
+  }
+ ],
+ "startup": {
+  "raw": [
+   0.032,
+   0.032,
+   0.032
+  ],
+  "raw_with_includes": [
+   0.565,
+   0.516,
+   0.515
+  ],
+  "cpp_repl": [
+   1.967,
+   2.017,
+   2.017
+  ],
+  "cpp_repl_no_std": [
+   1.466,
+   1.466,
+   1.516
+  ],
+  "connect": [
+   0.064,
+   0.064,
+   0.064
+  ],
+  "connect_fresh": [
+   0.064
+  ]
+ },
+ "latency": {
+  "raw": {
+   "declaration": [
+    0.00048358901403844357,
+    0.0001870619598776102,
+    0.0001736559788696468,
+    0.00016941799549385905,
+    0.00016687402967363596,
+    0.00017346598906442523,
+    0.00016229500761255622,
+    0.00016168301226571202,
+    0.00016232504276558757,
+    0.00015994999557733536,
+    0.0001690879580564797,
+    0.00017438799841329455,
+    0.00016273598885163665,
+    0.00017345603555440903,
+    0.00018185097724199295,
+    0.00021715799812227488,
+    0.00026649999199435115,
+    0.0002213959814980626,
+    0.00021754804765805602,
+    0.00021229899721220136
+   ],
+   "expression": [
+    0.0034241239773109555,
+    0.0021531159873120487,
+    0.002371366019360721,
+    0.002105716965161264,
+    0.0018480819999240339,
+    0.002015036006923765,
+    0.001957348024006933,
+    0.0028067139792256057,
+    0.0021166869555599988,
+    0.0019398850272409618,
+    0.0021258139749988914,
+    0.0020375889725983143,
+    0.0019327810150571167,
+    0.0021208240068517625,
+    0.001994606980588287,
+    0.0019651520415209234,
+    0.0019341339939273894,
+    0.0019207890145480633,
+    0.0022856550058349967,
+    0.0023239869624376297
+   ],
+   "statement": [
+    0.0020349029800854623,
+    0.0016363050090149045,
+    0.0016967079718597233,
+    0.0017083899583667517,
+    0.001677771972026676,
+    0.0016387089854106307,
+    0.0016289710183627903,
+    0.001616237044800073,
+    0.0018738709622994065,
+    0.0022113449522294104,
+    0.00171141600003466,
+    0.0016698180115781724,
+    0.001727956987451762,
+    0.001925246964674443,
+    0.0016293819644488394,
+    0.001617219008039683,
+    0.0016167080029845238,
+    0.0017625319887883961,
+    0.00186441297410056,
+    0.001638729008845985
+   ]
+  },
+  "cpp_repl": {
+   "declaration": [
+    0.0006527269724756479,
+    0.00048195599811151624,
+    0.0004423609934747219,
+    0.00044350401731207967,
+    0.0005008509615436196,
+    0.000525166979059577,
+    0.0004275040118955076,
+    0.00043330498738214374,
+    0.0004307400085963309,
+    0.0006145950173959136,
+    0.0008759560296311975,
+    0.0004245180170983076,
+    0.0005132349906489253,
+    0.00042462802957743406,
+    0.00039641500916332006,
+    0.0004860830376856029,
+    0.0003947019577026367,
+    0.00040357798570767045,
+    0.0004263310111127794,
+    0.0004243769799359143
+   ],
+   "declaration_run": [],
+   "expression": [
+    0.04639080702327192,
+    0.017502146016340703,
+    0.016986387025099248,
+    0.016934980056248605,
+    0.01705181901343167,
+    0.017075915005989373,
+    0.017248067946638912,
+    0.01728106098016724,
+    0.01761084998724982,
+    0.017748658952768892,
+    0.0185934659675695,
+    0.016272466047666967,
+    0.015969014959409833,
+    0.016914431005716324,
+    0.017037271987646818,
+    0.016470328031573445,
+    0.01658035395666957,
+    0.017189929028972983,
+    0.017034617019817233,
+    0.01707446202635765
+   ],
+   "expression_run": [
+    1.8885e-05,
+    1.0971e-05,
+    1.055e-05,
+    9.718e-06,
+    9.588e-06,
+    1.1432e-05,
+    1.1301e-05,
+    1.1151e-05,
+    1.6832e-05,
+    1.2624e-05,
+    1.2083e-05,
+    1.081e-05,
+    9.448e-06,
+    1.1622e-05,
+    1.0449e-05,
+    9.868e-06,
+    9.407e-06,
+    1.0229e-05,
+    9.458e-06,
+    1.074e-05
+   ],
+   "statement": [
+    0.016287783975712955,
+    0.016454197000712156,
+    0.016754590964410454,
+    0.016747607965953648,
+    0.016035380016546696,
+    0.016002457996364683,
+    0.015819795022252947,
+    0.016779226949438453,
+    0.017221068032085896,
+    0.017402518016751856,
+    0.016900425020139664,
+    0.016693166049662977,
+    0.016629917023237795,
+    0.01707518403418362,
+    0.017196412023622543,
+    0.016964525973889977,
+    0.016865159035660326,
+    0.016814603994134814,
+    0.01663792203180492,
+    0.01681844098493457
+   ],
+   "statement_run": [
+    9.608e-06,
+    1.1612e-05,
+    1.1381e-05,
+    1.1242e-05,
+    1.0349e-05,
+    9.498e-06,
+    1.0109e-05,
+    1.1391e-05,
+    1.2023e-05,
+    1.1161e-05,
+    1.1481e-05,
+    1.0881e-05,
+    1.1812e-05,
+    1.2213e-05,
+    1.1562e-05,
+    1.0189e-05,
+    1.1642e-05,
+    1.1191e-05,
+    1.0189e-05,
+    1.0089e-05
+   ]
+  }
+ }
+}

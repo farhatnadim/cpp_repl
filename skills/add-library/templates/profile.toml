@@ -1,8 +1,7 @@
 # <lib> <version> for cpp-repl, from <the CMake package, pkg-config module or headers it came from>.
 # Start a session with: cpp-repl -c .cpp-repl/<lib>.toml
 #
-# Paths are relative to this file, except inside flags, which cpp-repl reads
-# from the working directory: write those absolute.
+# Paths are relative to this file, inside flags too.
 
 # The library's include directories, as -isystem so that its own warnings stay quiet.
 # Never /usr/include or /usr/local/include: the compiler searches them already.

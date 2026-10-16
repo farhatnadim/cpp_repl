@@ -10,12 +10,11 @@ checkout. Use it in two cases:
 
 ## What the container sees
 
-cpp-repl mounts these directories at their own paths, read-only:
-- the working directory;
-- the cpp-repl checkout;
-- its state directory;
-- every directory the profile reads outside the image's own tree: include
-  directories, libraries, preludes and `compile_commands.json`.
+cpp-repl mounts these directories at their own paths:
+- the working directory and its state directory, read-write;
+- the cpp-repl checkout, read-only;
+- every directory the profile reads outside the image's own tree, read-only:
+  include directories, libraries, preludes and `compile_commands.json`.
 
 A path therefore means the same inside the container as outside it.
 

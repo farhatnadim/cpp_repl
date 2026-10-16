@@ -16,9 +16,12 @@ would inside `main()`, and:
   tuples, optionals, variants, smart pointers and wide strings, and your own
   types through their `operator<<`. Profiles add Eigen matrices and OpenUSD
   stages.
-- **A crash costs nothing.** A segfault, a Ctrl-C or a link failure replays the
-  session's journal into a spare clang-repl that is already running. Five
-  inputs come back in 0.05 s, every variable with them.
+- **A crash costs nothing at the prompt.** A segfault, a Ctrl-C or a link
+  failure replays the session's journal into a spare clang-repl that is
+  already running. Five inputs come back in 0.05 s, every variable with them.
+  An exception nothing catches is named and ends the program, not the
+  session. (A `--batch` run stops where the program would: at a crash, an
+  `exit()` or a `return` from `main()`.)
 - **Programs and sessions convert both ways.**
   - `cpp-repl prog.cpp` runs `main()` one statement at a time and leaves you
     at the prompt, its variables in scope.
@@ -31,9 +34,11 @@ would inside `main()`, and:
   for a coding agent that fixes the code and runs it again.
 - **It points at your project.** It takes `compile_commands.json`, a
   `cpp-repl.toml`, compiler flags and shared libraries.
-- **It works with every clang-repl from 18 to 24.** It works around what each
-  version gets wrong ([Why a front end](#why-a-front-end)), and Docker images
-  carry the newest one.
+- **It works with clang-repl 18, 23 and LLVM's development snapshot (24).**
+  It works around what each version gets wrong
+  ([Why a front end](#why-a-front-end)), and Docker images carry the newest
+  ones. The default standard is the newest the clang knows: gnu++26 from
+  clang 17.
 
 ```
 $ cpp-repl --docker
@@ -114,12 +119,17 @@ c++> std::map<std::string, int>{{"one", 1}, {"two", 2}}
 {"one": 1, "two": 2}
 ```
 
-- **Enter** runs the input once it is complete. **Esc then Enter** runs a block
-  as it stands. A pasted block can mix `#include` lines and code. If it ends in
-  a bare expression, its value prints, as a notebook cell's does.
-- **Tab** completes names from every header the session includes, and the
-  session's own names. **Ctrl-R** searches the history.
+- **Enter** runs the input once it is complete. **Esc then Enter** (with
+  prompt_toolkit) runs a block as it stands. A pasted block can mix `#include`
+  lines and code. If it ends in a bare expression, its value prints, as a
+  notebook cell's does.
+- **Tab** completes names from every header the preludes include (read
+  through the clang++ beside clang-repl), and the session's own names.
+  **Ctrl-R** searches the history.
 - **Ctrl-C** stops a running input and rebuilds the session without it.
+- **A `return N;`** ends the program as `main()`'s return does, and an
+  exception nothing catches as `abort()` would; the prompt says so and goes
+  on.
 
 | Command | What it does |
 | --- | --- |
@@ -193,9 +203,10 @@ cpp-repl --batch --json prog.cpp              # a JSON object per input
   program's own, with the errors where they arise.
 - **`--json`** writes a JSON object per input instead: `input`, `file`,
   `line`, `status` (`ok`, `error`, `link`, `crash`, `exit`, `stuck`,
-  `timeout`, `interrupted`), `seconds`, `output`, `notes`, and `returned`
-  when the input returned from `main()`. The last line holds the exit status,
-  the number of inputs and the failures.
+  `timeout`, `interrupted`, `exception`), `seconds`, `output`, `notes`, and
+  `returned` when the input returned from `main()`. The last line holds the
+  exit status, the number of inputs, the failures, and the inputs skipped
+  once the program ended.
 - **The exit status is the program's:** what `main()` returned, the `N` of
   its `exit(N)`, or 128 + the signal that killed it (139 for a segfault, 134
   for `abort()` and for an exception nothing caught, which cpp-repl names:
@@ -209,12 +220,14 @@ cpp-repl --batch --json prog.cpp              # a JSON object per input
 - **A session that stays.** `cpp-repl --serve SOCKET` keeps a session
   running, its profiles loaded. `cpp-repl --connect SOCKET [FILE...]` runs
   files, or stdin, in it, and exits with the run's status. A run there takes
-  0.06 s, against 1.3 s for a new cpp-repl, or 4 s with `-p usd`. The
+  0.06 s, against about 2 s for a new cpp-repl, or 4 s with `-p usd`. The
   session's names carry over from run to run. `--fresh` starts a run from an
-  empty session instead, for a program run again after an edit; for now it
-  costs about one start-up. `%quit` stops the server. Whoever connects runs
-  code as the server's user, so the socket is created readable and writable
-  by that user alone.
+  empty session instead, for a program run again after an edit, in the spare
+  clang-repl the server keeps warm. `--timeout`, `--stop-on-error`,
+  `--diagnostics`, `-q` and `--json` apply to the run; the flags, profiles
+  and libraries are the server's. `%quit` stops the server. Whoever connects
+  runs code as the server's user, so the socket is created readable and
+  writable by that user alone.
 
   ```sh
   cpp-repl --serve repl.sock -p eigen &
@@ -238,21 +251,27 @@ cpp-repl -p eigen -O3 --native
 ## Your project, your libraries
 
 Compiler flags go to clang as they are: `-I DIR`, `-isystem DIR`,
-`-D NAME=VALUE`, `-U NAME`, `-O3`, `-std=c++23`, `-march=...`, `-f...`,
-`-W...`, `-pthread`. Shared libraries load with `--lib PATH`, or with
-`-l NAME` and `-L DIR`, found as the linker finds them: in the `-L`
+`-D NAME=VALUE`, `-U NAME`, `-O3`, `-std=c++23`, `-stdlib=libc++`,
+`-include FILE` (a prelude of your own, parsed before the first input),
+`-march=...`, `-f...`, `-W...`, `-pthread`, `-isysroot`, `--sysroot`,
+`--gcc-toolchain=`, `-nostdinc++`. Shared libraries load with `--lib PATH`,
+or with `-l NAME` and `-L DIR`, found as the linker finds them: in the `-L`
 directories, `$LIBRARY_PATH`, the usual places, then the loader's cache. A
 linker script, such as glibc's `libm.so`, is followed to the library it
-names.
+names. With `-stdlib=libc++`, cpp-repl loads libc++'s runtime first, since
+clang-repl itself is linked with libstdc++; the Docker images carry it, and
+with it the C++23 library (`std::println`, `std::expected`, `std::mdspan`)
+that libstdc++ 13 lacks.
 
 ```sh
 cpp-repl -I include -DFAST=1 -L build -l mylib -O2
-cpp-repl --compile-commands build      # flags as your build compiles: -I, -D, -std, -m
+cpp-repl --compile-commands build      # flags as your build compiles: -I, -D, -std, -m, -include
 ```
 
 From `compile_commands.json`, cpp-repl takes the flags of the entry for the
-file you load (or the first entry). The optimisation level and warnings stay
-the REPL's own.
+file you load (or the first entry): its include directories, definitions,
+standard, `-m` flags, a forced `-include` as a prelude, and its `-Wno-`
+flags. The optimisation level stays the REPL's own.
 
 A `cpp-repl.toml` in the working directory, or any directory above it, says
 the same once for a project. `-c FILE` reads another; paths in it are relative
@@ -276,24 +295,28 @@ The precedence, from lowest to highest:
 4. `-c` files
 5. the command line
 
-For `-I`, the first match wins; for `-D`, the last definition wins. The
-prelude's templates need C++20, so a lower `-std` is raised, and the startup
-line says so.
+For `-I`, the first match wins; for `-D`, the last definition wins. Without
+a `-std`, the session compiles as the newest standard its clang knows:
+gnu++26 from clang 17, gnu++23 from clang 12. The prelude's templates need
+C++20, so a lower `-std` is raised, and the startup line says so.
 
 ### Profiles
 
 | Profile | What it adds |
 | --- | --- |
-| `-p eigen` | `<Eigen/Dense>`, found through `EIGEN_ROOT`, pkg-config or the usual places. A matrix prints with its shape; past 10 rows or columns, only the first and last three. |
+| `-p eigen` | `<Eigen/Dense>`, found through `EIGEN_ROOT`, pkg-config or the usual places. A matrix prints with its shape; past 10 rows or columns, only the first and last three. A comma initialiser (`m << 1, 2, 3`) prints the matrix it filled; quaternions, angle-axis rotations and transforms print too. |
 | `-p glm` | `<glm/glm.hpp>` with the matrix-transform and quaternion extensions, found through `GLM_ROOT`, pkg-config or the usual prefixes. A vector prints as `vec3(1, 2, 3)`, a quaternion as `quat(w, x, y, z)`, a matrix as its rows. |
-| `-p usd` | OpenUSD's libraries and `using namespace pxr`. A stage prints its usda; a prim its type, properties and children; an attribute its value and time samples. `tree(stage)` prints the hierarchy. The install is found through the `CMakeCache.txt` next to `compile_commands.json`, then `USD_ROOT`. |
+| `-p usd` | OpenUSD's libraries and `using namespace pxr`. A stage prints its usda; a prim its type, properties and children; an attribute its value and time samples. `tree(stage)` prints the hierarchy. The install is found through the `CMakeCache.txt` next to `compile_commands.json`, then `USD_ROOT`. The session compiles as C++20: OpenUSD's headers do not build as C++23 or later. |
 
 A profile of your own is a `cpp-repl.toml`-style file, loaded with `-c`. To
-make your types print, give them an `operator<<` in their own namespace,
-where argument-dependent lookup finds it, as it finds it for any template.
-cpp-repl finds one defined after the type first printed, in a list too. A
-type with no printer prints as `<Type>`, and a note says how to give it one.
-For a display of more than one line, specialise `repl::Show<T>`. See `src/cpp_repl/prelude/cpp_repl.h`, and
+make your types print, give them a non-member `operator<<` in their own
+namespace, where argument-dependent lookup finds it, as it finds it for any
+template. cpp-repl finds one defined after the type first printed, in a list
+too, and for an enum. A type that merely converts to `bool` or to a number
+does not print through the stream's own inserters: it prints as `<Type>`,
+with a note that says how to give it a printer. For a display of more than
+one line, specialise `repl::Show<T>`; for one line inside a list,
+`repl::Put<T>`. See `src/cpp_repl/prelude/cpp_repl.h`, and
 `profiles/eigen/cpp_repl_eigen.h` for an example.
 
 ### With Claude Code
@@ -421,43 +444,76 @@ Everything is in [bench/](bench/README.md).
   660 GFLOP/s.
 - **Untuned, it is about 300× slower.** The default is -O0, and leaving out
   `--native` costs almost two thirds of the speed.
-- **NumPy was a few percent behind Eigen at every size,** contrary to the
-  prediction written down before the run.
+- **NumPy was 1.5–6% behind Eigen from n = 512 up,** half as fast at n = 32
+  and ahead at n = 384, contrary to the prediction written down before the
+  run.
 - **What the REPL costs is compile time, not run time.**
   - Cold start to the first product: 3.2 s, against 2.5 s to compile and
     run natively and 0.06 s in NumPy.
   - In a running session, calling the kernel again costs 0.08 s, and a new
     product expression 0.72 s to compile.
 
+## What C++ you can type
+
+Every construct below was typed into cpp-repl on clang-repl 18.1.3, 23.1.4
+and the 24 snapshot, with the same result on each (`tests/sessions/` holds
+the transcripts):
+- the C++20 language: concepts and `requires`, abbreviated templates
+  (`auto add(auto a, auto b)`), `consteval`, `constinit`, `if constexpr`,
+  structured bindings, designated initialisers, `<=>`, `co_await` in a
+  function, `[[nodiscard]]`, user-defined literals, `extern "C"`, static
+  locals, `goto`, lambdas anywhere (passed to `std::sort`, immediately
+  invoked, in a `std::thread`), class templates with out-of-line members,
+  virtual functions, `using namespace std`, multi-line raw strings, digit
+  separators;
+- the C++23 language where the clang has it (`if consteval`, deducing
+  `this`, `auto(x)`), and `std::expected` from clang 19, or with
+  `-stdlib=libc++`;
+- the standard library of C++20 without an `#include`: containers, ranges and
+  views, `std::format`, `std::variant`, `std::optional`, `std::atomic`,
+  `std::thread` and `std::jthread`, `std::chrono` literals, `std::numbers`,
+  `std::source_location`, `std::span`, `std::bit_cast`;
+- an uncaught exception, a `return` from `main()`, `exit()` and a crash,
+  each ending the program as it does compiled.
+
+What a version lacks is clang-repl's own: 18's JIT cannot assemble inline
+`asm`, so Eigen's dynamic-size products abort there; `<print>`,
+`<generator>`, `<mdspan>` and `<flat_map>` need libstdc++ 14 or libc++
+(`cpp-repl --docker -stdlib=libc++`), and cpp-repl says so when an
+`#include` of them fails. `import std;` has no module file in any of them.
+
 ## Limits
 
-- **Each input is compiled on its own, and a name can't be defined twice.**
-  `auto x = ...` a second time is an error. Assign instead, pick a new name,
-  or `%undo`.
 - **Variables typed at the prompt are globals.** A name can clash with a C
   library function: `int index = 3;` fails.
 - **Rebuilding replays the journal,** file writes and other side effects
-  included.
+  included; declaring a name again replays the inputs after its old
+  declaration.
 - **Code that reads file descriptor 0 itself,** with `read(0, ...)` or
   `/dev/stdin`, reads what cpp-repl sends clang-repl. `stdin` and `std::cin`
   read the program's input.
 - **An input with a backslash line splice outside a directive goes as one
-  line,** and so does `%timeit`'s. A multi-line raw string literal in it
-  becomes an ordinary escaped literal, and its errors name `input_line_N`.
-- **Startup takes about 1.3 s,** or 1.0 s with `--no-std`, which leaves out
+  line,** and so does `%timeit`'s, and its errors name `input_line_N`.
+- **An exception thrown by a file-scope declaration's initialiser** (`auto
+  x = parse("bad");`) still ends the session, which is rebuilt; one thrown
+  by a statement is caught and named.
+- **Startup takes about 2 s,** or 1.3 s with `--no-std`, which leaves out
   the standard library prelude. A profile adds its headers: Eigen about
-  0.5 s, OpenUSD about 3 s. Docker adds about 0.2 s.
+  1 s, OpenUSD about 3 s. Docker adds about 0.2 s.
 - **Your headers must compile with your clang-repl.**
   - clang 23 rejects TBB 2020's headers, so the `usd` profile needs an
-    OpenUSD built against oneTBB there.
+    OpenUSD built against oneTBB there; and OpenUSD's headers do not build
+    as C++23 or later, so that profile compiles as C++20.
   - clang-repl 18 can't run Eigen's dynamic-size products, as the table shows.
-- **C++20 is the floor.**
+- **C++20 is the floor.** The default is the newest standard the clang knows.
 
 ## How it works
 
 - **[`lexer.py`](src/cpp_repl/lexer.py)** finds where inputs and statements
   end. It decides what clang-repl gets:
-  - control flow and lambda statements inside a function of their own;
+  - control flow, lambda statements and expression statements inside a
+    function of their own, where a `return` ends the program and an
+    exception is caught; declarations and definitions at file scope;
   - each input through a temporary file and an `#include`, after a `#line`
     directive, at its source's lines and columns;
   - a bare expression through `repl::print_expr`.
@@ -470,8 +526,10 @@ Everything is in [bench/](bench/README.md).
   - **Calibration:** at startup it learns the marker's text and any prompt.
     It also checks that a parse error is recognised.
 - **[`session.py`](src/cpp_repl/session.py)** journals the inputs that
-  worked. After a crash, a Ctrl-C, a link failure or `%undo`, it replays them
-  into a spare clang-repl started in advance.
+  worked. After a crash, a Ctrl-C, a link failure, `%undo` or a name declared
+  again, it replays them into a spare clang-repl started in advance.
+- **[`server.py`](src/cpp_repl/server.py)** is `--serve` and `--connect`: one
+  session on a Unix socket, for a coding agent's loop.
 - **[`prelude/cpp_repl.h`](src/cpp_repl/prelude/cpp_repl.h)** is the C++
   every session starts from: `show`, `Show<T>`/`Put<T>`, `keep` and `timeit`.
   Profiles add their own headers.
@@ -503,7 +561,8 @@ claude plugin validate .                                 # the Claude Code plugi
 claude plugin eval . --case yaml-cpp --runs 1 --ablation none   # one skill eval (real model calls)
 ```
 
-The test suite passes on clang-repl 18.1.3, 23.1.2 and the 24 snapshot:
+The test suite passes on clang-repl 18.1.3, 23.1.4 and the 24 snapshot
+(`make test-snapshot`):
 - unit tests;
 - a fake clang-repl that prints prompts, splits its output and crashes on cue;
 - golden transcripts;

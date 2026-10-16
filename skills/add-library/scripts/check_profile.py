@@ -7,8 +7,8 @@
 The steps, each in the report:
   config      cpp-repl reads the profile; every library is a shared object;
               no implicit include directory; prelude names are unique
-  prelude     clang++ -fsyntax-only over the preludes (cpp-repl starts even
-              when a prelude fails half-way, so only this step shows it)
+  prelude     clang++ -fsyntax-only over the preludes: a prelude that fails
+              stops cpp-repl's start, and this step shows why in full
   startup     seconds to a ready session, against the same without the profile
   example     the example under cpp-repl --batch, input by input
   prove_libs  the example without the profile's libraries: some input must

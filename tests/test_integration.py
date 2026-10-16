@@ -131,6 +131,33 @@ def test_golden_session(path, tmp_path):
     assert matches(transcript, actual), f'{path.name} differs:\n{actual}'
 
 
+EXAMPLES = sorted((ROOT / 'examples').glob('*.repl'))
+
+
+@pytest.mark.parametrize('path', EXAMPLES, ids=lambda p: p.stem)
+def test_example_sessions_run(path, tmp_path):
+    """Each examples/NAME.repl runs under its profile with no error. A
+    `// requires:` line in the example says what it needs, as a golden's
+    header does."""
+    profile = None if path.stem == 'stl' else path.stem
+    requires = re.findall(r'^// requires: (.*)$', path.read_text(), re.M)
+    if profile:
+        requires.append(f'profile={profile}')
+    reason = unmet(', '.join(requires))
+    if reason:
+        pytest.skip(reason)
+    args = ['-p', profile] if profile else []
+    if profile:
+        empty = tmp_path / 'empty.repl'
+        empty.write_text('')
+        start = run_cpp_repl([*args, '--no-config', '--batch', '--no-color', str(empty)], tmp_path)
+        if 'clang-repl failed to start' in start.stderr:
+            pytest.skip('the profile does not start with this clang-repl')
+    result = run_cpp_repl([*args, '--no-config', '--batch', '--no-color', str(path)], tmp_path)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert 'error:' not in result.stdout and 'crashed' not in result.stdout
+
+
 # -- recovery, against the real thing ----------------------------------------
 
 def make_session(tmp_path, **options):

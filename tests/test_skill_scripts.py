@@ -317,7 +317,7 @@ def test_check_profile_end_to_end(tmp_path):
     assert (dot / 'point.session').is_file() and (dot / 'point.check.json').is_file()
     code, out = script('check_profile.py', *env_cmd, cwd=tmp_path)   # the golden transcript now compares
     assert code == 0 and out['steps']['golden']['ok']
-    # A prelude that fails half-way: cpp-repl starts anyway, the prelude step shows why.
+    # A prelude that fails half-way stops cpp-repl's start; the prelude step shows why.
     (dot / 'point_repl.h').write_text('#pragma once\n#include "no_such_header.h"\n')
     code, out = script('check_profile.py', *env_cmd[:4], '--runs', '1', cwd=tmp_path)
     assert code == 1 and not out['steps']['prelude']['ok']

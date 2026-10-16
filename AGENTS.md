@@ -50,13 +50,16 @@ the rule above.
 | `src/cpp_repl/sources.py` | `.cpp` and `.repl` files as inputs |
 | `src/cpp_repl/config.py` | flags, profiles, `cpp-repl.toml`, `compile_commands.json`, the clang-repl binary |
 | `src/cpp_repl/backend.py` | one clang-repl process and the end-of-output marker protocol |
-| `src/cpp_repl/session.py` | the journal, recovery, commands, `%save-cpp` |
+| `src/cpp_repl/session.py` | the journal, recovery, redefinition, commands, `%save-cpp` |
+| `src/cpp_repl/server.py` | `--serve` and `--connect`: one session on a Unix socket |
 | `src/cpp_repl/diagnostics.py` | what is shown of clang's diagnostics: brief or full |
 | `src/cpp_repl/ui.py`, `painter.py` | prompt_toolkit or readline input; colour |
 | `src/cpp_repl/prelude/` | `cpp_repl.h`, the C++ every session starts from |
 | `src/cpp_repl/profiles/` | one Python module and one header per library |
 | `docker/Dockerfile` | images with clang-repl from apt.llvm.org, or built from source |
 | `tests/` | unit tests, a fake clang-repl, golden sessions, compat probes |
+| `bin/` | `cpp-repl` and `cpp-repl-docker`, run from the checkout |
+| `scripts/` | `parity.py` (the tutorial's lessons against their compiled programs), `compat_table.py` |
 | `bench/` | NumPy vs Eigen in the REPL vs native Eigen |
 | `.claude-plugin/` | the Claude Code plugin and marketplace manifests; the plugin root is the repo root |
 | `skills/` | the plugin's skills; `skills/add-library/scripts/` probes libraries and checks profiles |
@@ -67,10 +70,10 @@ the rule above.
 ```
 make test           # unit and fake-backend tests; no clang-repl needed
 make test-host      # everything, against the host's clang-repl
-make parity         # the OpenUSD lessons through usd-repl and cpp-repl -p usd, diffed
+make parity         # the OpenUSD lessons through cpp-repl -p usd against their compiled programs
 make compat         # what raw clang-repl does with the inputs cpp-repl rewrites
-make docker         # build cpp-repl:llvm23
-make test-docker    # the test suite inside the image
+make docker         # build cpp-repl:llvm23 (make docker-snapshot: LLVM main)
+make test-docker    # the test suite inside the image (make test-snapshot: in the snapshot's)
 make bench-quick    # a 3-minute benchmark run in the bench image
 claude plugin validate .   # the plugin's manifests and skills
 claude plugin eval . --case <case> --runs 1 --ablation none   # one skill eval; real model calls

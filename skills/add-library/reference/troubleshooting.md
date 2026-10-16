@@ -4,8 +4,10 @@ Find the row by the `anchor` of a hint in the check report, or by the text
 you see.
 
 Before working through the table:
-- Fix the first failure only. After a link failure, clang-repl's state is
-  unreliable, and later inputs fail for that reason alone.
+- Fix the first failure only. A later input may need what the failed one
+  would have defined. After a link failure, cpp-repl restores the session,
+  so the inputs after it run as they would alone; the check marks an input
+  `unreliable` only when that restore could not replay every earlier input.
 - `CPP_REPL_TRACES=1` makes cpp-repl print clang-repl's crash traces.
 
 ## Configuration
@@ -35,8 +37,8 @@ Before working through the table:
 | file-not-found | `fatal error: 'x.h' file not found` | No include directory holds that header. | Add the directory to `flags` as `-isystem /abs/dir`, or fix the `#include`. |
 | undeclared | `use of undeclared identifier 'cv'`, or `no member named ... in namespace` | The header that declares the name is not included. Or the prelude failed part-way: cpp-repl does not notice that, and starts anyway. | Look at the check's `prelude` step first, then the prelude's includes. |
 | symbols-not-found | `JIT session error: Symbols not found: [ _ZN... ]` | The code calls a function that no loaded library defines. When the list names `repl::` symbols (`_ZN4repl`), see stale-template. | `probe_library.py symbol '_ZN...' --config .cpp-repl/<lib>.toml` names the library that defines it. Add that library to `libs`. It also takes a demangled prefix such as `cv::GaussianBlur`. |
-| stale-template | `Symbols not found` naming `repl::put`, `repl::show` or a standard-library template, for a correct input that follows one that failed to compile | clang-repl 18, 23 and 24 keep the template instantiations of an input that failed to compile, but not their code. A later input that needs one of them cannot link. No library is missing. | At the prompt, run the input again: after a link failure, cpp-repl restores the session in a fresh clang-repl, where the input links. In a file run with `--batch`, fix the input that failed to compile. |
-| materialize | `error: Failed to materialize symbols`, with no `Symbols not found` | An earlier input failed to link, and the session now fails on everything. | Fix the first failure only. |
+| stale-template | `Symbols not found` naming `repl::put`, `repl::show` or a standard-library template, for a correct input that follows one that failed to compile | clang-repl 18, 23 and 24 keep the template instantiations of an input that failed to compile, but not their code. A later input that needs one of them cannot link. No library is missing. | Nothing for that input: cpp-repl restores the session and runs it again, at the prompt and under `--batch`, and the check marks it `reran`. Fix the input that failed to compile. |
+| materialize | `error: Failed to materialize symbols`, with no `Symbols not found` | Seen only with a cpp-repl from before 2026-10-15, which kept the session after a link failure; it then failed on everything. The current one restores the session. | Update cpp-repl. Until then, fix the first failure only. |
 | libcxx | symbols with `St3__1` in them | The library was built against libc++. | Unsupported: see resolve.md, `libcxx`. |
 | old-abi | `std::string` symbols without `B5cxx11` (`_ZN...Ss...`) | The library was built with the old libstdc++ string ABI, as some prebuilt binaries are (older libtorch releases). | `defines = ["_GLIBCXX_USE_CXX11_ABI=0"]`. |
 | openmp | symbols such as `__kmpc_fork_call` or `omp_get_num_threads` | The code uses OpenMP. | `-fopenmp` in `flags`, and the matching `libomp.so` in `libs`. |

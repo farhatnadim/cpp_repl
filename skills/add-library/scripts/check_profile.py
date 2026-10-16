@@ -41,6 +41,15 @@ CRASH = re.compile(r'^\[(clang-repl (?:crashed \([^)]*\)|exited \(code -?\d+\)|g
 UNPRINTABLE = re.compile(r'^<[^\n]*>$')
 # cpp-repl's note on a type that printed as <type>, after the input's output.
 PRINTER_HINT = re.compile(r'^\[[^\n]* prints as <[^\n]*>: [^\n]*\]\n', re.M)
+# cpp-repl's note before it runs an input again: the input failed to link
+# because an earlier input had failed to compile (troubleshooting.md,
+# stale-template), so the session was restored first. The run after the note
+# is the one that counts.
+RERUN = re.compile(r'^\[that input failed to link after an earlier error: restored \d+ inputs?; '
+                   r'running it again\]\n', re.M)
+# cpp-repl's note when a restored session could not replay every earlier
+# input: the inputs after it run without that one and those that followed it.
+REPLAY_STOPPED = re.compile(r'^replay stopped at: ', re.M)
 # The generic printer's <type name> as an item of a printed container.
 UNPRINTABLE_ITEM = re.compile(r'(?:^|[\[{(]|, )(<[A-Za-z_:][^\n]*?>)(?=$|[\]})]|, )', re.M)
 CONTAINER = re.compile(r'^\s*std::(vector|array|map|unordered_map|set|list|deque|pair|tuple|optional)\b')
@@ -54,8 +63,6 @@ HINTS = [
      'kept it without its code. Fix that input, then run again'),
     (r'Symbols not found: \[(?![^\]]*_ZN4repl)\s*([^\s,\]]+)', 'symbols-not-found',
      "a library is missing from libs: probe_library.py symbol '{0}' --config {T} names the one that defines it"),
-    (r'Failed to materialize symbols', 'materialize',
-     'an earlier input failed to link and left the backend unreliable: fix the first failure only'),
     (r"fatal error: '([^']+)' file not found", 'file-not-found',
      'no include directory holds {0}: add it to flags as -isystem DIR, or fix the #include'),
     (r'[Ii]nline asm', 'inline-asm',
@@ -81,6 +88,13 @@ HINTS = [
     (r'clang-repl failed to start', 'failed-to-start',
      'the session did not start: see startup.diagnosis, then CPP_REPL_TRACES=1 for a crash trace'),
 ]
+
+
+def after_rerun(output):
+    """(whether cpp-repl ran the input again, the output of the run that
+    counts: the last one)."""
+    m = RERUN.search(output)
+    return (True, output[m.end():]) if m else (False, output)
 
 
 def hints_for(text, toml):
@@ -325,29 +339,36 @@ class Checker:
         return pieces
 
     def classify(self, pieces, timed_out=False):
+        """One entry per input: its status, output and lines. An input that
+        cpp-repl ran again in a restored session is marked reran, and its
+        status is that run's. Inputs after a restore that could not replay
+        every earlier input are marked unreliable."""
         from cpp_repl.backend import outcome
         from cpp_repl.lexer import transform
-        results, poisoned = [], False
-        last_run = max((i for i, (_, out) in enumerate(pieces) if out is not None), default=-1)
-        for i, (text, output) in enumerate(pieces):
+        results, unreliable = [], False
+        last = max((i for i, (_, out) in enumerate(pieces) if out is not None), default=-1)
+        for i, (text, whole) in enumerate(pieces):
             entry = {'input': text}
-            if output is None:
+            if whole is None:
                 entry['status'] = 'not-run'
             else:
+                reran, output = after_rerun(whole)
                 crash = CRASH.search(output)
-                if timed_out and i == last_run:
+                if timed_out and i == last:
                     entry['status'] = 'timeout'
                 elif crash:
                     entry['status'] = 'stuck' if 'stuck' in crash.group(1) else 'crash'
                 else:
                     entry['status'] = outcome(output)
+                if reran:
+                    entry['reran'] = True
                 lines = output.rstrip('\n').split('\n') if output.strip() else []
                 entry['lines'] = len(lines)
                 entry['output'] = '\n'.join(lines[:40]) + ('\n...' if len(lines) > 40 else '')
-                if poisoned:
+                if unreliable:
                     entry['unreliable'] = True
-                if entry['status'] == 'link':
-                    poisoned = True
+                if REPLAY_STOPPED.search(whole):
+                    unreliable = True
                 stripped = text.strip()
                 is_expr = not stripped.startswith(('%', '#')) and transform(text, wrap=False).kind == 'expr'
                 entry['bare_expression'] = is_expr
@@ -427,7 +448,7 @@ class Checker:
             return {'ok': False, 'error': '%save-cpp wrote nothing', 'output': (out + err).splitlines()[-10:]}
         # What the REPL printed: every input's output but the % commands'.
         pieces = self.split(out, inputs)
-        repl = ''.join(o or '' for t, o in pieces if not t.strip().startswith('%'))
+        repl = ''.join(after_rerun(o or '')[1] for t, o in pieces if not t.strip().startswith('%'))
         cflags = shlex.split(self.report['steps']['config'].get('cflags') or '')
         libs = shlex.split(self.report['steps']['config'].get('libs') or '')
         exe = self.tmp / 'saved'

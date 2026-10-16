@@ -139,7 +139,6 @@ Start from the templates in `${CLAUDE_SKILL_DIR}/templates/`.
   would also find a dependency through the library that needs it. The native
   build of a `%save-cpp` file does not: it needs every library on its link
   line.
-
 **`<lib>_repl.h`:**
 - `#include "cpp_repl.h"` first.
 - Then the headers the user will reach for most: the project's own `#include`
@@ -176,9 +175,12 @@ Read `failed_steps`, the `status` of each input, and `hints`. Each hint names
 a row of [reference/troubleshooting.md](reference/troubleshooting.md) by its
 `anchor`.
 
-- **Fix the first failure only.** After a link failure, clang-repl's state is
-  unreliable, so later inputs fail for no reason of their own. The report marks
-  them `unreliable`.
+- **Fix the first failure only.** A later input may need what the failed one
+  would have defined. After a link failure, cpp-repl restores the session, so
+  the inputs after it run as they would alone. An input that failed to link
+  only because an earlier input failed to compile is run again: the report
+  marks it `reran`, and its `status` is that run's. An input marked
+  `unreliable` ran after a restore that could not replay every earlier input.
 - **Re-run after each fix.** After three attempts at the same failure, stop
   and report what you found, rather than piling on flags.
 - **Run once more for the final report.** Leave out `--runs 1`, so that the

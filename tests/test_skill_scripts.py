@@ -248,22 +248,42 @@ c++> std::vector<P>{p}
 c++> f();
 JIT session error: Symbols not found: [ _Z1fv ]
 error: Failed to materialize symbols: { (main, { __orc_init_func.incr_module_5 }) }
+[that input failed to link: restored 5 inputs]
+c++> nope;
+input_line_7:1:1: error: use of undeclared identifier 'nope'
+error: Parsing failed.
+c++> say(x);
+JIT session error: Symbols not found: [ _Z3sayi ]
+error: Failed to materialize symbols: { (main, { __orc_init_func.incr_module_8 }) }
+[that input failed to link after an earlier error: restored 5 inputs; running it again]
+1
+c++> g();
+JIT session error: Symbols not found: [ _Z1gv ]
+error: Failed to materialize symbols: { (main, { __orc_init_func.incr_module_10 }) }
+replay stopped at: for (int i = 0; i < 2; ++i) {
+[that input failed to link: restored 2 inputs]
 c++> x + 1
-error: Failed to materialize symbols: { (main, { __orc_init_func.incr_module_6 }) }
+2
 c++> *p = 1;
 [clang-repl crashed (SIGSEGV)]
 '''
 INPUTS = ['int x = 1;', 'x', 'for (int i = 0; i < 2; ++i) {\n  std::cout << i;\n}', 'big', 'std::vector<P>{p}',
-          'f();', 'x + 1', '*p = 1;', 'never_run()']
+          'f();', 'nope;', 'say(x);', 'g();', 'x + 1', '*p = 1;', 'never_run()']
 
 
 def test_transcript_split_and_classified():
     c = checker()
     results = c.classify(c.split(TRANSCRIPT, INPUTS))
-    assert [r['status'] for r in results] == ['ok', 'ok', 'ok', 'ok', 'ok', 'link', 'link', 'crash', 'not-run']
+    assert [r['status'] for r in results] == ['ok', 'ok', 'ok', 'ok', 'ok', 'link', 'error', 'ok', 'link', 'ok',
+                                              'crash', 'not-run']
     assert results[2]['output'] == '01'
     assert results[3]['lines'] == 20
-    assert results[6].get('unreliable') and not results[5].get('unreliable')
+    # say(x); failed to link after nope; failed to compile: cpp-repl restored the
+    # session and ran it again, and that run is the one that counts.
+    assert results[7].get('reran') and (results[7]['output'], results[7]['lines']) == ('1', 1)
+    assert [i for i, r in enumerate(results) if r.get('reran')] == [7]
+    # The restore after g(); could not replay every input: what follows is unreliable.
+    assert [i for i, r in enumerate(results) if r.get('unreliable')] == [9, 10]
     kinds = {(w['kind'], w['input']) for w in c.report['warnings']}
     assert kinds == {('verbose', 'big'), ('unprintable', 'std::vector<P>{p}')}
 
@@ -272,7 +292,7 @@ def test_hints():
     hints = check_profile.hints_for('JIT session error: Symbols not found: [ _ZN2cv12GaussianBlurE ]\n'
                                     'error: Failed to materialize symbols: { }', '.cpp-repl/x.toml')
     anchors = [h['anchor'] for h in hints]
-    assert anchors == ['symbols-not-found', 'materialize']
+    assert anchors == ['symbols-not-found']
     assert "symbol '_ZN2cv12GaussianBlurE' --config .cpp-repl/x.toml" in hints[0]['advice']
     # A printer instantiated by an input that failed to compile: no library is missing.
     stale = check_profile.hints_for('JIT session error: Symbols not found: [ _ZN9__gnu_cxxeqIPK1QE, '
@@ -281,7 +301,6 @@ def test_hints():
     dso =check_profile.hints_for('/usr/bin/ld: /usr/lib/x86_64-linux-gnu/libfmt.so.9: error adding symbols: '
                                   'DSO missing from command line', 'x.toml')
     assert dso[0]['anchor'] == 'dso-missing' and 'libfmt.so.9' in dso[0]['advice']
-
 
 def test_golden_patterns():
     assert check_profile.matches('a\n<any>\nc\n', 'a\nb\nc\n')
@@ -303,6 +322,7 @@ def test_check_profile_end_to_end(tmp_path):
         '#pragma once\n#include "cpp_repl.h"\n'
         'struct Point { double x, y; };\n'
         'inline Point scaled(Point p) { return {p.x * POINT_SCALE, p.y * POINT_SCALE}; }\n'
+        'inline std::vector<Point> many(int n) { return std::vector<Point>(n); }\n'
         'inline std::ostream &operator<<(std::ostream &os, const Point &p)\n'
         '{ return os << "Point(" << p.x << ", " << p.y << ")"; }\n')
     (dot / 'point.repl').write_text('Point p{1, 2};\nscaled(p)\nstd::vector<Point>{p, p}\n')
@@ -317,6 +337,16 @@ def test_check_profile_end_to_end(tmp_path):
     assert (dot / 'point.session').is_file() and (dot / 'point.check.json').is_file()
     code, out = script('check_profile.py', *env_cmd, cwd=tmp_path)   # the golden transcript now compares
     assert code == 0 and out['steps']['golden']['ok']
+    # An input that could not link because the one before it failed to compile
+    # (troubleshooting.md, stale-template): cpp-repl ran it again, and the
+    # check reads that run as the one that counts.
+    (dot / 'stale.repl').write_text('Point p{1, 2};\nmany()\nmany(2)\n')
+    code, out = script('check_profile.py', '--config', dot / 'point.toml', '--example', dot / 'stale.repl',
+                       '--runs', '1', cwd=tmp_path)
+    inputs = out['steps']['example']['inputs']
+    assert code == 1 and [i['status'] for i in inputs] == ['ok', 'error', 'ok']
+    assert inputs[2].get('reran') and inputs[2]['output'] == '[Point(0, 0), Point(0, 0)]'
+    assert not any(i.get('unreliable') for i in inputs) and out['steps']['example']['first_failure'] == 1
     # A prelude that fails half-way stops cpp-repl's start; the prelude step shows why.
     (dot / 'point_repl.h').write_text('#pragma once\n#include "no_such_header.h"\n')
     code, out = script('check_profile.py', *env_cmd[:4], '--runs', '1', cwd=tmp_path)

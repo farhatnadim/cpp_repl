@@ -285,9 +285,11 @@ standard, `-m` flags, a forced `-include` as a prelude, and its `-W` flags,
 `-Werror` apart: warnings stay warnings at a prompt. The optimisation level
 stays the REPL's own.
 
-A `cpp-repl.toml` in the working directory, or any directory above it, says
-the same once for a project. `-c FILE` reads another; paths in it are relative
-to the file:
+A `cpp-repl.toml` in the working directory, or any directory above it on the
+same filesystem, says the same once for a project. It is a build file: its
+`libs` load and its `prelude` runs at startup, so one owned by another user
+is left alone, with a note, and the startup line, `%flags` and `--json` name
+the one read. `-c FILE` reads another; paths in it are relative to the file:
 
 ```toml
 std = "c++23"

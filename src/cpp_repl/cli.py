@@ -251,12 +251,15 @@ def _run(argv):
     atexit.register(session.close)
     if not interactive:
         # The prompt's first line says these. A batch run's stdout is the
-        # program's own, so they go to stderr there, or into --json's notes.
+        # program's own, so they go to stderr there, or into --json's notes,
+        # which also name the project file read, since it runs code.
         for note in cfg.notes:
             if args.json:
                 out.note(f'[{note}]')
             else:
                 sys.stderr.write(f'[{note}]\n')
+        if args.json and cfg.project_file:
+            out.note(f'[configuration: {cfg.project_file}]')
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))
     signal.signal(signal.SIGHUP, lambda *_: sys.exit(1))
     if args.serve:

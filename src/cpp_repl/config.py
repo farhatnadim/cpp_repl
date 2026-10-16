@@ -333,12 +333,30 @@ def read_toml(path):
     return profile
 
 
-def find_project_file(start):
-    """The nearest cpp-repl.toml in start or a directory above it."""
+def find_project_file(start, notes=None):
+    """The nearest cpp-repl.toml in start or a directory above it, on the
+    same filesystem. A cpp-repl.toml is a build file: its libraries load and
+    its prelude runs at startup. So one owned by another user is left alone,
+    and said so in notes, and the search stops where the filesystem does."""
+    try:
+        device = start.stat().st_dev
+    except OSError:
+        return None
     for d in [start, *start.parents]:
-        candidate = d / PROJECT_FILE
-        if candidate.is_file():
-            return candidate
+        try:
+            if d.stat().st_dev != device:
+                break
+            candidate = d / PROJECT_FILE
+            if not candidate.is_file():
+                continue
+            owner = candidate.stat().st_uid
+        except OSError:
+            break
+        if owner not in (os.getuid(), 0) and os.getuid() != 0:
+            if notes is not None:
+                notes.append(f'{candidate} is owned by another user: not read')
+            continue
+        return candidate
     return None
 
 
@@ -715,7 +733,7 @@ class Config:
         command line name, and settle on a compile_commands.json. Returns
         the TOML profiles, in order."""
         tomls = []
-        self.project_file = None if options.no_config else find_project_file(cwd)
+        self.project_file = None if options.no_config else find_project_file(cwd, self.notes)
         if self.project_file:
             tomls.append(read_toml(self.project_file))
         configs, names = list(options.configs), []
@@ -805,10 +823,13 @@ class Config:
         return shlex.join(args)
 
     def describe(self):
-        """The startup line: backend, standard, optimisation, profiles."""
+        """The startup line: backend, standard, optimisation, profiles, and
+        the project file read, since it runs code."""
         parts = [f'clang-repl {self.version_text}', self.std.removeprefix('-std='),
                  self.opt or '-O0']
         parts += [p.banner or p.name for p in self.profiles]
+        if self.project_file:
+            parts.append(f'{PROJECT_FILE} in {self.project_file.parent}')
         return ', '.join(parts)
 
     def cflags(self):

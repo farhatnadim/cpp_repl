@@ -13,8 +13,8 @@ from conftest import CLANG_REPL
 from cpp_repl.cli import make_parser, split_compiler_flags
 from cpp_repl.config import (CORE_PRELUDE, PRELUDE_DIR, STD_PRELUDE, Config, ConfigError, Options,
                              clang_repl_version, compile_command_flags, compile_commands_entry, default_std,
-                             find_clang_repl, find_library, floor_std, merge_flags, parse_flags, read_toml,
-                             stdlib_runtime)
+                             find_clang_repl, find_library, find_project_file, floor_std, merge_flags, parse_flags,
+                             read_toml, stdlib_runtime)
 
 
 def test_parse_flags(tmp_path):
@@ -494,3 +494,20 @@ def test_compile_command_response_files(tmp_path):
     entry = {'directory': str(tmp_path), 'file': 'a.cpp', 'command': 'c++ @flags.rsp @missing.rsp -c a.cpp -o a.o'}
     assert compile_command_flags(entry) == parse_flags(['-I', str(tmp_path / 'inc'), '-DFOO=1', '-DQUOTED=a b',
                                                         '-std=gnu++20'])
+
+
+def test_a_project_file_of_another_user_is_left_alone(tmp_path, monkeypatch):
+    """A cpp-repl.toml runs code, so one another user owns is skipped with a
+    note; one's own is found from a directory below and named at startup."""
+    (tmp_path / 'cpp-repl.toml').write_text('defines = ["FROM_TOML=1"]\n')
+    sub = tmp_path / 'a' / 'b'
+    sub.mkdir(parents=True)
+    assert find_project_file(sub) == tmp_path / 'cpp-repl.toml'
+    cfg = Config(Options(cwd=sub), backend=False)
+    assert cfg.project_file == tmp_path / 'cpp-repl.toml' and cfg.describe().endswith(f'cpp-repl.toml in {tmp_path}')
+    monkeypatch.setattr(os, 'getuid', lambda: 65534)   # someone else
+    notes = []
+    assert find_project_file(sub, notes) is None
+    assert notes == [f'{tmp_path / "cpp-repl.toml"} is owned by another user: not read']
+    other = Config(Options(cwd=sub), backend=False)
+    assert other.project_file is None and '-DFROM_TOML=1' not in other.compiler_flags and other.notes == notes

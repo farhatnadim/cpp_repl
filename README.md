@@ -724,7 +724,8 @@ their compiled programs do: the same output, the same files written.
 ## Development
 
 ```sh
-make check         # before a pull request: every test against the host's clang-repl (23 or newer), then claude plugin validate; CI runs the same
+make check         # before a pull request: every test against the host's clang-repl (23 or newer), then claude plugin validate
+make check-docker  # the same inside cpp-repl:llvm23, built first: what CI runs
 make test          # unit and fake-backend tests: no clang-repl needed
 make test-host     # every test against the host's clang-repl
 make test-docker   # every test inside cpp-repl:llvm23 (make docker first)

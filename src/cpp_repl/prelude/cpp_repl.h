@@ -295,6 +295,18 @@ void put_wide(std::ostream &os, std::basic_string_view<C> s)
   os << '"';
 }
 
+// How much of a character array a string holds: up to its last non-null
+// character. A buffer filled by a C API (char name[256]) shows its string,
+// not the nulls after it; a null inside the string still shows, as \0.
+template <class C, std::size_t N>
+constexpr std::size_t used_extent(const C (&x)[N])
+{
+  std::size_t n = N;
+  while (n && !x[n - 1])
+    --n;
+  return n;
+}
+
 // The code units of a wide string, whatever holds them.
 template <class T>
 auto wide_units(const T &x)
@@ -302,8 +314,7 @@ auto wide_units(const T &x)
   if constexpr (std::is_pointer_v<T>) {
     return std::basic_string_view<std::remove_cv_t<std::remove_pointer_t<T>>>(x);
   } else if constexpr (std::is_array_v<T>) {
-    constexpr std::size_t n = std::extent_v<T>;
-    return std::basic_string_view<std::remove_cv_t<std::remove_extent_t<T>>>(x, n && !x[n - 1] ? n - 1 : n);
+    return std::basic_string_view<std::remove_cv_t<std::remove_extent_t<T>>>(x, used_extent(x));
   } else {
     return std::basic_string_view<typename T::value_type>(x.data(), x.size());
   }
@@ -440,8 +451,7 @@ void put_generic(std::ostream &os, const T &x)
     }
     put_string(os, x);
   } else if constexpr (is_char_array<T>) {
-    put_string(os, std::string_view(x, std::extent_v<T> && !x[std::extent_v<T> - 1]
-                                                   ? std::extent_v<T> - 1 : std::extent_v<T>));
+    put_string(os, std::string_view(x, used_extent(x)));
   } else if constexpr (is_wide_string<T>) {
     if constexpr (std::is_pointer_v<T>) {
       if (!x) {

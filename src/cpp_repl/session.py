@@ -32,7 +32,8 @@ still follow. Esc then Enter runs a block as it stands.
 
 A bare expression, with no semicolon, prints its value; show(x) does the same.
 A `return N;` ends the program as main()'s return does: a file stops there,
-and cpp-repl --batch exits with N.
+and cpp-repl --batch exits with N. So does an exception nothing catches, as
+abort() would (status 134): the prompt says what was thrown and goes on.
 
   %undo           drop the last input      %restart        rebuild from the journal
   %reset          start again, empty       %journal        list the inputs so far
@@ -56,9 +57,10 @@ Entry = namedtuple('Entry', 'text sent kind')
 VOID_MARK = '\x1e'   # what repl::print_expr writes after a void expression
 # What the prelude writes for a value with no printer: <type> between two marks.
 _UNPRINTABLE = re.compile('\x1f<(.*?)>\x1f')
-# What repl::finish writes when a statement returned from main(): the status
-# between two marks, on a line of its own.
-_END_MARK = re.compile('\x1d(-?\\d+)\x1d\n?')
+# What repl::finish writes when a statement ended the program, on a line of
+# its own: the status between two marks; after an uncaught exception, '!',
+# the status and what was thrown.
+_END_MARK = re.compile('\x1d(!?)(-?\\d+)([^\x1d]*)\x1d\n?')
 
 
 def printer_hint(name):
@@ -115,11 +117,12 @@ class JsonOutput(Output):
     """One JSON object per line for each input, in place of the transcript
     (cpp-repl --json): {"input": N, "file": PATH, "line": N, "status": S,
     "seconds": T, "output": TEXT, "notes": [TEXT, ...], "returned": N}, where
-    status is the first of ok, error (it did not compile), link, crash, exit
-    (the program called exit()), stuck, timeout or interrupted, and returned
-    is main's return value when the input returned. Anything written between
-    inputs is {"output": TEXT} or {"note": TEXT}, and the last line is
-    {"exit": STATUS, "inputs": N, "failures": N}."""
+    status is the first of ok, error (it did not compile), link, exception
+    (one left the input uncaught), crash, exit (the program called exit()),
+    stuck, timeout or interrupted, and returned is main's return value when
+    the input returned. Anything written between inputs is {"output": TEXT}
+    or {"note": TEXT}, and the last line is {"exit": STATUS, "inputs": N,
+    "failures": N}."""
 
     def __init__(self, stream=None):
         super().__init__(stream)
@@ -208,7 +211,8 @@ class Session:
         self.new_run()
         self.echo = not (cfg.options.quiet or cfg.options.json)   # whether run_inputs shows each input
         self.tainted = False   # an input failed to compile in this clang-repl
-        self.returned = None   # main's return value, when the input running returned (see _show)
+        self.returned = None   # the status the input running ended the program with (see _show)
+        self.thrown = None     # what an uncaught exception was, when that ended it
         self.spare = None
         self.files = 0
         self.functions = 0   # functions made to run inputs in: cpp_repl_1, ...
@@ -317,7 +321,8 @@ class Session:
         return f'<{m.group(1)}>'
 
     def _returned(self, m):
-        self.returned = int(m.group(1))
+        self.returned = int(m.group(2))
+        self.thrown = m.group(3).strip() if m.group(1) else None
         return ''
 
     def _show_end(self):
@@ -333,7 +338,7 @@ class Session:
         """Run one line. Returns (output, result), result being 'ok', 'error',
         'link', 'dead', 'interrupted' or 'timeout'."""
         self.diagnostics.start()
-        self.returned = None
+        self.returned = self.thrown = None
         try:
             output, alive = self.backend.run(line, echo=self._show if echo else None,
                                              deadline=self.cfg.options.timeout)
@@ -359,13 +364,18 @@ class Session:
             if journal:
                 self.journal.append(Entry(text, sent, kind))
             if self.returned is not None:
-                # The statement returned from main(): the program is over,
-                # with that status. A file's final `return 0;` goes without
-                # saying; anything else is said.
+                # The statement ended the program: it returned from main(),
+                # or an exception left it. A file's final `return 0;` goes
+                # without saying; anything else is said.
                 self._program_ended(self.returned)
-                self.out.returned(self.returned)
-                if self.returned != 0 or getattr(text, 'origin', TYPED) is TYPED:
-                    self._note(f'[main returned {self.returned}]')
+                if self.thrown is not None:
+                    self.out.failed('exception')
+                    self.failures += 1
+                    self._note(f'[uncaught exception: {self.thrown}]')
+                else:
+                    self.out.returned(self.returned)
+                    if self.returned != 0 or getattr(text, 'origin', TYPED) is TYPED:
+                        self._note(f'[main returned {self.returned}]')
             return True
         if result == 'link' and again and self.tainted:
             # clang-repl keeps the template instantiations of an input that

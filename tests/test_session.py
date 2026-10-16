@@ -18,6 +18,7 @@ from cpp_repl import backend as backend_module
 from cpp_repl import session as session_module
 from cpp_repl.config import Config, Options
 from cpp_repl.diagnostics import Diagnostics
+from cpp_repl.lexer import in_function
 from cpp_repl.session import JsonOutput, Output, Session, SessionError
 from cpp_repl.sources import inputs_from_file, inputs_from_repl
 
@@ -129,6 +130,26 @@ def test_a_return_ends_the_program(tmp_path, monkeypatch, made):
     made.append(s)
     assert s.run_input('if (true) return 2;')
     assert stream.getvalue() == '[main returned 2]\n'
+    assert s.run_input('say("still here");')
+    assert stream.getvalue().endswith('still here\n')
+
+
+def test_an_uncaught_exception_ends_the_program(tmp_path, monkeypatch, made):
+    """An exception nothing catches is named, and ends the program as
+    abort() would: a run of files stops with status 134. At the prompt the
+    session goes on as it is, with no restart."""
+    s, stream = make(tmp_path, monkeypatch)
+    made.append(s)
+    inputs = inputs_from_repl('say("before");\nthrow_it();\nsay("after");\n')
+    assert s.run_inputs(inputs, echo=False) is False
+    assert stream.getvalue() == 'before\n[uncaught exception: std::runtime_error: boom]\n'
+    assert s.exit_status() == 134 and s.failures == 1
+    s, stream = make(tmp_path, monkeypatch, batch=False)
+    made.append(s)
+    first = s.backend.proc.pid
+    assert s.run_input('throw_it();')
+    assert stream.getvalue() == '[uncaught exception: std::runtime_error: boom]\n'
+    assert s.backend.proc.pid == first
     assert s.run_input('say("still here");')
     assert stream.getvalue().endswith('still here\n')
 
@@ -301,9 +322,8 @@ def test_inputs_from_a_file_sit_at_their_lines(tmp_path, monkeypatch, made):
     assert stream.getvalue() == 'one\ntwo\n42\n'
     sent = [Path(e.sent[0][len('#include "'):-1]).read_text() for e in s.journal]
     name = str(tmp_path / 'p.cpp')
-    assert sent[0] == f'#line 3 "{name}"\n  say("one");\n'
-    assert sent[1].endswith(f'\n#line 4 "{name}"\n  if (1) {{\n    say("two");\n  }}\n return {{}}; }} '
-                            'repl::finish(cpp_repl_1());\n')
+    assert sent[0] == in_function('cpp_repl_1', f'\n#line 3 "{name}"\n  say("one");\n') + '\n'
+    assert sent[1] == in_function('cpp_repl_2', f'\n#line 4 "{name}"\n  if (1) {{\n    say("two");\n  }}\n') + '\n'
     assert f'repl::print_expr(((\n#line 7 "{name}"\n  42), repl::printer' in sent[2]
     assert s.sources == {name}
 

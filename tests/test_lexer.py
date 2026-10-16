@@ -61,7 +61,7 @@ def test_completeness(text, state):
     ('int x = 1;', 'stmt', 'int x = 1;'),
     ('x', 'expr', 'x'),
     ('std::vector<int>{1, 2}', 'expr', 'std::vector<int>{1, 2}'),
-    ('std::vector<int>{1, 2};', 'stmt', 'std::vector<int>{1, 2};'),
+    ('std::vector<int>{1, 2};', 'stmt', in_function('f1', 'std::vector<int>{1, 2};')),
     ('std::map<int, int> m{{1, 2}}', 'expr', 'std::map<int, int> m{{1, 2}}'),
     ('for (auto p : v) {\n  f(p);\n}', 'stmt', in_function('f1', 'for (auto p : v) { f(p); }')),
     ('try { f(); } catch (...) { g(); }', 'stmt', in_function('f1', 'try { f(); } catch (...) { g(); }')),
@@ -72,7 +72,7 @@ def test_completeness(text, state):
      in_function('f1', 'std::sort(v.begin(), v.end(), [](int a, int b) { return a > b; });')),
     ('auto g = [](int x) { return x; };', 'stmt', 'auto g = [](int x) { return x; };'),
     ('int n = count(v, [](int x) { return x > 1; });', 'stmt', 'int n = count(v, [](int x) { return x > 1; });'),
-    ('x = arr[i](3);', 'stmt', 'x = arr[i](3);'),
+    ('x = arr[i](3);', 'stmt', in_function('f1', 'x = arr[i](3);')),
     ('int a = 1; a', 'stmt', 'int a = 1; a'),
     ('return run();', 'stmt', in_function('f1', 'return run();')),
     ('#pragma unroll\nreturn 0;', 'stmt', in_function('f1', '_Pragma("unroll") return 0;')),
@@ -97,9 +97,11 @@ def test_transform(text, kind, sent):
 def test_in_function():
     """`return 1;` from a main() body becomes the program's exit status: the
     function a statement runs in returns repl::ended, which an int converts
-    to, and falls off its end otherwise."""
-    assert in_function('f1', 'if (x) return 1;') == \
-        'repl::ended f1() { if (x) return 1; return {}; } repl::finish(f1());'
+    to, and falls off its end otherwise. An exception that leaves the
+    statement is caught and named."""
+    assert in_function('f1', 'if (x) return 1;') == (
+        'repl::ended f1() { try { if (x) return 1; } catch (...) { return repl::uncaught(); } return {}; } '
+        'repl::finish(f1());')
 
 
 def test_regions_and_block_directives_go_through_a_file():
@@ -109,7 +111,7 @@ def test_regions_and_block_directives_go_through_a_file():
     send = transform(block, fresh=fresh())
     assert send.kind == 'stmt' and send.file
     assert '\n#ifdef X\n' in send.text and '\n#endif\n' in send.text
-    assert 'repl::ended f1() { for' in send.text
+    assert 'repl::ended f1() { try { for' in send.text
 
 
 def test_transform_without_wrapping():
@@ -178,8 +180,8 @@ def test_an_input_sits_at_its_source_lines_and_columns():
 def test_a_placed_expression_and_its_statement():
     send = transform('v.size()', origin=ORIGIN)
     assert send == ('\n#line 7 "prog.cpp"\n  v.size()', 'expr', True)
-    send = transform('v.size()  // a comment', origin=ORIGIN, statement=True)
-    assert send.text == '#line 7 "prog.cpp"\n  v.size();'
+    send = transform('v.size()  // a comment', origin=ORIGIN, statement=True, fresh=fresh())
+    assert send.text == in_function('f1', '\n#line 7 "prog.cpp"\n  v.size();\n')
 
 
 def test_what_keeps_no_place():
@@ -188,7 +190,7 @@ def test_what_keeps_no_place():
     assert transform('#include <vector>', origin=ORIGIN) == ('#include <vector>', 'pp', False)
     send = transform('int a = \\\n  1;', origin=ORIGIN)   # a line splice: one line, as without an origin
     assert send == ('int a = 1;', 'stmt', False)
-    assert transform('x', statement=True).text == 'x;'
+    assert transform('x', statement=True, fresh=fresh()).text == in_function('f1', 'x;')
 
 
 def test_located():
@@ -212,8 +214,8 @@ def test_open_conditionals():
     ('const auto &r = pick(v, [](int x) { return x; });', False),
     ('std::vector<std::pair<int, int>> w = make([] { return 1; });', False),
     ('[[maybe_unused]] int q = 1;', False),
-    ('m[k] = 2;', False),
-    ('f(m[k]);', False),
+    ('int n = m[k];', False),
+    ('int n = f(m[k]);', False),
     ('struct S { int m() { auto l = [] { return 7; }; return l(); } };', False),
     ('template <class T> struct W { T v; auto get() { return [this] { return v; }; } };', False),
     ('namespace N { auto f = [] { return 1; }; }', False),
@@ -221,7 +223,30 @@ def test_open_conditionals():
      False),
     ('std::enable_if_t<(N > 4), int> k = count(v, [](int x) { return x > 1; });', False),
     ('return 1;', True),
-    ('returned = 1;', False),
+    ('throw std::runtime_error("x");', True),
+    # Expression statements run inside a function, where an exception is caught.
+    ('v.at(9);', True),
+    ('std::cout << x;', True),
+    ('returned = 1;', True),
+    ('++n;', True),
+    ('std::string(5, \'a\');', True),
+    ('ns::f(x);', True),
+    # Declarations and definitions stay at file scope, whatever their shape.
+    ('unsigned long n = 1;', False),
+    ('long double d = 1;', False),
+    ('long *p = nullptr;', False),
+    ('unsigned char buf[16];', False),
+    ('int (*fp)(int) = f;', False),
+    ('alignas(16) float v[4];', False),
+    ('#pragma pack(1)\nint packed;', False),
+    ('std::string s(5, \'a\');', False),
+    ('static_assert(sizeof(int) == 4);', True),
+    ('using namespace std;', False),
+    ('struct S;', False),
+    # A macro may declare something: it stays at file scope.
+    ('TF_DEFINE_PRIVATE_TOKENS(_tokens, ((a, "a")));', False),
+    ('DEFINE_bool(verbose, false, "say more");', False),
+    ('PXR_NAMESPACE_USING_DIRECTIVE;', False),
 ])
 def test_needs_function(text, wrapped):
     tokens, _ = lex(text)

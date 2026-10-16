@@ -174,6 +174,21 @@ def test_ctrl_c_stops_an_endless_loop(session):
     assert stream.getvalue().endswith('7\n')
 
 
+def test_an_uncaught_exception_is_named_and_the_session_goes_on(session):
+    s, stream = session
+    assert s.run_input('int a = 41;')
+    first = s.backend.proc.pid
+    assert s.run_input('std::stoi("abc");')
+    assert stream.getvalue().endswith('[uncaught exception: std::invalid_argument: stoi]\n')
+    assert s.run_input('std::vector<int>().at(3)')        # a bare expression, thrown while printing
+    assert '[uncaught exception: std::out_of_range: vector::_M_range_check' in stream.getvalue()
+    assert s.run_input('throw 7;')
+    assert stream.getvalue().endswith('[uncaught exception: int]\n')
+    assert s.backend.proc.pid == first                   # no restart: the session is as it was
+    assert s.run_input('a + 1')
+    assert stream.getvalue().endswith('42\n')
+
+
 def test_a_link_failure_is_undone(session):
     s, stream = session
     assert s.run_input('int defined_one() { return 1; }')
@@ -331,10 +346,11 @@ int main()
 
 
 @pytest.mark.parametrize('end, status', [('std::abort();', 134), ('std::exit(5);', 5),
-                                         ('*(volatile int *)nullptr = 1;', 139), ('return 7;', 7)])
+                                         ('*(volatile int *)nullptr = 1;', 139), ('return 7;', 7),
+                                         ('throw std::runtime_error("boom");', 134)])
 def test_the_exit_status_is_the_program_s(tmp_path, end, status):
-    """A program that returns from main, crashes or calls exit() ends
-    cpp-repl --batch with the status a shell would report for it."""
+    """A program that returns from main, throws, crashes or calls exit()
+    ends cpp-repl --batch with the status a shell would report for it."""
     (tmp_path / 'p.repl').write_text(f'std::puts("before");\n{end}\nstd::puts("after");\n')
     result = run_cpp_repl(['--no-config', '--batch', '--no-color', 'p.repl'], tmp_path)
     assert result.returncode == status, result.stdout + result.stderr

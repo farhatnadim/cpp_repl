@@ -18,6 +18,7 @@ It reads one input per line and answers:
   syntax error         anything with 'error_here' in it fails to parse
   ...repl::print_expr(((N), ...))...   prints N; with void_call() for N, the void mark
   ...return N; ... repl::finish(...)   the end mark around N, as a statement that returned from main
+  ...throw_it(); ... repl::finish(...) the end mark of an uncaught std::runtime_error, "boom"
   #include "FILE"      FILE's lines but #line directives, joined into one, and answered as above
 anything else is silently accepted.
 
@@ -145,6 +146,9 @@ def main():
         m = re.search(r'\breturn (-?\d+);', line) if 'repl::finish(' in line else None
         if m:
             out(f'\x1d{m.group(1)}\x1d\n')
+            continue
+        if 'throw_it()' in line and 'repl::finish(' in line:
+            out('\x1d!134std::runtime_error: boom\x1d\n')
             continue
 
 

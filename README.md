@@ -192,7 +192,9 @@ cpp-repl --batch --json prog.cpp              # a JSON object per input
   the number of inputs and the failures.
 - **The exit status is the program's:** what `main()` returned, the `N` of
   its `exit(N)`, or 128 + the signal that killed it (139 for a segfault, 134
-  for `abort()`). It is 1 if an input failed to compile or link.
+  for `abort()` and for an exception nothing caught, which cpp-repl names:
+  `[uncaught exception: std::invalid_argument: stoi]`). It is 1 if an input
+  failed to compile or link.
 - **`--stop-on-error`** stops at the first input that fails, as the rest
   usually depends on it.
 - **`--timeout SECONDS`** stops an input that takes longer, compiling

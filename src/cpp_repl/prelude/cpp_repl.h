@@ -31,14 +31,17 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <exception>
 #include <iomanip>
 #include <iterator>
+#include <memory>
 #include <optional>
 #include <ostream>
 #include <string>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
+#include <typeinfo>
 #include <utility>
 #include <vector>
 #if defined(__linux__)
@@ -46,6 +49,9 @@
 #endif
 #if __has_include(<ext/stdio_sync_filebuf.h>)
 #include <ext/stdio_sync_filebuf.h>   // libstdc++'s std::cin buffer, for take_stdin()
+#endif
+#if __has_include(<cxxabi.h>)
+#include <cxxabi.h>   // the name of an uncaught exception's type
 #endif
 
 namespace repl {
@@ -349,28 +355,76 @@ void print_expr(printer<Tag>)
   std::cout << void_mark << std::flush;
 }
 
-// A statement that cannot run at top level (control flow, a lambda, a bare
-// expression) runs as the body of a function of its own:
-//   repl::ended cpp_repl_N() { STATEMENT return {}; }  repl::finish(cpp_repl_N());
+// A statement that does not run at top level (control flow, a lambda, a bare
+// expression, an expression statement) runs as the body of a function of its
+// own:
+//   repl::ended cpp_repl_N() { try { STATEMENT } catch (...) { return repl::uncaught(); } return {}; }
+//   repl::finish(cpp_repl_N());
 // A `return EXPR;` inside it, as in main()'s `if (bad) return 1;`, converts
-// EXPR to the status main() would have returned, and finish() writes that
-// status between two end marks. cpp-repl then ends the program as the
-// compiled one would: --batch exits with the status, and the prompt says so.
-// Nothing is rewritten and no diagnostic is turned off, so a lambda inside
+// EXPR to the status main() would have returned. An exception that leaves the
+// statement would otherwise end the program through std::terminate(), and the
+// session with it: uncaught() names it and ends the program as abort() would,
+// with status 134, what a shell reports for the compiled program. finish()
+// writes the status between two end marks, and cpp-repl ends the program as
+// the compiled one would: --batch exits with the status, and the prompt says
+// so. Nothing is rewritten and no diagnostic is turned off, so a lambda inside
 // the statement that falls off its end still warns.
 struct ended {
   std::optional<int> status;   // main's return value, if the statement returned
+  std::string thrown;          // what an uncaught exception was, if one ended it
 
   ended() = default;
   ended(int value) : status(value) {}   // implicit: `return 1;` converts
 };
 
 inline constexpr char end_mark = '\x1d';
+inline constexpr int abort_status = 134;   // 128 + SIGABRT
 
-inline void finish(ended e)
+namespace detail {
+
+inline std::string demangled(const char *name)
+{
+#if __has_include(<cxxabi.h>)
+  int status = 0;
+  const std::unique_ptr<char, void (*)(void *)> readable(abi::__cxa_demangle(name, nullptr, nullptr, &status),
+                                                         std::free);
+  if (status == 0 && readable)
+    return readable.get();
+#endif
+  return name;
+}
+
+}  // namespace detail
+
+// Inside a handler: what the exception being handled is, on one line.
+inline ended uncaught()
+{
+  ended e(abort_status);
+  try {
+    throw;
+  } catch (const std::exception &x) {
+    e.thrown = detail::demangled(typeid(x).name()) + ": " + x.what();
+  } catch (...) {
+#if __has_include(<cxxabi.h>)
+    if (const std::type_info *type = abi::__cxa_current_exception_type())
+      e.thrown = detail::demangled(type->name());
+    else
+#endif
+      e.thrown = "of an unknown type";
+  }
+  for (char &c : e.thrown)
+    if (c == '\n' || c == end_mark)
+      c = ' ';
+  return e;
+}
+
+inline void finish(const ended &e)
 {
   if (e.status) {
-    std::fprintf(stdout, "%c%d%c\n", end_mark, *e.status, end_mark);   // past any std::cout redirection
+    // Through stdout itself, past any redirection of std::cout. An
+    // exception's mark starts with '!' and carries the exception's name.
+    std::fprintf(stdout, "%c%s%d%s%c\n", end_mark, e.thrown.empty() ? "" : "!", *e.status, e.thrown.c_str(),
+                 end_mark);
     std::fflush(stdout);
   }
 }

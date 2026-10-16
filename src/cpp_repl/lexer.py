@@ -347,35 +347,61 @@ def _angle_end(tokens, i):
     return len(tokens)
 
 
-def _declaration(tokens):
-    """Whether a statement looks like a variable declaration: specifiers, a
-    type (a keyword, or a name with :: and <...>), * and &, then a name and
-    =, {, (, [ or ;."""
-    i, n = 0, len(tokens)
-    while i < n and tokens[i].kind == 'ident' and tokens[i].text in _SPECIFIERS:
-        i += 1
-    if i >= n or tokens[i].kind != 'ident':
-        return False
-    if tokens[i].text == 'decltype' and _is(tokens, i + 1, '('):
-        i = _match(tokens, i + 1) + 1
-    else:
-        i += 1
+def _skip_attributes(tokens, i):
+    """Index past the [[...]], alignas(...) and __attribute__((...)) at i."""
+    n = len(tokens)
     while i < n:
-        if _is(tokens, i, '::') and i + 1 < n and tokens[i + 1].kind == 'ident':
-            i += 2
-        elif _is(tokens, i, '<'):
-            i = _angle_end(tokens, i)
-        elif tokens[i].kind == 'ident' and tokens[i].text in _TYPE_WORDS:
-            i += 1
+        if _is(tokens, i, '[') and _is(tokens, i + 1, '['):
+            i = _match(tokens, i) + 1
+        elif (tokens[i].kind == 'ident' and tokens[i].text in ('alignas', '__attribute__', '__declspec')
+                and _is(tokens, i + 1, '(')):
+            i = _match(tokens, i + 1) + 1
         else:
             break
+    return i
+
+
+def _declares(tokens, i):
+    """Whether tokens[i] is a declared name: an identifier that =, {, (, [,
+    ; or , follows, or a declarator in parentheses, as in int (*f)(int)."""
+    if _is(tokens, i, '(') and (_is(tokens, i + 1, '*') or _is(tokens, i + 1, '&')):
+        return True
+    return (i + 1 < len(tokens) and tokens[i].kind == 'ident'
+            and tokens[i + 1].kind == 'op' and tokens[i + 1].text in ('=', '{', '(', '[', ';', ','))
+
+
+def _declaration(tokens):
+    """Whether a statement looks like a variable declaration: attributes,
+    specifiers, a type (a keyword, or a name with :: and <...>), * and &,
+    then a name and =, {, (, [, ; or a comma."""
+    tokens = [t for t in tokens if t.kind != 'directive']
+    i, n = _skip_attributes(tokens, 0), len(tokens)
+    typed = False   # the specifiers hold a type word: `unsigned long n` needs no other
+    while i < n and tokens[i].kind == 'ident' and tokens[i].text in _SPECIFIERS:
+        typed = typed or tokens[i].text in _TYPE_WORDS
+        i += 1
+    if i < n and tokens[i].kind == 'ident' and not (typed and _declares(tokens, i)):
+        if tokens[i].text == 'decltype' and _is(tokens, i + 1, '('):
+            i = _match(tokens, i + 1) + 1
+        else:
+            i += 1
+        while i < n:
+            if _is(tokens, i, '::') and i + 1 < n and tokens[i + 1].kind == 'ident':
+                i += 2
+            elif _is(tokens, i, '<'):
+                i = _angle_end(tokens, i)
+            elif tokens[i].kind == 'ident' and tokens[i].text in _TYPE_WORDS:
+                i += 1
+            else:
+                break
+    elif not typed:
+        return False
     while i < n and (tokens[i].text in ('*', '&', '&&') and tokens[i].kind == 'op'
                      or tokens[i].kind == 'ident' and tokens[i].text in ('const', 'volatile')):
         i += 1
     if _is(tokens, i, '['):   # a structured binding: auto [a, b] = ...
         return True
-    return (i + 1 < n and tokens[i].kind == 'ident'
-            and tokens[i + 1].kind == 'op' and tokens[i + 1].text in ('=', '{', '(', '[', ';', ','))
+    return _declares(tokens, i)
 
 
 def _has_lambda(tokens):
@@ -399,27 +425,41 @@ def _has_lambda(tokens):
     return False
 
 
+# The name of a macro, as macros are named: TF_DEFINE_PRIVATE_TOKENS, Q_UNUSED,
+# DEFINE_bool. One may expand to a declaration, which belongs at file scope.
+_MACRO_NAME = re.compile(r'[A-Z][A-Z0-9_]*|[A-Z]\w*_\w*')
+
+
 def needs_function(tokens, control):
-    """Whether a statement has to run inside a function: control flow, which
-    clang-repl 18 mis-compiles at top level; a `return`, which ends the
-    program as main()'s would (see in_function); and a statement with a
-    lambda in it, which crashes clang-repl 23 at top level. A declaration
-    such as `auto f = [](int x) { ... };` is fine where it is, and so is a
-    definition: a struct, namespace or function whose body holds a lambda
-    belongs at file scope, where later inputs can see it."""
-    first = next((t for t in tokens if t.kind != 'directive'), None)
-    if control or (first is not None and first.kind == 'ident' and first.text == 'return'):
+    """Whether a statement runs inside a function of its own (see
+    in_function): control flow, which clang-repl 18 mis-compiles at top
+    level; a `return` or `throw`, which ends the program as main()'s would; a
+    statement with a lambda in it, which crashes clang-repl 23 at top level;
+    and any other expression statement, so that an exception it throws is
+    caught. A declaration such as `auto f = [](int x) { ... };` stays where
+    it is, and so does a definition: a struct, namespace or function belongs
+    at file scope, where later inputs can see it. So does a statement that
+    starts with a macro's name, since the macro may declare something."""
+    code = [t for t in tokens if t.kind != 'directive']
+    if not code:
+        return False
+    first = code[0]
+    if control or (first.kind == 'ident' and first.text in ('return', 'throw')):
         return True
-    return _has_lambda(tokens) and not _declaration(tokens) and not _definition(tokens)
+    if _declaration(code) or _definition(code):
+        return False
+    return _has_lambda(code) or not (first.kind == 'ident' and _MACRO_NAME.fullmatch(first.text))
 
 
 def in_function(name, body):
     """body as the body of a new function, and a call of it. The function
     returns repl::ended, which an int converts to: `return 1;` inside body,
     as in main()'s `if (bad) return 1;`, becomes the program's exit status,
-    which repl::finish() reports to the session; body falling off its end
-    returns nothing."""
-    return f'repl::ended {name}() {{ {body} return {{}}; }} repl::finish({name}());'
+    an exception that leaves body is named and ends the program as abort()
+    would, and body falling off its end returns nothing. repl::finish()
+    reports the end to the session."""
+    return (f'repl::ended {name}() {{ try {{ {body} }} catch (...) {{ return repl::uncaught(); }} return {{}}; }} '
+            f'repl::finish({name}());')
 
 
 def _end(toks):

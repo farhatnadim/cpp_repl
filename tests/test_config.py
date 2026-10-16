@@ -456,6 +456,8 @@ def test_libraries_named_with_l(tmp_path, monkeypatch):
     assert flags == ['-I', 'inc']
     assert cfg.libs == [lib / 'libfoo.so', lib / 'libbar.so.2', lib / 'libqux.so.10']
     assert cfg.link_flags()[-1] == str(lib / 'libqux.so.10')
+    # Linked whether or not the program calls into it, as the session loads it.
+    assert cfg.link_flags()[0] == '-Wl,--no-as-needed'
     assert '-L ' + str(lib) + ' -l foo -l bar -l qux' in cfg.command()
     with pytest.raises(ConfigError, match='only .*libbaz.a, a static archive'):
         Config(Options(cwd=tmp_path, no_config=True, link_names=['baz'], link_dirs=['lib']), backend=False)

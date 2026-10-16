@@ -727,8 +727,12 @@ class Config:
         self.history = self.state / 'history'
         self._backend = backend
         if backend:
-            for d in (self.home, self.tmp, self.inputs):
-                d.mkdir(parents=True, exist_ok=True)
+            try:
+                for d in (self.home, self.tmp, self.inputs):
+                    d.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                raise ConfigError(f'cannot write the state directory {self.state} ({e.strerror}): set '
+                                  'XDG_STATE_HOME to a writable directory') from None
             _prune(self.tmp, days=7)
             # A live session replays its inputs from here, however old it is.
             _prune(self.inputs, days=7, ended=session_ended)

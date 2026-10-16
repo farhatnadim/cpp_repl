@@ -636,6 +636,24 @@ def test_the_files_after_the_end_of_the_program_are_named(tmp_path):
     assert done.stdout.endswith('[main returned 3]\n[the program ended: more.repl not run]\n')
 
 
+@pytest.mark.skipif(os.geteuid() == 0, reason='root writes anywhere')
+def test_a_state_directory_that_cannot_be_written_says_so(tmp_path):
+    """A read-only HOME, as in a coding agent's sandbox, stops the start with
+    what to set, not a traceback."""
+    (tmp_path / 'p.repl').write_text('say("hi");\n')
+    locked = tmp_path / 'locked'
+    locked.mkdir(mode=0o555)
+    env = dict(os.environ, CPP_REPL_CLANG_REPL=str(FAKE), NO_COLOR='1', XDG_STATE_HOME=str(locked / 'state'))
+    try:
+        run = subprocess.run([sys.executable, str(CPP_REPL), '--no-config', '--batch', 'p.repl'], cwd=tmp_path,
+                             env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=60)
+    finally:
+        locked.chmod(0o755)
+    assert run.returncode == 2
+    assert run.stderr == (f'cpp-repl: cannot write the state directory {locked}/state/cpp-repl (Permission denied): '
+                          'set XDG_STATE_HOME to a writable directory\n')
+
+
 def test_a_session_that_stays(tmp_path):
     """cpp-repl --serve SOCKET runs what cpp-repl --connect SOCKET sends, and
     the client exits with the run's status; %quit stops the server."""

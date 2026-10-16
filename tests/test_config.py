@@ -13,7 +13,8 @@ from conftest import CLANG_REPL
 from cpp_repl.cli import make_parser, split_compiler_flags
 from cpp_repl.config import (CORE_PRELUDE, PRELUDE_DIR, STD_PRELUDE, Config, ConfigError, Options,
                              clang_repl_version, compile_command_flags, compile_commands_entry, default_std,
-                             find_library, floor_std, merge_flags, parse_flags, read_toml, stdlib_runtime)
+                             find_clang_repl, find_library, floor_std, merge_flags, parse_flags, read_toml,
+                             stdlib_runtime)
 
 
 def test_parse_flags(tmp_path):
@@ -53,6 +54,23 @@ def test_merge_flags_precedence():
     assert flags == ['-I', '/high', '-I', '/low', '-Wno-a', '-DMODE=1', '-DMODE=2']
     assert (std, opt) == ('-std=c++20', '-O3')
     assert preludes == [Path('/a.h'), Path('/b.h')]
+
+
+def test_the_newest_clang_repl_wins(tmp_path, monkeypatch):
+    """An unversioned clang-repl on PATH no longer beats a newer clang-repl-N
+    beside it: the newest LLVM version wins. CPP_REPL_CLANG_REPL still names
+    one outright."""
+    bin_dir = tmp_path / 'bin'
+    bin_dir.mkdir()
+    for name, version in (('clang-repl', '18.1.3'), ('clang-repl-23', '23.1.4'), ('clang-repl-21', '21.1.0')):
+        script = bin_dir / name
+        script.write_text(f'#!/bin/sh\necho "Ubuntu LLVM version {version}"\n')
+        script.chmod(0o755)
+    monkeypatch.setenv('PATH', str(bin_dir))
+    monkeypatch.delenv('CPP_REPL_CLANG_REPL', raising=False)
+    assert find_clang_repl() == str(bin_dir / 'clang-repl-23')
+    monkeypatch.setenv('CPP_REPL_CLANG_REPL', str(bin_dir / 'clang-repl'))
+    assert find_clang_repl() == str(bin_dir / 'clang-repl')
 
 
 def test_libcxx_needs_its_runtime(tmp_path):

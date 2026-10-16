@@ -420,29 +420,38 @@ def find_library(name, dirs=()):
 
 def find_clang_repl(explicit=None):
     """The clang-repl to run: the one asked for, then $CPP_REPL_CLANG_REPL,
-    then clang-repl on PATH, then the newest clang-repl-N on PATH or in
-    /usr/lib/llvm-N/bin."""
+    then the newest by LLVM version of clang-repl and clang-repl-N on PATH
+    and clang-repl in /usr/lib/llvm-N/bin; among equals, the first found."""
     for candidate in (explicit, os.environ.get('CPP_REPL_CLANG_REPL')):
         if candidate:
             found = shutil.which(candidate) or (candidate if Path(candidate).is_file() else None)
             if not found:
                 raise ConfigError(f'no clang-repl at {candidate}')
             return found
-    found = shutil.which('clang-repl')
-    if found:
-        return found
-    best = None
+    best = None   # (major, path)
+
+    def consider(major, path):
+        nonlocal best
+        if os.access(path, os.X_OK) and (best is None or major > best[0]):
+            best = (major, str(path))
+
+    plain = shutil.which('clang-repl')
+    if plain:
+        try:
+            consider(clang_repl_version(plain)[0][0], plain)
+        except ConfigError:
+            pass
     for directory in (Path(d) for d in os.environ.get('PATH', '').split(os.pathsep) if d):
         if not directory.is_dir():
             continue
         for p in directory.glob('clang-repl-*'):
             m = re.fullmatch(r'clang-repl-(\d+)', p.name)
-            if m and os.access(p, os.X_OK) and (best is None or int(m.group(1)) > best[0]):
-                best = (int(m.group(1)), str(p))
+            if m:
+                consider(int(m.group(1)), p)
     for p in Path('/usr/lib').glob('llvm-*/bin/clang-repl'):
         m = re.fullmatch(r'llvm-(\d+)', p.parent.parent.name)
-        if m and os.access(p, os.X_OK) and (best is None or int(m.group(1)) > best[0]):
-            best = (int(m.group(1)), str(p))
+        if m:
+            consider(int(m.group(1)), p)
     if best:
         return best[1]
     raise ConfigError('no clang-repl found: install clang-tools-N (apt.llvm.org has the newest), '

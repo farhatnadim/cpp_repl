@@ -454,6 +454,14 @@ def test_a_session_that_stays(tmp_path):
         assert run.returncode == 1 and run.stdout.startswith('one\n') and 'error_here' in run.stdout
         records = [json.loads(line) for line in client('--json', '--fresh', stdin='42\n').stdout.splitlines()]
         assert records[0]['output'] == '42\n' and records[-1] == {'exit': 0, 'inputs': 1, 'failures': 0}
+        # --timeout and --stop-on-error hold for the run; the configuration is the server's.
+        assert client('-q', '--timeout', '1', stdin='hang();\n').returncode == 124
+        (tmp_path / 's.repl').write_text('error_here;\nsay("after");\n')
+        stopped = client('-q', '--stop-on-error', 's.repl')
+        assert stopped.returncode == 1 and 'after' not in stopped.stdout and 'not run' in stopped.stdout
+        fixed = client('-p', 'eigen', stdin='42\n')
+        assert fixed.returncode == 2 and 'configuration is fixed' in fixed.stderr
+        assert client('-q', stdin='say("still here");\n').stdout == 'still here\n'
         assert client(stdin='%quit\n').returncode == 0
         assert server.wait(timeout=30) == 0
         assert not (tmp_path / 'repl.sock').exists()

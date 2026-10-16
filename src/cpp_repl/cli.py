@@ -186,6 +186,11 @@ def _run(argv):
 
     if args.connect:
         from .server import connect
+        if (flags or args.profile or args.config or args.compile_commands or args.build_dir or args.lib
+                or args.link_names or args.link_dirs or args.native or args.no_std or args.clang_repl or args.cwd):
+            return _fail("--connect runs in the server's session, whose configuration is fixed: its flags, "
+                         'profiles, libraries and directory are the server\'s. --timeout, --stop-on-error, '
+                         '--diagnostics, -q, --json and --fresh apply to the run')
         return connect(args, _fail)
 
     if args.docker:
@@ -205,7 +210,9 @@ def _run(argv):
         return 0
 
     interactive = not args.batch and not args.serve and sys.stdin.isatty()
-    colour = sys.stdout.isatty() and not args.no_color and not args.json and not os.environ.get('NO_COLOR')
+    # A server's output goes to its clients, which paint for themselves.
+    colour = (sys.stdout.isatty() and not args.no_color and not args.json and not args.serve
+              and not os.environ.get('NO_COLOR'))
     options = options_from(args, flags, colour, interactive)
     try:
         cfg = Config(options, backend=not (args.cflags or args.libs))

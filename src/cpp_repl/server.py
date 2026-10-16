@@ -2,17 +2,21 @@
 stays, for a coding agent's loop.
 
 The server holds one session, with a spare clang-repl started in advance,
-and listens on a Unix socket. A client sends one request, a JSON line:
+and listens on a Unix socket, which is the user's alone. A client sends one
+request, a JSON line:
 
     {"files": [{"name": ..., "path": ..., "text": ...}], "stdin": TEXT,
-     "fresh": BOOL, "quiet": BOOL, "json": BOOL}
+     "fresh": BOOL, "quiet": BOOL, "json": BOOL,
+     "timeout": SECONDS, "stop_on_error": BOOL, "diagnostics": "brief"|"full"}
 
 The server runs the files' inputs, then stdin's, in the session, as
 cpp-repl --batch would, and answers with JSON lines: {"out": TEXT} for what
 the run writes, as it writes it, and {"exit": STATUS} at the end. With fresh,
 the run starts from an empty session, the spare: no start-up, no replay.
-Without it, the session goes on from the last run. Requests run one at a
-time. %quit stops the server.
+Without it, the session goes on from the last run. timeout, stop_on_error
+and diagnostics hold for the run; the session's flags, profiles and
+libraries are the server's. Requests run one at a time. %quit stops the
+server.
 """
 
 import json
@@ -61,6 +65,14 @@ def _run(session, f):
     session.out = JsonOutput(frames) if request.get('json') else Output(frames)
     session.echo = not (request.get('quiet') or request.get('json'))
     session.new_run()
+    options, diagnostics = session.cfg.options, session.diagnostics
+    before = (options.timeout, options.stop_on_error, diagnostics.brief)
+    if request.get('timeout') is not None:
+        options.timeout = request['timeout']
+    if request.get('stop_on_error'):
+        options.stop_on_error = True
+    if request.get('diagnostics'):
+        diagnostics.brief = request['diagnostics'] == 'brief'
     go_on = True
     try:
         if request.get('fresh'):
@@ -68,6 +80,8 @@ def _run(session, f):
         session.run_inputs(_inputs(request, session), echo=True)
     except SystemExit:   # %quit
         go_on = False
+    finally:
+        options.timeout, options.stop_on_error, diagnostics.brief = before
     status = session.exit_status()
     if request.get('json'):
         session.out.finish(status, session)
@@ -131,7 +145,8 @@ def serve(session, address):
 def connect(args, fail):
     """cpp-repl --connect: send the files, or stdin, to the server and write
     what comes back. Returns the run's exit status."""
-    request = {'fresh': args.fresh, 'quiet': args.quiet, 'json': args.json, 'files': []}
+    request = {'fresh': args.fresh, 'quiet': args.quiet, 'json': args.json, 'files': [], 'timeout': args.timeout,
+               'stop_on_error': args.stop_on_error, 'diagnostics': args.diagnostics}
     for f in args.files:
         if not f.is_file():
             return fail(f'no such file: {f}')

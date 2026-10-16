@@ -471,3 +471,14 @@ def test_exceptions_follow_the_flags(tmp_path):
     assert exceptions('-fno-exceptions') is False
     assert exceptions('-fno-exceptions', '-fexceptions') is True
     assert exceptions('-fexceptions', '-fno-exceptions') is False
+
+
+def test_compile_command_response_files(tmp_path):
+    """A build that keeps its flags in a response file (`c++ @flags.rsp`)
+    still gives the session its include directories and definitions; one
+    response file may name another, and a missing one is left as it is."""
+    (tmp_path / 'flags.rsp').write_text('-I inc -DFOO=1\n"-DQUOTED=a b" @more.rsp\n')
+    (tmp_path / 'more.rsp').write_text('-std=gnu++20\n')
+    entry = {'directory': str(tmp_path), 'file': 'a.cpp', 'command': 'c++ @flags.rsp @missing.rsp -c a.cpp -o a.o'}
+    assert compile_command_flags(entry) == parse_flags(['-I', str(tmp_path / 'inc'), '-DFOO=1', '-DQUOTED=a b',
+                                                        '-std=gnu++20'])

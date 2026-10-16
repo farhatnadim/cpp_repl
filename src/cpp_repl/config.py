@@ -139,12 +139,29 @@ _SKIP_WITH_VALUE = {'-o', '-MF', '-MT', '-MQ', '-imacros', '-x', '-Xclang', '-ta
                     '-main-file-name'}
 
 
+def _response_files(args, base):
+    """args with each @FILE replaced by the arguments the file holds, read
+    as clang reads a response file (whitespace between arguments, quotes as
+    in a shell), relative to base, response files inside it included. A file
+    that cannot be read stays as it is."""
+    out = []
+    for a in args:
+        if len(a) > 1 and a.startswith('@'):
+            try:
+                out += _response_files(shlex.split((Path(base) / a[1:]).read_text()), base)
+                continue
+            except (OSError, ValueError):
+                pass
+        out.append(a)
+    return out
+
+
 def compile_command_flags(entry, notes=None):
-    """The flags worth keeping from one compile_commands.json entry. A
-    macro file the build reads first (-imacros) is left out, with a note in
-    notes."""
-    args = entry.get('arguments') or shlex.split(entry['command'])
+    """The flags worth keeping from one compile_commands.json entry, its
+    response files (@FILE) read. A macro file the build reads first
+    (-imacros) is left out, with a note in notes."""
     base = Path(entry.get('directory') or '.')
+    args = _response_files(entry.get('arguments') or shlex.split(entry['command']), base)
     kept, i = [], 1
     while i < len(args):
         a = args[i]

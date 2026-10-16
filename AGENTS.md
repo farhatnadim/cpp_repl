@@ -73,6 +73,9 @@ the rule above.
 ## Commands
 
 ```
+make check          # before a pull request, what CI runs: every test against the host's clang-repl (23 or newer), then claude plugin validate
+make pr             # make check, push the branch N-slug and open its pull request, which closes issue N
+make issue KIND=bug|feature|task TITLE="..." [BODY="..."]   # file an issue on the board
 make test           # unit and fake-backend tests; no clang-repl needed
 make test-host      # everything, against the host's clang-repl (23 or newer: with an older one the backend tests skip)
 make tutorials      # docs/tutorials' transcripts against runs
@@ -85,6 +88,37 @@ claude plugin validate .   # the plugin's manifests and skills
 evals/headless.py --case <case>   # one skill eval with claude -p; real model calls
 claude plugin eval . --case <case> --runs 1 --ablation none   # the same, where its sandbox runs
 ```
+
+## How changes land
+
+Since v0.1.0 (2026-10-16) work is tracked on GitHub and lands by pull request,
+for the user and for agents alike.
+
+- **An issue first.** A bug, a feature or a task is an issue on the board,
+  project 18 (github.com/users/farhatnadim/projects/18), before it is code:
+  `make issue KIND=bug|feature|task TITLE="..." [BODY="..."]`, which files it
+  with the label and puts it on the board (`gh issue create --project` fails
+  in gh 2.45), or the forms on the web, which do the same. A problem not fixed
+  on the spot is filed the same way. A title is one sentence that states the
+  fact.
+- **A branch per issue.** `gh issue develop N --checkout` makes `N-slug`,
+  linked to the issue. Nothing goes to main directly: a ruleset requires a
+  pull request with a passing `check`, for the owner too.
+- **`make check` before the pull request.** It runs what CI runs
+  (`.github/workflows/check.yml`): every test against clang-repl 23 or newer,
+  then `claude plugin validate`. `make pr` runs it, pushes, and opens the pull
+  request titled as the issue, with `Closes #N`. A pull request that closes no
+  issue fails CI.
+- **CI on the pull request is the evidence;** a passing local run is not.
+  Merges are rebases, the branch is deleted on merge, the issue closes with
+  it. The user merges (`gh pr merge --rebase`, or `--auto` to queue it),
+  unless they tell the agent to. An agent never closes an issue.
+- **A release** is a tag `vX.Y.Z` on main with a GitHub release
+  (`gh release create`); `pyproject.toml` carries the same version. The
+  plugin keeps tracking main: `plugin.json` names no version, so an install
+  follows the commits.
+- **GOALS.md** stays the roadmap summary the workspace status tool reads; the
+  board holds the work.
 
 ## Using cpp-repl from an agent
 

@@ -18,12 +18,37 @@ DOCKER_RUN = docker run --rm --init -i --user $$(id -u):$$(id -g) -e HOME=/tmp \
 	-v $(CURDIR):$(CURDIR):ro -w $(CURDIR) \
 	$(if $(USD_ROOT),-e USD_ROOT=$(USD_ROOT) -v $(USD_ROOT):$(USD_ROOT):ro)
 
-.PHONY: help test test-host test-docker test-snapshot parity tutorials tutorials-update compat compat-docker \
-        compat-table compare compare-docker compare-doc docker docker-bench docker-snapshot docker-src bench \
-        bench-quick bench-host
+.PHONY: help check need-clang-repl pr need-issue-branch issue test test-host test-docker test-snapshot parity tutorials tutorials-update \
+        compat compat-docker compat-table compare compare-docker compare-doc docker docker-bench docker-snapshot \
+        docker-src bench bench-quick bench-host
 
 help:  ## this list
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | sed -E 's/:.*## /\t/' | expand -t 18
+
+check: need-clang-repl test-host  ## before a pull request, what CI runs: every test against the host's clang-repl (23 or newer), then the plugin's manifests
+	claude plugin validate .
+
+# Without a clang-repl the backend tests skip, and a passing make check would say nothing.
+need-clang-repl:
+	@test -n "$(CLANG_REPL)" || { echo "make check: no clang-repl 23 or newer found; install one, or pass CLANG_REPL=/path/to/clang-repl" >&2; exit 2; }
+
+pr: need-issue-branch check  ## make check, push this branch (N-slug, from gh issue develop N --checkout) and open its pull request, which closes issue N
+	@n=$$(git rev-parse --abbrev-ref HEAD | sed -n 's/^\([0-9][0-9]*\)-.*/\1/p'); \
+	git push -u origin HEAD && \
+	gh pr create --assignee @me --title "$$(gh issue view $$n --json title --jq .title)" \
+	  --body "$$(printf 'Closes #%s\n\n## What changed\n\n\n\n## Checks\n\n- [x] `make check` passed locally\n- [ ] docs and tutorial transcripts updated where behaviour changed\n' "$$n")"
+
+# The pull request closes the issue the branch is named after, so the name comes first.
+need-issue-branch:
+	@git rev-parse --abbrev-ref HEAD | grep -q '^[0-9][0-9]*-' || \
+	  { echo "make pr: the branch is not named N-slug; start from: gh issue develop N --checkout" >&2; exit 2; }
+
+# gh 2.45's `gh issue create --project` fails (it still asks for classic projects), hence item-add.
+issue:  ## file an issue on the board: make issue KIND=bug|feature|task TITLE="one sentence" [BODY="..."]
+	@label=$$(case "$(KIND)" in bug) echo bug;; feature) echo enhancement;; task) echo task;; esac); \
+	test -n "$$label" -a -n "$(TITLE)" || { echo 'make issue KIND=bug|feature|task TITLE="one sentence that states the fact" [BODY="..."]' >&2; exit 2; }; \
+	url=$$(gh issue create --label "$$label" --title "$(TITLE)" --body "$(BODY)") && echo "$$url" && \
+	gh project item-add 18 --owner farhatnadim --url "$$url" > /dev/null
 
 test:  ## unit and fake-backend tests: no clang-repl needed
 	$(PYTHON) -m pytest -q -m 'not backend'

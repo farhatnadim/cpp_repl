@@ -724,6 +724,7 @@ their compiled programs do: the same output, the same files written.
 ## Development
 
 ```sh
+make check         # before a pull request: every test against the host's clang-repl (23 or newer), then claude plugin validate; CI runs the same
 make test          # unit and fake-backend tests: no clang-repl needed
 make test-host     # every test against the host's clang-repl
 make test-docker   # every test inside cpp-repl:llvm23 (make docker first)
@@ -746,8 +747,9 @@ clang-repl, and skips what needs one when that is older than 23:
 - integration tests for crashes, Ctrl-C, link failures and `%save-cpp` round
   trips.
 
-[AGENTS.md](AGENTS.md) describes the layout and how to probe clang-repl
-safely.
+Changes land by pull request from an issue on the project board;
+[CONTRIBUTING.md](CONTRIBUTING.md) has the steps. [AGENTS.md](AGENTS.md)
+describes the layout, the rule in full, and how to probe clang-repl safely.
 
 ## License
 

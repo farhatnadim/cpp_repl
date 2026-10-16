@@ -576,6 +576,8 @@ def transform(text, wrap=True, fresh=fresh_name, origin=None, statement=False):
     if not stmts:
         return Send('', 'empty', False)
     lines = needs_lines(tokens)
+    if len(stmts) == 1 and _open_end(*stmts[0]) and _statement_shaped(stmts[0][0]):
+        statement = True   # `int x = 5` without its ';': a statement, with no value to print
     if not statement and not lines and len(stmts) == 1 and _open_end(*stmts[0]):
         toks = stmts[0][0]
         if origin:
@@ -597,6 +599,16 @@ def transform(text, wrap=True, fresh=fresh_name, origin=None, statement=False):
             line = in_function(fresh(), f'\n{line}\n' if origin else line)
         parts.append(line)
     return Send(('\n' if origin else ' ').join(parts), 'stmt', lines or origin is not None)
+
+
+def _statement_shaped(toks):
+    """Whether an input without its ';' is a statement rather than an
+    expression with a value to print: a declaration (`int x = 5`,
+    `std::vector<int> v{1, 2}`), a return or a throw."""
+    code = [t for t in toks if t.kind != 'directive']
+    if not code:
+        return False
+    return _declaration(code) or (code[0].kind == 'ident' and code[0].text in ('return', 'throw'))
 
 
 def _definition(tokens):

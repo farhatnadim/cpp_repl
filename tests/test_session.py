@@ -89,6 +89,17 @@ def test_parse_errors_are_not_journaled(tmp_path, monkeypatch, made):
     assert s.failures == 1
 
 
+def test_a_declaration_without_its_semicolon_is_a_statement(tmp_path, monkeypatch, made):
+    """`int x = 5` is not tried as an expression first: no failed compile,
+    and the session is not tainted by one."""
+    s, stream = make(tmp_path, monkeypatch)
+    made.append(s)
+    assert s.run_input('int nosemi = 5')
+    text, (sent,), kind = s.journal[-1]
+    assert (text, kind) == ('int nosemi = 5', 'stmt') and not s.tainted
+    assert Path(sent[len('#include "'):-1]).read_text() == '#line 1 "<input>"\nint nosemi = 5;\n'
+
+
 def test_void_expressions(tmp_path, monkeypatch, made):
     s, stream = make(tmp_path, monkeypatch)
     made.append(s)

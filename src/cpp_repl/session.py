@@ -16,7 +16,7 @@ from pathlib import Path
 from .backend import ANY_ERROR, STARTUP_ERROR, Backend, BackendError, outcome, plain
 from .config import session_dir_name
 from .diagnostics import SNIPPET, Diagnostics
-from .lexer import (Origin, open_end, unsplice, declared_names, in_function, is_definition, join, lex,
+from .lexer import (Origin, open_end, unsplice, declared_names, has_lambda, in_function, is_definition, join, lex,
                     located, split_statements, trailing_expression, transform)
 from .sources import PRELUDE_NAMES, Input, inputs_from_file, split_directives
 
@@ -76,6 +76,22 @@ _DIAGNOSTIC_LINE = re.compile(r'(?:\S[^:\n]*:\d+:\d+: )?(?:fatal error|error|war
                               r'|In file included from |' + SNIPPET.pattern)
 # What clang says of a name declared again.
 _REDEFINED = re.compile(r"error: redefinition of '([^']+)'")
+
+
+def _top_level_comma(tokens):
+    """Whether a comma stands outside every (), [] and {} in tokens. (One
+    inside <> counts too, and the parentheses it earns do no harm.)"""
+    depth = 0
+    for t in tokens:
+        if t.kind != 'op':
+            continue
+        if t.text in '([{':
+            depth += 1
+        elif t.text in ')]}':
+            depth -= 1
+        elif t.text == ',' and depth == 0:
+            return True
+    return False
 
 
 def printer_hint(name):
@@ -673,11 +689,45 @@ class Session:
 
     # -- saving -----------------------------------------------------------
 
+    def _file_scope(self):
+        """Which journal entries the saved program puts at file scope, and the
+        variables among them. A definition goes there. A variable typed at
+        the prompt is a global there; in the program it stays one when a
+        function or a lambda typed later names it, and so, in turn, does a
+        variable its initialiser names: inside main() it would be out of the
+        function's reach, and a local the lambda does not capture. The journal
+        is read backwards, so what a later entry needs is known first."""
+        at_file_scope, needed, hoisted = set(), set(), []
+        for i in range(len(self.journal) - 1, -1, -1):
+            entry = self.journal[i]
+            if entry.kind != 'stmt':
+                continue
+            text = unsplice(entry.text).strip()
+            tokens, _ = lex(text)
+            idents = {t.text for t in tokens if t.kind == 'ident'}
+            if is_definition(text):
+                at_file_scope.add(i)
+                needed |= idents
+                continue
+            stmts = split_statements(tokens)
+            names = [n for toks, control in stmts if not control for n in declared_names(toks)]
+            declaration = bool(names) and all(not control and declared_names(toks) for toks, control in stmts)
+            if declaration and needed.intersection(names):
+                at_file_scope.add(i)
+                hoisted[:0] = [n for n in names if n not in hoisted]
+                needed |= idents
+            elif has_lambda(tokens):
+                needed |= idents
+        return at_file_scope, hoisted
+
     def as_cpp(self, path):
-        """The journal as a C++ program: directives and definitions at file
-        scope, the rest inside main(), bare expressions through show()."""
-        includes, libs, definitions, body = [], [], [], []
-        for entry in self.journal:
+        """(The journal as a C++ program, the variables it keeps at file
+        scope): directives and definitions at file scope, with the variables
+        a later function or lambda uses (see _file_scope); the rest inside
+        main(), bare expressions through show()."""
+        at_file_scope, hoisted = self._file_scope()
+        includes, libs, scope, body = [], [], [], []
+        for i, entry in enumerate(self.journal):
             text = unsplice(entry.text).strip()
             tokens, _ = lex(text)
             if entry.kind == 'pp':
@@ -689,11 +739,13 @@ class Session:
             elif entry.kind == 'lib':
                 libs.append(text.split(None, 1)[-1])
             elif entry.kind == 'expr':
-                body.append(f'show({join(tokens)});')
+                # A comma outside brackets (`a, b`) would make two arguments.
+                expression = join(tokens)
+                body.append(f'show(({expression}));' if _top_level_comma(tokens) else f'show({expression});')
             elif entry.kind == 'void':
                 body.append(f'{join(tokens)};')
-            elif is_definition(text):
-                definitions.append(entry.text.strip())
+            elif i in at_file_scope:
+                scope.append(entry.text.strip())
             else:
                 stmts = split_statements(tokens)
                 if stmts and open_end(*stmts[-1]):
@@ -707,20 +759,24 @@ class Session:
                '//',
                "// The cpp_repl*.h headers are the session's prelude: show(), keep(),",
                '// timeit(), and what the profiles add.']
+        if hoisted:
+            out += ['//',
+                    f'// Globals, as at the prompt: {", ".join(hoisted)}. A function or a lambda below',
+                    '// uses them, so they stay out of main() and are initialised before it runs.']
         out += [f'#include "{h.name}"' for h in self.cfg.preludes]
         out += includes
         if libs:
             out += ['', '// The session also loaded these libraries; link them as well:']
             out += [f'//   {lib}' for lib in libs]
-        for definition in definitions:
-            out += ['', definition]
+        for item in scope:
+            out += ['', item]
         out += ['', 'int main()', '{']
         for stmt in body:
             out += [('  ' + line) if line.strip() else '' for line in stmt.split('\n')]
         if not body or not body[-1].startswith('return'):
             out.append('  return 0;')
         out += ['}', '']
-        return '\n'.join(out)
+        return '\n'.join(out), hoisted
 
     def describe_flags(self):
         cfg = self.cfg
@@ -767,11 +823,15 @@ class Session:
                 self.out.write(f'usage: {name} FILE\n')
             else:
                 path = Path(arg).expanduser()
+                where = ''
                 if name == '%save':
                     path.write_text(''.join(e.text + '\n' for e in self.journal))
                 else:
-                    path.write_text(self.as_cpp(path))
-                self.out.write(f'saved {len(self.journal)} inputs to {path.resolve()}\n')
+                    program, hoisted = self.as_cpp(path)
+                    path.write_text(program)
+                    if hoisted:
+                        where = f'; {", ".join(hoisted)} at file scope, for the functions and lambdas that use them'
+                self.out.write(f'saved {len(self.journal)} inputs to {path.resolve()}{where}\n')
         elif name == '%load':
             if not arg or not Path(arg).expanduser().is_file():
                 self.out.write('usage: %load FILE (a C++ source or a .repl)\n')

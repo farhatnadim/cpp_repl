@@ -263,7 +263,12 @@ def test_save_cpp_builds_and_prints_the_same(session, tmp_path):
     inputs = ['#include <numeric>', 'std::vector<int> v{1, 2, 3, 4};',
               'int total(const std::vector<int> &x) { return std::accumulate(x.begin(), x.end(), 0); }',
               'total(v)', 'for (int x : v) {\n  std::cout << x << ";";\n}\nstd::cout << "\\n";',
-              'std::map<int, char>{{1, \'a\'}}']
+              'std::map<int, char>{{1, \'a\'}}',
+              # Variables a later function or lambda uses, one through another's initialiser.
+              'int base = 1;', 'int n = base + 2;', 'int f() { return n; }', 'f()',
+              'auto plus_n = [](int a) { return a + n; };', 'plus_n(1)',
+              'int alive = 0;', 'struct Tracked { Tracked() { ++alive; } ~Tracked() { --alive; } };',
+              'Tracked{}, alive']
     for text in inputs:
         assert s.run_input(text), stream.getvalue()
     in_repl = stream.getvalue()

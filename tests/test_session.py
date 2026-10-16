@@ -385,15 +385,24 @@ def test_save_and_save_cpp(tmp_path, monkeypatch, made):
     s, stream = make(tmp_path, monkeypatch)
     made.append(s)
     for text in ('#include <vector>', 'int twice(int x) { return 2 * x; }', 'int a = twice(2);', '42',
-                 'void_call()', 'if (a) {\n  say("yes");\n}'):
+                 'void_call()', 'if (a) {\n  say("yes");\n}',
+                 # A variable a later function or lambda names stays a global, and
+                 # so does one its initialiser names (base, through n).
+                 'int base = 1;', 'int n = base + 2;', 'int f() { return n; }', 'f()',
+                 'int seen = 0;', 'auto count = [](int q) { return q + seen; };', 'count(1)',
+                 'seen, 42'):   # a comma expression is one argument to show()
         assert s.run_input(text)
     s.run_input(f'%save {tmp_path / "s.repl"}')
     assert (tmp_path / 's.repl').read_text().startswith('#include <vector>\nint twice')
     s.run_input(f'%save-cpp {tmp_path / "s.cpp"}')
+    assert stream.getvalue().endswith('; base, n, seen at file scope, for the functions and lambdas that use them\n')
     cpp = (tmp_path / 's.cpp').read_text()
+    assert '// Globals, as at the prompt: base, n, seen. A function or a lambda below\n' in cpp
     assert '#include "cpp_repl.h"\n#include "cpp_repl_std.h"\n#include <vector>\n' in cpp
-    assert '\nint twice(int x) { return 2 * x; }\n' in cpp
-    assert '  int a = twice(2);\n  show(42);\n  void_call();\n  if (a) {\n    say("yes");\n  }\n  return 0;\n}' in cpp
+    assert ('\nint twice(int x) { return 2 * x; }\n\nint base = 1;\n\nint n = base + 2;\n\nint f() { return n; }\n\n'
+            'int seen = 0;\n\nint main()\n{\n') in cpp
+    assert ('  int a = twice(2);\n  show(42);\n  void_call();\n  if (a) {\n    say("yes");\n  }\n  show(f());\n'
+            '  auto count = [](int q) { return q + seen; };\n  show(count(1));\n  show((seen, 42));\n  return 0;\n}') in cpp
 
 
 def test_a_backend_that_never_answers(tmp_path, monkeypatch):

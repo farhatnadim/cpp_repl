@@ -531,7 +531,7 @@ def _head_state(toks):
     return 'extendable' if _function_head(code) else None
 
 
-def _has_lambda(tokens):
+def has_lambda(tokens):
     """Whether tokens hold a lambda expression: a [ that does not follow a
     name, a ) or a ] (which would make it a subscript), closed by a ] that a
     parameter list, a body, or a lambda specifier follows."""
@@ -575,7 +575,7 @@ def needs_function(tokens, control):
         return True
     if _declaration(code) or _definition(code):
         return False
-    return _has_lambda(code) or not (first.kind == 'ident' and _MACRO_NAME.fullmatch(first.text))
+    return has_lambda(code) or not (first.kind == 'ident' and _MACRO_NAME.fullmatch(first.text))
 
 
 def in_function(name, body, timed=True, exceptions=True):

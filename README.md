@@ -176,6 +176,9 @@ and when the inputs themselves come through stdin, it reads end-of-file.
 
 `%save-cpp FILE` writes the session as a program:
 - includes and definitions at file scope;
+- a variable that a function or a lambda typed later uses stays a global, as
+  it was at the prompt (and so does one its initialiser uses), initialised
+  before `main()` runs; the file and `%save-cpp` say which;
 - everything else in `main()`;
 - bare expressions as `show(...)` calls.
 

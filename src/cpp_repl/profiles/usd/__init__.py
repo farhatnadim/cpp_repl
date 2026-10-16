@@ -34,8 +34,17 @@ COMPLETION = ['usd/usd', 'usd/usdGeom', 'usd/usdLux', 'usd/usdShade', 'usd/sdf',
 HELP = """\
   tree(stage)     the prim hierarchy of a stage or prim
   A stage prints its usda, a prim its type, properties and children, an
-  attribute its value and time samples.
+  attribute its value and time samples. The session compiles as C++20:
+  OpenUSD's headers do not build as C++23 or later (a std::unique_ptr of an
+  incomplete type, which libstdc++'s constexpr unique_ptr rejects).
 """
+
+# OpenUSD's headers as of 26.11 do not compile as C++23 or later with
+# libstdc++ 13: std::unique_ptr<UsdPrimDefinition>, the type incomplete, hits
+# the "sizeof an incomplete type" assertion of the constexpr unique_ptr. The
+# profile's flags come lowest, so -std on the command line still wins.
+STD = '-std=gnu++20'
+STD_NOTE = f'the usd profile compiles as {STD.removeprefix("-std=")}: OpenUSD\'s headers do not build as C++23 or later'
 
 # USD's own errors and warnings, coloured by severity.
 DIAGNOSTICS = [(re.compile(r'(Coding Error|Runtime Error|Fatal Error|FATAL ERROR|Error|Warning|Status):'),
@@ -121,7 +130,7 @@ def libraries(root):
 
 def configure(ctx):
     root = find_root(ctx)
-    flags = ['-isystem', str(root / 'include')]
+    flags = [STD, '-isystem', str(root / 'include')]
     python = python_include(root)
     if python:
         flags += ['-isystem', str(python)]
@@ -130,4 +139,4 @@ def configure(ctx):
     return Profile(name='usd', flags=flags, libs=libraries(root), prelude=[HERE / 'cpp_repl_usd.h'],
                    prompt='usd> ', blocks=[(re.compile(r'#usda '), 'usd')], diagnostics=DIAGNOSTICS,
                    completion=[include / d for d in COMPLETION], help=HELP,
-                   banner=f'OpenUSD {version(root)}', mounts=[root])
+                   banner=f'OpenUSD {version(root)}', mounts=[root], notes=[STD_NOTE])

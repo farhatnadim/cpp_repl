@@ -9,10 +9,11 @@ from pathlib import Path
 
 import pytest
 
+from conftest import CLANG_REPL
 from cpp_repl.cli import make_parser, split_compiler_flags
 from cpp_repl.config import (CORE_PRELUDE, PRELUDE_DIR, STD_PRELUDE, Config, ConfigError, Options,
-                             compile_command_flags, compile_commands_entry, find_library, floor_std,
-                             merge_flags, parse_flags, read_toml)
+                             clang_repl_version, compile_command_flags, compile_commands_entry, default_std,
+                             find_library, floor_std, merge_flags, parse_flags, read_toml)
 
 
 def test_parse_flags(tmp_path):
@@ -95,6 +96,23 @@ def test_read_toml(tmp_path):
     (tmp_path / 'bad.toml').write_text('include_dirs = ["x"]\n')
     with pytest.raises(ConfigError, match='unknown keys include_dirs'):
         read_toml(tmp_path / 'bad.toml')
+
+
+@pytest.mark.parametrize('version, std', [
+    ((18, 1, 3), '-std=gnu++26'),
+    ((23, 1, 2), '-std=gnu++26'),
+    ((16, 0, 6), '-std=gnu++23'),
+    ((11, 1, 0), '-std=gnu++20'),
+    (None, '-std=gnu++20'),
+])
+def test_the_default_standard_is_the_newest_the_clang_knows(version, std):
+    assert default_std(version) == std
+
+
+def test_the_default_standard_follows_the_clang_repl_found(tmp_path):
+    cfg = Config(Options(cwd=tmp_path, no_config=True), backend=False)
+    expected = default_std(clang_repl_version(CLANG_REPL)[0]) if CLANG_REPL else '-std=gnu++20'
+    assert cfg.std == expected and cfg.describe().split(', ')[1] == expected.removeprefix('-std=')
 
 
 def test_config_without_a_backend(tmp_path, monkeypatch):

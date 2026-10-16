@@ -32,8 +32,20 @@ PRELUDE_DIR = PACKAGE / 'prelude'
 CORE_PRELUDE = PRELUDE_DIR / 'cpp_repl.h'
 STD_PRELUDE = PRELUDE_DIR / 'cpp_repl_std.h'
 PROJECT_FILE = 'cpp-repl.toml'
-DEFAULT_STD = '-std=gnu++20'
 PROMPT = 'c++> '
+
+
+def default_std(version):
+    """The standard a session compiles with when none is asked for: the
+    newest its clang knows, from the clang-repl's (major, minor, patch).
+    clang 17 added C++26 (as c++2c) and clang 12 C++23 (as c++2b); the
+    prelude needs C++20, which an unknown clang gets."""
+    major = version[0] if version else 0
+    if major >= 17:
+        return '-std=gnu++26'
+    if major >= 12:
+        return '-std=gnu++23'
+    return '-std=gnu++20'
 
 
 class ConfigError(Exception):
@@ -58,6 +70,7 @@ class Profile:
     banner: str = ''                                 # what the startup line says about it
     mounts: list = field(default_factory=list)       # directories `cpp-repl --docker` mounts
     base: Path | None = None                         # what relative paths in flags are relative to
+    notes: list = field(default_factory=list)        # what the profile changed, said at the start and by %flags
 
 
 # ---------------------------------------------------------------------------
@@ -561,6 +574,7 @@ class Config:
 
         ctx = SimpleNamespace(compile_commands=self.compile_commands, env=os.environ, cwd=cwd)
         self.profiles = [load_profile(n, ctx) for n in names]
+        self.notes += [note for p in self.profiles for note in p.notes]
 
         layers = [parse_flags(p.flags) for p in self.profiles]
         if self.compile_commands:
@@ -574,7 +588,18 @@ class Config:
         if sanitizers:
             raise ConfigError(f'{sanitizers[0]}: clang-repl\'s JIT cannot run sanitized code. Leave it out, or '
                               'build the program with clang++ (%save-cpp writes the session as one)')
-        self.std, note = floor_std(std or DEFAULT_STD)
+        # The clang-repl is found now: the default standard is the newest
+        # its clang knows. Without a backend (cpp-repl --docker, --cflags)
+        # there may be none, and the default is then an unknown clang's.
+        self.clang_repl = self.version = self.version_text = self.argv = None
+        if backend or std is None:
+            try:
+                self.clang_repl = find_clang_repl(options.clang_repl)
+                self.version, self.version_text = clang_repl_version(self.clang_repl)
+            except ConfigError:
+                if backend:
+                    raise
+        self.std, note = floor_std(std or default_std(self.version))
         if note:
             self.notes.append(note)
         self.opt = opt
@@ -613,15 +638,12 @@ class Config:
         self.state = state_dir()
         self.home, self.tmp, self.inputs = (self.state / d for d in ('home', 'tmp', 'inputs'))
         self.history = self.state / 'history'
-        self.clang_repl = self.version = self.version_text = self.argv = None
         if backend:
             for d in (self.home, self.tmp, self.inputs):
                 d.mkdir(parents=True, exist_ok=True)
             _prune(self.tmp, days=7)
             # A live session replays its inputs from here, however old it is.
             _prune(self.inputs, days=7, ended=session_ended)
-            self.clang_repl = find_clang_repl(options.clang_repl)
-            self.version, self.version_text = clang_repl_version(self.clang_repl)
             brief = BRIEF_FLAGS if options.diagnostics == 'brief' else ()
             self.argv = ([self.clang_repl] + ['--Xcc=' + a for a in (*brief, *self.compiler_flags)]
                          + [a for h in self.preludes for a in ('--Xcc=-include', '--Xcc=' + str(h))]

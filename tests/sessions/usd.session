@@ -3,6 +3,7 @@
 # addresses and input_line numbers are normalised.
 # args: -p usd
 # requires: profile=usd
+[the usd profile compiles as gnu++20: OpenUSD's headers do not build as C++23 or later]
 usd> auto stage = UsdStage::CreateInMemory();
 usd> auto sphere = UsdGeomSphere::Define(stage, SdfPath("/World/Ball"));
 usd> sphere.GetRadiusAttr().Set(2.0);

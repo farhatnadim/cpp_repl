@@ -93,7 +93,9 @@ def v_bare_builtin(out, rc, hung):
     if common(out, rc, hung):
         return common(out, rc, hung)
     m = re.search(r'\(int\) 42', out)
-    return 'prints (int) 42' if m else 'prints nothing'
+    if m:
+        return 'prints (int) 42'
+    return "prints 'Not implement yet.'" if 'Not implement yet.' in out else 'prints nothing'
 
 
 def v_bare_class(out, rc, hung):
@@ -218,6 +220,22 @@ def probes(scratch):
         probe('native', '`-Xcc -march=native` in the JIT',
               ['#include <cstdio>', 'printf("__AVX2__=%d\\n", __AVX2__ + 0);'],
               v_flag('__AVX2__'), flags=['--Xcc=-march=native'], cpp_repl='--native'),
+        probe('return_top', 'A `return 3;` at top level',
+              ['#include <cstdio>', 'return 3;', 'printf("after\\n");'],
+              lambda out, rc, hung: common(out, rc, hung) or ('ignored' if 'after' in out and 'error' not in out
+                                                               else 'an error' if 'after' in out else 'errors'),
+              cpp_repl='ends the program with 3, as main() would'),
+        probe('goto_label', 'A `goto` to a label clang-repl never saw',
+              ['#include <cstdio>', 'goto nowhere;', 'printf("after\\n");'],
+              lambda out, rc, hung: common(out, rc, hung) or ('an error' if 'after' in out else 'errors'),
+              cpp_repl='the same error, or a restored session on 18'),
+        probe('init_capture', 'A file-scope lambda whose init-capture is not a constant',
+              ['#include <cstdio>', 'int base = 10;', 'auto f = [v = base](int x) { return v + x; };',
+               'printf("f %d\\n", f(1));'],
+              lambda out, rc, hung: common(out, rc, hung) or ('works' if 'f 11' in out else
+                                                               'prints f 1: the closure holds zero' if 'f 1' in out
+                                                               else 'errors'),
+              cpp_repl='the same (a clang-repl limit, README Limits)'),
         probe('help', '`%help`', ['%help'], v_command, cpp_repl='its own %help'),
         probe('undo', '`%undo`', ['int u = 1;', '%undo', 'int u = 2;'],
               lambda out, rc, hung: common(out, rc, hung) or ('works' if 'redefinition' not in out

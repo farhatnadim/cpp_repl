@@ -14,7 +14,7 @@
   "two_loops": {
    "verdict": "works",
    "exit": 0,
-   "seconds": 0.05,
+   "seconds": 0.04,
    "output": "L1:1 2 3 \nL2:10 20 30 \n\n",
    "title": "Two top-level range-for loops",
    "cpp_repl": "runs each loop inside a function"
@@ -38,8 +38,8 @@
   "lambda": {
    "verdict": "crashes (SIGSEGV)",
    "exit": -11,
-   "seconds": 0.05,
-   "output": "Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point to it):\n0  libLLVM.so.23.1      0x000076557ee6fc5f llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) + 63\n1  libLLVM.so.23.1      0x000076557ee6d4bb llvm::sys::RunSignalHandlers() + 43\n2  libLLVM.so.23.1      0x000076557ee70b03\n3  libc.so.6            0x00007655798b2330\n4  libclang-cpp.so.23.1 0x0000765584e774b7\n5  libclang-cpp.so.23.1 0x0000765584e7a230\n6  libclang-cpp.so.23.1 0x0000765584e7a1ff\n7  libclang-cpp.so.23.1 0x0000765584e76b2c\n8  libclang-cpp.so.23.1 0x0000765584e6582b\n9  libclang-cpp.so.23.1 0x0000765584e6458a\n10 libclang-cpp.so.23.1 0x0000765584e606c7\n11 libclang-cpp.so.23.1 0x0000765585d4628d\n12 libclang-cpp.so.23.1 0x0000765585d3d471 clang::CodeGen::CodeGenModule::getMangledName(clang::GlobalDecl) + 385\n13 libclang-cpp.so.23.1 0x0000765585d58317 clang::CodeGen::CodeGenModule::GetAddrOfFunction(clang::GlobalDecl, llvm::Type*, bool, bool, clang::CodeGen::ForDefinition_t) + 471\n14 libclang-cpp.so.23.1 0x0000765585b58b5c clang::CodeGen::CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(clang::CallExpr const*, clang::CXXMethodDecl const*, clang::CodeGen::ReturnValueSlot, bool, clang::NestedNameSpecifier, bool, clang::Expr const*, llvm::CallBase**) + 4172\n15 libclang-cpp.so.23.1 0x0000765585b59140 clang::CodeGen::CodeGenFunction::EmitCXXOperatorMemberCallExpr(clang::CXXOperatorCallExpr const*, clang::CXXMethodDecl const*, clang::CodeGen::ReturnValueSlot, llvm::CallBase**) + 96\n16 libclang-cpp.so.23.1 0x0000765585b41228 clang::CodeGen::CodeGenFunction::EmitCallExpr(clang::CallExpr const*, clang::CodeGen::ReturnValueSlot, llvm::CallBase**) + 488\n17 libclang-cpp.so.23.1 0x0000765585b8cfde\n18 libclang-cpp.so.23.1 0x0000765585b8c275\n19 libclang-cpp.so.23.1 0x0000765585b7bb71 clang::CodeGen::CodeGenFunction::EmitScalarExpr(clang::Expr const*, bool) + 97\n20 libclang-cpp.so.23.1 0x0000765585b1c9f1 clang::CodeGen::CodeGenFunction::EmitIgnoredExpr(clang::Expr const*) + 449\n21 libclang-cpp.so.23.1 0x0000765585cc4102 clang::CodeGen::CodeGenFunction::EmitStmt(clang::Stmt const*, llvm::ArrayRef<clang::Attr const*>) + 434\n22 libclang-cpp.so.23.1 0x0000765585d5c7b0 clang::CodeGen::CodeGenModule::EmitTopLevelStmt(clang::TopLevelStmtDecl const*) + 1168\n23 libclang-cpp.so.23.1 0x0000765585e00d8c\n24 libclang-cpp.so.23.1 0x0000765585d1ec08 clang::BackendConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 200\n25 libclang-cpp.so.23.1 0x0000765586577d3c clang::MultiplexConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 60\n26 libclang-cpp.so.23.1 0x0000765586c37232 clang::InProcessPrintingASTConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 258\n27 libclang-cpp.so.23.1 0x0000765586c3dcac clang::IncrementalParser::ParseOrWrapTopLevelDecl() + 716\n28 libclang-cpp.so.23.1 0x0000765586c3e32d clang::IncrementalParser::Parse(llvm::StringRef) + 1069\n29 libclang-cpp.so.23.1 0x0000765586c424ff clang::Interpreter::Parse(llvm::StringRef) + 367\n30 libclang-cpp.so.23.1 0x0000765586c41c82 clang::Interpreter::ParseAndExecute(llvm::StringRef, clang::Value*) + 50\n31 clang-repl           0x0000624197117935 main + 5797\n32 libc.so.6            0x00007655798971ca\n33 libc.so.6            0x000076557989728b __libc_start_main + 139\n34 clang-repl           0x0000624197115435 _start + 37\n",
+   "seconds": 0.04,
+   "output": "Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point to it):\n0  libLLVM.so.23.1      0x00007fcb7c292c5f llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) + 63\n1  libLLVM.so.23.1      0x00007fcb7c2904bb llvm::sys::RunSignalHandlers() + 43\n2  libLLVM.so.23.1      0x00007fcb7c293b03\n3  libc.so.6            0x00007fcb76cd5330\n4  libclang-cpp.so.23.1 0x00007fcb8229a4b7\n5  libclang-cpp.so.23.1 0x00007fcb8229d230\n6  libclang-cpp.so.23.1 0x00007fcb8229d1ff\n7  libclang-cpp.so.23.1 0x00007fcb82299b2c\n8  libclang-cpp.so.23.1 0x00007fcb8228882b\n9  libclang-cpp.so.23.1 0x00007fcb8228758a\n10 libclang-cpp.so.23.1 0x00007fcb822836c7\n11 libclang-cpp.so.23.1 0x00007fcb8316928d\n12 libclang-cpp.so.23.1 0x00007fcb83160471 clang::CodeGen::CodeGenModule::getMangledName(clang::GlobalDecl) + 385\n13 libclang-cpp.so.23.1 0x00007fcb8317b317 clang::CodeGen::CodeGenModule::GetAddrOfFunction(clang::GlobalDecl, llvm::Type*, bool, bool, clang::CodeGen::ForDefinition_t) + 471\n14 libclang-cpp.so.23.1 0x00007fcb82f7bb5c clang::CodeGen::CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(clang::CallExpr const*, clang::CXXMethodDecl const*, clang::CodeGen::ReturnValueSlot, bool, clang::NestedNameSpecifier, bool, clang::Expr const*, llvm::CallBase**) + 4172\n15 libclang-cpp.so.23.1 0x00007fcb82f7c140 clang::CodeGen::CodeGenFunction::EmitCXXOperatorMemberCallExpr(clang::CXXOperatorCallExpr const*, clang::CXXMethodDecl const*, clang::CodeGen::ReturnValueSlot, llvm::CallBase**) + 96\n16 libclang-cpp.so.23.1 0x00007fcb82f64228 clang::CodeGen::CodeGenFunction::EmitCallExpr(clang::CallExpr const*, clang::CodeGen::ReturnValueSlot, llvm::CallBase**) + 488\n17 libclang-cpp.so.23.1 0x00007fcb82faffde\n18 libclang-cpp.so.23.1 0x00007fcb82faf275\n19 libclang-cpp.so.23.1 0x00007fcb82f9eb71 clang::CodeGen::CodeGenFunction::EmitScalarExpr(clang::Expr const*, bool) + 97\n20 libclang-cpp.so.23.1 0x00007fcb82f3f9f1 clang::CodeGen::CodeGenFunction::EmitIgnoredExpr(clang::Expr const*) + 449\n21 libclang-cpp.so.23.1 0x00007fcb830e7102 clang::CodeGen::CodeGenFunction::EmitStmt(clang::Stmt const*, llvm::ArrayRef<clang::Attr const*>) + 434\n22 libclang-cpp.so.23.1 0x00007fcb8317f7b0 clang::CodeGen::CodeGenModule::EmitTopLevelStmt(clang::TopLevelStmtDecl const*) + 1168\n23 libclang-cpp.so.23.1 0x00007fcb83223d8c\n24 libclang-cpp.so.23.1 0x00007fcb83141c08 clang::BackendConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 200\n25 libclang-cpp.so.23.1 0x00007fcb8399ad3c clang::MultiplexConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 60\n26 libclang-cpp.so.23.1 0x00007fcb8405a232 clang::InProcessPrintingASTConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 258\n27 libclang-cpp.so.23.1 0x00007fcb84060cac clang::IncrementalParser::ParseOrWrapTopLevelDecl() + 716\n28 libclang-cpp.so.23.1 0x00007fcb8406132d clang::IncrementalParser::Parse(llvm::StringRef) + 1069\n29 libclang-cpp.so.23.1 0x00007fcb840654ff clang::Interpreter::Parse(llvm::StringRef) + 367\n30 libclang-cpp.so.23.1 0x00007fcb84064c82 clang::Interpreter::ParseAndExecute(llvm::StringRef, clang::Value*) + 50\n31 clang-repl           0x000059ca9a426935 main + 5797\n32 libc.so.6            0x00007fcb76cba1ca\n33 libc.so.6            0x00007fcb76cba28b __libc_start_main + 139\n34 clang-repl           0x000059ca9a424435 _start + 37\n",
    "title": "A lambda called in a top-level statement",
    "cpp_repl": "runs the statement inside a function"
   },
@@ -47,7 +47,7 @@
    "verdict": "crashes (SIGSEGV)",
    "exit": -11,
    "seconds": 0.04,
-   "output": "Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point to it):\n0  libLLVM.so.23.1      0x00007497e0848c5f llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) + 63\n1  libLLVM.so.23.1      0x00007497e08464bb llvm::sys::RunSignalHandlers() + 43\n2  libLLVM.so.23.1      0x00007497e0849b03\n3  libc.so.6            0x00007497db28b330\n4  libclang-cpp.so.23.1 0x00007497e68504b7\n5  libclang-cpp.so.23.1 0x00007497e6853230\n6  libclang-cpp.so.23.1 0x00007497e684fb2c\n7  libclang-cpp.so.23.1 0x00007497e683e82b\n8  libclang-cpp.so.23.1 0x00007497e683ebd0\n9  libclang-cpp.so.23.1 0x00007497e684cd39\n10 libclang-cpp.so.23.1 0x00007497e6851b6d\n11 libclang-cpp.so.23.1 0x00007497e683e8b9\n12 libclang-cpp.so.23.1 0x00007497e683d58a\n13 libclang-cpp.so.23.1 0x00007497e68396c7\n14 libclang-cpp.so.23.1 0x00007497e771f28d\n15 libclang-cpp.so.23.1 0x00007497e7716471 clang::CodeGen::CodeGenModule::getMangledName(clang::GlobalDecl) + 385\n16 libclang-cpp.so.23.1 0x00007497e7731317 clang::CodeGen::CodeGenModule::GetAddrOfFunction(clang::GlobalDecl, llvm::Type*, bool, bool, clang::CodeGen::ForDefinition_t) + 471\n17 libclang-cpp.so.23.1 0x00007497e751c1ac\n18 libclang-cpp.so.23.1 0x00007497e751a8e0 clang::CodeGen::CodeGenFunction::EmitCallee(clang::Expr const*) + 1456\n19 libclang-cpp.so.23.1 0x00007497e751a240 clang::CodeGen::CodeGenFunction::EmitCallExpr(clang::CallExpr const*, clang::CodeGen::ReturnValueSlot, llvm::CallBase**) + 512\n20 libclang-cpp.so.23.1 0x00007497e7565fde\n21 libclang-cpp.so.23.1 0x00007497e7554b71 clang::CodeGen::CodeGenFunction::EmitScalarExpr(clang::Expr const*, bool) + 97\n22 libclang-cpp.so.23.1 0x00007497e74f59f1 clang::CodeGen::CodeGenFunction::EmitIgnoredExpr(clang::Expr const*) + 449\n23 libclang-cpp.so.23.1 0x00007497e769d102 clang::CodeGen::CodeGenFunction::EmitStmt(clang::Stmt const*, llvm::ArrayRef<clang::Attr const*>) + 434\n24 libclang-cpp.so.23.1 0x00007497e77357b0 clang::CodeGen::CodeGenModule::EmitTopLevelStmt(clang::TopLevelStmtDecl const*) + 1168\n25 libclang-cpp.so.23.1 0x00007497e77d9d8c\n26 libclang-cpp.so.23.1 0x00007497e76f7c08 clang::BackendConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 200\n27 libclang-cpp.so.23.1 0x00007497e7f50d3c clang::MultiplexConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 60\n28 libclang-cpp.so.23.1 0x00007497e8610232 clang::InProcessPrintingASTConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 258\n29 libclang-cpp.so.23.1 0x00007497e8616cac clang::IncrementalParser::ParseOrWrapTopLevelDecl() + 716\n30 libclang-cpp.so.23.1 0x00007497e861732d clang::IncrementalParser::Parse(llvm::StringRef) + 1069\n31 libclang-cpp.so.23.1 0x00007497e861b4ff clang::Interpreter::Parse(llvm::StringRef) + 367\n32 libclang-cpp.so.23.1 0x00007497e861ac82 clang::Interpreter::ParseAndExecute(llvm::StringRef, clang::Value*) + 50\n33 clang-repl           0x0000557383df4935 main + 5797\n34 libc.so.6            0x00007497db2701ca\n35 libc.so.6            0x00007497db27028b __libc_start_main + 139\n36 clang-repl           0x0000557383df2435 _start + 37\n",
+   "output": "Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point to it):\n0  libLLVM.so.23.1      0x000070e7b555fc5f llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) + 63\n1  libLLVM.so.23.1      0x000070e7b555d4bb llvm::sys::RunSignalHandlers() + 43\n2  libLLVM.so.23.1      0x000070e7b5560b03\n3  libc.so.6            0x000070e7affa2330\n4  libclang-cpp.so.23.1 0x000070e7bb5674b7\n5  libclang-cpp.so.23.1 0x000070e7bb56a230\n6  libclang-cpp.so.23.1 0x000070e7bb566b2c\n7  libclang-cpp.so.23.1 0x000070e7bb55582b\n8  libclang-cpp.so.23.1 0x000070e7bb555bd0\n9  libclang-cpp.so.23.1 0x000070e7bb563d39\n10 libclang-cpp.so.23.1 0x000070e7bb568b6d\n11 libclang-cpp.so.23.1 0x000070e7bb5558b9\n12 libclang-cpp.so.23.1 0x000070e7bb55458a\n13 libclang-cpp.so.23.1 0x000070e7bb5506c7\n14 libclang-cpp.so.23.1 0x000070e7bc43628d\n15 libclang-cpp.so.23.1 0x000070e7bc42d471 clang::CodeGen::CodeGenModule::getMangledName(clang::GlobalDecl) + 385\n16 libclang-cpp.so.23.1 0x000070e7bc448317 clang::CodeGen::CodeGenModule::GetAddrOfFunction(clang::GlobalDecl, llvm::Type*, bool, bool, clang::CodeGen::ForDefinition_t) + 471\n17 libclang-cpp.so.23.1 0x000070e7bc2331ac\n18 libclang-cpp.so.23.1 0x000070e7bc2318e0 clang::CodeGen::CodeGenFunction::EmitCallee(clang::Expr const*) + 1456\n19 libclang-cpp.so.23.1 0x000070e7bc231240 clang::CodeGen::CodeGenFunction::EmitCallExpr(clang::CallExpr const*, clang::CodeGen::ReturnValueSlot, llvm::CallBase**) + 512\n20 libclang-cpp.so.23.1 0x000070e7bc27cfde\n21 libclang-cpp.so.23.1 0x000070e7bc26bb71 clang::CodeGen::CodeGenFunction::EmitScalarExpr(clang::Expr const*, bool) + 97\n22 libclang-cpp.so.23.1 0x000070e7bc20c9f1 clang::CodeGen::CodeGenFunction::EmitIgnoredExpr(clang::Expr const*) + 449\n23 libclang-cpp.so.23.1 0x000070e7bc3b4102 clang::CodeGen::CodeGenFunction::EmitStmt(clang::Stmt const*, llvm::ArrayRef<clang::Attr const*>) + 434\n24 libclang-cpp.so.23.1 0x000070e7bc44c7b0 clang::CodeGen::CodeGenModule::EmitTopLevelStmt(clang::TopLevelStmtDecl const*) + 1168\n25 libclang-cpp.so.23.1 0x000070e7bc4f0d8c\n26 libclang-cpp.so.23.1 0x000070e7bc40ec08 clang::BackendConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 200\n27 libclang-cpp.so.23.1 0x000070e7bcc67d3c clang::MultiplexConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 60\n28 libclang-cpp.so.23.1 0x000070e7bd327232 clang::InProcessPrintingASTConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 258\n29 libclang-cpp.so.23.1 0x000070e7bd32dcac clang::IncrementalParser::ParseOrWrapTopLevelDecl() + 716\n30 libclang-cpp.so.23.1 0x000070e7bd32e32d clang::IncrementalParser::Parse(llvm::StringRef) + 1069\n31 libclang-cpp.so.23.1 0x000070e7bd3324ff clang::Interpreter::Parse(llvm::StringRef) + 367\n32 libclang-cpp.so.23.1 0x000070e7bd331c82 clang::Interpreter::ParseAndExecute(llvm::StringRef, clang::Value*) + 50\n33 clang-repl           0x0000592ede388935 main + 5797\n34 libc.so.6            0x000070e7aff871ca\n35 libc.so.6            0x000070e7aff8728b __libc_start_main + 139\n36 clang-repl           0x0000592ede386435 _start + 37\n",
    "title": "A lambda passed to a template in a top-level statement",
    "cpp_repl": "runs the statement inside a function"
   },
@@ -62,15 +62,15 @@
   "bare_class": {
    "verdict": "link error",
    "exit": 0,
-   "seconds": 0.23,
-   "output": "JIT session error: Symbols not found: [ _ZNSaIiED1Ev ]\nerror: Failed to materialize symbols: { (main, { $.incr_module_3.__inits.0, _ZNSt11__copy_moveILb0ELb0ESt26random_access_iterator_tagE12__assign_oneIiKiEEvPT_PT0_, _ZSt8_DestroyIPiEvT_S1_, _ZNSt6vectorIiSaIiEE19_M_range_initializeIPKiEEvT_S5_St20forward_iterator_tag, _ZSt12__niter_baseIPKiET_S2_, _ZNSt12_Vector_baseIiSaIiEE17_Vector_impl_dataC2Ev, _ZNSt6vectorIiSaIiEED2Ev, _ZNSt20__uninitialized_copyILb1EE13__uninit_copyIPKiPiEET0_T_S6_S5_, _ZSt4copyIPKiPiET0_T_S4_S3_, _ZNSt12_Destroy_auxILb1EE9__destroyIPiEEvT_S3_, _ZNSt15__new_allocatorIiE10deallocateEPim, _ZNSt12_Vector_baseIiSaIiEE12_Vector_implC2ERKS0_, _ZNSt12_Vector_baseIiSaIiEEC2ERKS0_, _ZNKSt16initializer_listIiE5beginEv, _ZNSt12_Vector_baseIiSaIiEED2Ev, _ZNSt12_Vector_baseIiSaIiEE13_M_deallocateEPim, _ZNSt6vectorIiSaIiEE17_S_check_init_lenEmRKS0_, _ZSt22__uninitialized_copy_aIPKiPiiET0_T_S4_S3_RSaIT1_E, _ZSt12__miter_baseIPKiET_S2_, _ZSt14__copy_move_a1ILb0EPKiPiET1_T0_S4_S3_, _ZNKSt16initializer_listIiE4sizeEv, _ZNSt6vectorIiSaIiEEC2ESt16initializer_listIiERKS0_, __orc_init_func.incr_module_3, _ZSt12__niter_baseIPiET_S1_, _ZNSt12_Vector_baseIiSaIiEE19_M_get_Tp_allocatorEv, _ZNSt15__new_allocatorIiE8allocateEmPKv, _ZNKSt16initializer_listIiE3endEv, __clang_call_terminate, _ZSt12__niter_wrapIPiET_RKS1_S1_, _ZSt3minImERKT_S2_S2_, _ZSt18uninitialized_copyIPKiPiET0_T_S4_S3_, DW.ref.__gxx_personality_v0, _ZNSt12_Vector_baseIiSaIiEE11_M_allocateEm, _ZNSt11__copy_moveILb0ELb1ESt26random_access_iterator_tagE8__copy_mIKiiEEPT0_PT_S7_S5_, _ZNSt6vectorIiSaIiEE11_S_max_sizeERKS0_, _ZSt13__copy_move_aILb0EPKiPiET1_T0_S4_S3_, _ZNSt12_Vector_baseIiSaIiEE12_Vector_implD2Ev, _ZSt14__copy_move_a2ILb0EPKiPiET1_T0_S4_S3_ }) }\n\n",
+   "seconds": 0.22,
+   "output": "JIT session error: Symbols not found: [ _ZNSaIiED1Ev ]\nerror: Failed to materialize symbols: { (main, { _ZSt13__copy_move_aILb0EPKiPiET1_T0_S4_S3_, _ZNSt6vectorIiSaIiEED2Ev, _ZNSt12_Vector_baseIiSaIiEE12_Vector_implC2ERKS0_, DW.ref.__gxx_personality_v0, _ZNSt15__new_allocatorIiE10deallocateEPim, _ZNSt15__new_allocatorIiE8allocateEmPKv, _ZNSt11__copy_moveILb0ELb1ESt26random_access_iterator_tagE8__copy_mIKiiEEPT0_PT_S7_S5_, _ZSt12__niter_baseIPiET_S1_, _ZNSt6vectorIiSaIiEE11_S_max_sizeERKS0_, _ZNSt6vectorIiSaIiEEC2ESt16initializer_listIiERKS0_, _ZNSt12_Vector_baseIiSaIiEED2Ev, _ZNKSt16initializer_listIiE5beginEv, _ZSt12__miter_baseIPKiET_S2_, _ZNSt6vectorIiSaIiEE19_M_range_initializeIPKiEEvT_S5_St20forward_iterator_tag, _ZNSt12_Vector_baseIiSaIiEE12_Vector_implD2Ev, _ZNSt12_Vector_baseIiSaIiEE19_M_get_Tp_allocatorEv, _ZNSt12_Vector_baseIiSaIiEE11_M_allocateEm, _ZSt12__niter_baseIPKiET_S2_, _ZSt8_DestroyIPiEvT_S1_, _ZNSt12_Vector_baseIiSaIiEEC2ERKS0_, _ZNSt6vectorIiSaIiEE17_S_check_init_lenEmRKS0_, _ZNSt12_Vector_baseIiSaIiEE13_M_deallocateEPim, _ZSt3minImERKT_S2_S2_, _ZNKSt16initializer_listIiE4sizeEv, _ZNSt12_Vector_baseIiSaIiEE17_Vector_impl_dataC2Ev, _ZSt14__copy_move_a2ILb0EPKiPiET1_T0_S4_S3_, _ZNSt12_Destroy_auxILb1EE9__destroyIPiEEvT_S3_, _ZSt4copyIPKiPiET0_T_S4_S3_, _ZSt18uninitialized_copyIPKiPiET0_T_S4_S3_, $.incr_module_3.__inits.0, _ZNKSt16initializer_listIiE3endEv, _ZSt22__uninitialized_copy_aIPKiPiiET0_T_S4_S3_RSaIT1_E, _ZNSt11__copy_moveILb0ELb0ESt26random_access_iterator_tagE12__assign_oneIiKiEEvPT_PT0_, __orc_init_func.incr_module_3, _ZSt14__copy_move_a1ILb0EPKiPiET1_T0_S4_S3_, _ZNSt20__uninitialized_copyILb1EE13__uninit_copyIPKiPiEET0_T_S6_S5_, __clang_call_terminate, _ZSt12__niter_wrapIPiET_RKS1_S1_ }) }\n\n",
    "title": "A bare `std::vector<int>{1, 2, 3}`",
    "cpp_repl": "prints [1, 2, 3]"
   },
   "bare_void": {
    "verdict": "does not run it",
    "exit": 0,
-   "seconds": 0.04,
+   "seconds": 0.03,
    "output": "\n",
    "title": "A bare call of a void function",
    "cpp_repl": "runs it"
@@ -86,7 +86,7 @@
   "region": {
    "verdict": "works",
    "exit": 0,
-   "seconds": 0.04,
+   "seconds": 0.03,
    "output": "region 1\n\n",
    "title": "An `#if` region, through an `#include`d file",
    "cpp_repl": "sends #if regions this way"
@@ -110,7 +110,7 @@
   "lib_error": {
    "verdict": "error: <path>: cannot open shared object file: No such file or directory",
    "exit": 0,
-   "seconds": 0.03,
+   "seconds": 0.02,
    "output": "error: /nonexistent/cpp-repl/MARKER: cannot open shared object file: No such file or directory\n\n",
    "title": "The error `%lib` prints for a missing file",
    "cpp_repl": "uses it as the end-of-output marker"
@@ -118,7 +118,7 @@
   "parse_error": {
    "verdict": "error: Parsing failed.",
    "exit": 0,
-   "seconds": 0.03,
+   "seconds": 0.02,
    "output": "In file included from <<< inputs >>>:1:\ninput_line_2:1:2: error: probe\n    1 | #error probe\n      |  ^\nerror: Parsing failed.\n\n",
    "title": "How a parse error ends",
    "cpp_repl": "classifies it as an error"
@@ -134,7 +134,7 @@
   "no_opt": {
    "verdict": "__OPTIMIZE__ undefined",
    "exit": 0,
-   "seconds": 0.04,
+   "seconds": 0.03,
    "output": "In file included from <<< inputs >>>:1:\ninput_line_3:1:29: error: use of undeclared identifier '__OPTIMIZE__'\n    1 | printf(\"__OPTIMIZE__=%d\\n\", __OPTIMIZE__ + 0);\n      |                             ^~~~~~~~~~~~\nerror: Parsing failed.\n\n",
    "title": "The JIT without `-O`",
    "cpp_repl": "-O0 too; see %timeit's note"
@@ -146,6 +146,30 @@
    "output": "__AVX2__=1\n\n",
    "title": "`-Xcc -march=native` in the JIT",
    "cpp_repl": "--native"
+  },
+  "return_top": {
+   "verdict": "crashes (SIGSEGV)",
+   "exit": -11,
+   "seconds": 0.03,
+   "output": "Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point to it):\n0  libLLVM.so.23.1      0x000070bfe0777c5f llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) + 63\n1  libLLVM.so.23.1      0x000070bfe07754bb llvm::sys::RunSignalHandlers() + 43\n2  libLLVM.so.23.1      0x000070bfe0778b03\n3  libc.so.6            0x000070bfdb1ba330\n4  libclang-cpp.so.23.1 0x000070bfe68131a3 clang::Stmt::getEndLoc() const + 51\n5  libclang-cpp.so.23.1 0x000070bfe6399f66 clang::TopLevelStmtDecl::getSourceRange() const + 22\n6  libclang-cpp.so.23.1 0x000070bfe766465c clang::CodeGen::CodeGenModule::EmitTopLevelStmt(clang::TopLevelStmtDecl const*) + 828\n7  libclang-cpp.so.23.1 0x000070bfe7708d8c\n8  libclang-cpp.so.23.1 0x000070bfe7626c08 clang::BackendConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 200\n9  libclang-cpp.so.23.1 0x000070bfe7e7fd3c clang::MultiplexConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 60\n10 libclang-cpp.so.23.1 0x000070bfe853f232 clang::InProcessPrintingASTConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 258\n11 libclang-cpp.so.23.1 0x000070bfe8545cac clang::IncrementalParser::ParseOrWrapTopLevelDecl() + 716\n12 libclang-cpp.so.23.1 0x000070bfe854632d clang::IncrementalParser::Parse(llvm::StringRef) + 1069\n13 libclang-cpp.so.23.1 0x000070bfe854a4ff clang::Interpreter::Parse(llvm::StringRef) + 367\n14 libclang-cpp.so.23.1 0x000070bfe8549c82 clang::Interpreter::ParseAndExecute(llvm::StringRef, clang::Value*) + 50\n15 clang-repl           0x00005ba8a93b2935 main + 5797\n16 libc.so.6            0x000070bfdb19f1ca\n17 libc.so.6            0x000070bfdb19f28b __libc_start_main + 139\n18 clang-repl           0x00005ba8a93b0435 _start + 37\n",
+   "title": "A `return 3;` at top level",
+   "cpp_repl": "ends the program with 3, as main() would"
+  },
+  "goto_label": {
+   "verdict": "an error",
+   "exit": 0,
+   "seconds": 0.03,
+   "output": "In file included from <<< inputs >>>:1:\ninput_line_3:1:6: error: use of undeclared label 'nowhere'\n    1 | goto nowhere;\n      |      ^\nerror: Parsing failed.\nafter\n\n",
+   "title": "A `goto` to a label clang-repl never saw",
+   "cpp_repl": "the same error, or a restored session on 18"
+  },
+  "init_capture": {
+   "verdict": "prints f 1: the closure holds zero",
+   "exit": 0,
+   "seconds": 0.04,
+   "output": "f 1\n\n",
+   "title": "A file-scope lambda whose init-capture is not a constant",
+   "cpp_repl": "the same (a clang-repl limit, README Limits)"
   },
   "help": {
    "verdict": "known",

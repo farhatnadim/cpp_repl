@@ -22,7 +22,7 @@
   "nested": {
    "verdict": "works",
    "exit": 0,
-   "seconds": 0.04,
+   "seconds": 0.03,
    "output": "NESTED:00 01 10 11 \n\n",
    "title": "Nested top-level `for` loops (llvm#89506)",
    "cpp_repl": "runs the loop inside a function"
@@ -30,7 +30,7 @@
   "try": {
    "verdict": "works",
    "exit": 0,
-   "seconds": 0.04,
+   "seconds": 0.03,
    "output": "caught 7\nnext ok\n\n",
    "title": "A top-level `try`/`catch`",
    "cpp_repl": "runs it inside a function"
@@ -38,7 +38,7 @@
   "lambda": {
    "verdict": "works",
    "exit": 0,
-   "seconds": 0.04,
+   "seconds": 0.03,
    "output": "lambda ran\n\n",
    "title": "A lambda called in a top-level statement",
    "cpp_repl": "runs the statement inside a function"
@@ -46,7 +46,7 @@
   "lambda_arg": {
    "verdict": "works",
    "exit": 0,
-   "seconds": 0.04,
+   "seconds": 0.03,
    "output": "lambda ran\n\n",
    "title": "A lambda passed to a template in a top-level statement",
    "cpp_repl": "runs the statement inside a function"
@@ -54,7 +54,7 @@
   "bare_builtin": {
    "verdict": "prints (int) 42",
    "exit": 0,
-   "seconds": 0.04,
+   "seconds": 0.03,
    "output": "(int) 42\n\n",
    "title": "A bare `x + 1`, no semicolon",
    "cpp_repl": "prints 42"
@@ -62,8 +62,8 @@
   "bare_class": {
    "verdict": "link error",
    "exit": 0,
-   "seconds": 0.24,
-   "output": "JIT session error: Symbols not found: [ _ZNSaIiED1Ev ]\nerror: Failed to materialize symbols: { (main, { _ZNSt6vectorIiSaIiEE11_S_max_sizeERKS0_, _ZSt12__niter_baseIPiET_S1_, _ZNKSt16initializer_listIiE3endEv, DW.ref.__gxx_personality_v0, _ZNSt12_Vector_baseIiSaIiEE13_M_deallocateEPim, _ZSt8_DestroyIPiEvT_S1_, _ZSt18uninitialized_copyIPKiPiET0_T_S4_S3_, __clang_call_terminate, _ZNSt6vectorIiSaIiEED2Ev, _ZSt13__copy_move_aILb0EPKiPiET1_T0_S4_S3_, _ZNSt12_Vector_baseIiSaIiEE12_Vector_implD2Ev, _ZNSt12_Vector_baseIiSaIiEED2Ev, _ZSt14__copy_move_a2ILb0EPKiPiET1_T0_S4_S3_, _ZNKSt16initializer_listIiE5beginEv, _ZNSt6vectorIiSaIiEE19_M_range_initializeIPKiEEvT_S5_St20forward_iterator_tag, _ZNSt15__new_allocatorIiE10deallocateEPim, _ZSt4copyIPKiPiET0_T_S4_S3_, _ZNSt6vectorIiSaIiEEC2ESt16initializer_listIiERKS0_, _ZNSt6vectorIiSaIiEE17_S_check_init_lenEmRKS0_, _ZNSt12_Vector_baseIiSaIiEE19_M_get_Tp_allocatorEv, _ZNSt11__copy_moveILb0ELb0ESt26random_access_iterator_tagE12__assign_oneIiKiEEvPT_PT0_, _ZSt12__niter_baseIPKiET_S2_, _ZNSt12_Destroy_auxILb1EE9__destroyIPiEEvT_S3_, $.incr_module_3.__inits.0, _ZNSt12_Vector_baseIiSaIiEE12_Vector_implC2ERKS0_, __orc_init_func.incr_module_3, _ZSt14__copy_move_a1ILb0EPKiPiET1_T0_S4_S3_, _ZNSt12_Vector_baseIiSaIiEE11_M_allocateEm, _ZSt22__uninitialized_copy_aIPKiPiiET0_T_S4_S3_RSaIT1_E, _ZNSt15__new_allocatorIiE8allocateEmPKv, _ZSt12__miter_baseIPKiET_S2_, _ZSt12__niter_wrapIPiET_RKS1_S1_, _ZNSt12_Vector_baseIiSaIiEE17_Vector_impl_dataC2Ev, _ZNKSt16initializer_listIiE4sizeEv, _ZSt3minImERKT_S2_S2_, _ZNSt20__uninitialized_copyILb1EE13__uninit_copyIPKiPiEET0_T_S6_S5_, _ZNSt11__copy_moveILb0ELb1ESt26random_access_iterator_tagE8__copy_mIKiiEEPT0_PT_S7_S5_, _ZNSt12_Vector_baseIiSaIiEEC2ERKS0_ }) }\n\n",
+   "seconds": 0.22,
+   "output": "JIT session error: Symbols not found: [ _ZNSaIiED1Ev ]\nerror: Failed to materialize symbols: { (main, { _ZNSt15__new_allocatorIiE10deallocateEPim, _ZNSt12_Vector_baseIiSaIiEE11_M_allocateEm, _ZSt12__niter_wrapIPiET_RKS1_S1_, _ZSt12__niter_baseIPiET_S1_, _ZNSt15__new_allocatorIiE8allocateEmPKv, _ZSt14__copy_move_a2ILb0EPKiPiET1_T0_S4_S3_, _ZNSt12_Vector_baseIiSaIiEED2Ev, _ZNSt12_Destroy_auxILb1EE9__destroyIPiEEvT_S3_, _ZSt8_DestroyIPiEvT_S1_, _ZNSt6vectorIiSaIiEE19_M_range_initializeIPKiEEvT_S5_St20forward_iterator_tag, _ZNSt11__copy_moveILb0ELb1ESt26random_access_iterator_tagE8__copy_mIKiiEEPT0_PT_S7_S5_, _ZNSt12_Vector_baseIiSaIiEE17_Vector_impl_dataC2Ev, _ZNSt12_Vector_baseIiSaIiEE12_Vector_implD2Ev, _ZNSt12_Vector_baseIiSaIiEEC2ERKS0_, _ZSt14__copy_move_a1ILb0EPKiPiET1_T0_S4_S3_, _ZNSt11__copy_moveILb0ELb0ESt26random_access_iterator_tagE12__assign_oneIiKiEEvPT_PT0_, _ZNSt6vectorIiSaIiEE11_S_max_sizeERKS0_, DW.ref.__gxx_personality_v0, _ZNSt12_Vector_baseIiSaIiEE12_Vector_implC2ERKS0_, _ZSt18uninitialized_copyIPKiPiET0_T_S4_S3_, _ZNSt12_Vector_baseIiSaIiEE19_M_get_Tp_allocatorEv, _ZNKSt16initializer_listIiE3endEv, _ZSt4copyIPKiPiET0_T_S4_S3_, _ZSt12__miter_baseIPKiET_S2_, _ZSt3minImERKT_S2_S2_, _ZNKSt16initializer_listIiE5beginEv, _ZSt12__niter_baseIPKiET_S2_, _ZNSt6vectorIiSaIiEEC2ESt16initializer_listIiERKS0_, _ZSt22__uninitialized_copy_aIPKiPiiET0_T_S4_S3_RSaIT1_E, _ZSt13__copy_move_aILb0EPKiPiET1_T0_S4_S3_, _ZNSt6vectorIiSaIiEED2Ev, _ZNKSt16initializer_listIiE4sizeEv, _ZNSt12_Vector_baseIiSaIiEE13_M_deallocateEPim, __clang_call_terminate, _ZNSt6vectorIiSaIiEE17_S_check_init_lenEmRKS0_, $.incr_module_3.__inits.0, _ZNSt20__uninitialized_copyILb1EE13__uninit_copyIPKiPiEET0_T_S6_S5_, __orc_init_func.incr_module_3 }) }\n\n",
    "title": "A bare `std::vector<int>{1, 2, 3}`",
    "cpp_repl": "prints [1, 2, 3]"
   },
@@ -78,7 +78,7 @@
   "inline_asm": {
    "verdict": "works",
    "exit": 0,
-   "seconds": 0.04,
+   "seconds": 0.03,
    "output": "asm 5\n\n",
    "title": "Inline assembly, as in Eigen's matrix product",
    "cpp_repl": "the same (a clang-repl limit)"
@@ -94,7 +94,7 @@
   "include_init": {
    "verdict": "runs it",
    "exit": 0,
-   "seconds": 0.04,
+   "seconds": 0.03,
    "output": "init ran\nnext\n\n",
    "title": "A dynamic initialiser in an `-include`d header",
    "cpp_repl": "keeps the prelude free of them"
@@ -110,7 +110,7 @@
   "lib_error": {
    "verdict": "error: <path>: cannot open shared object file: No such file or directory",
    "exit": 0,
-   "seconds": 0.03,
+   "seconds": 0.02,
    "output": "error: /nonexistent/cpp-repl/MARKER: cannot open shared object file: No such file or directory\n\n",
    "title": "The error `%lib` prints for a missing file",
    "cpp_repl": "uses it as the end-of-output marker"
@@ -118,7 +118,7 @@
   "parse_error": {
    "verdict": "error: Parsing failed.",
    "exit": 0,
-   "seconds": 0.03,
+   "seconds": 0.02,
    "output": "In file included from <<< inputs >>>:1:\ninput_line_2:1:2: error: probe\n    1 | #error probe\n      |  ^\nerror: Parsing failed.\n\n",
    "title": "How a parse error ends",
    "cpp_repl": "classifies it as an error"
@@ -126,7 +126,7 @@
   "opt": {
    "verdict": "__OPTIMIZE__ = 1",
    "exit": 0,
-   "seconds": 0.04,
+   "seconds": 0.03,
    "output": "__OPTIMIZE__=1\n\n",
    "title": "`-Xcc -O2` in the JIT",
    "cpp_repl": "-O2 on its command line"
@@ -134,7 +134,7 @@
   "no_opt": {
    "verdict": "__OPTIMIZE__ undefined",
    "exit": 0,
-   "seconds": 0.04,
+   "seconds": 0.03,
    "output": "In file included from <<< inputs >>>:1:\ninput_line_3:1:29: error: use of undeclared identifier '__OPTIMIZE__'\n    1 | printf(\"__OPTIMIZE__=%d\\n\", __OPTIMIZE__ + 0);\n      |                             ^~~~~~~~~~~~\nerror: Parsing failed.\n\n",
    "title": "The JIT without `-O`",
    "cpp_repl": "-O0 too; see %timeit's note"
@@ -142,15 +142,39 @@
   "native": {
    "verdict": "__AVX2__ = 1",
    "exit": 0,
-   "seconds": 0.04,
+   "seconds": 0.03,
    "output": "__AVX2__=1\n\n",
    "title": "`-Xcc -march=native` in the JIT",
    "cpp_repl": "--native"
   },
+  "return_top": {
+   "verdict": "crashes (SIGSEGV)",
+   "exit": -11,
+   "seconds": 0.03,
+   "output": "Stack dump without symbol names (ensure you have llvm-symbolizer in your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point to it):\n0  libLLVM.so.24.0      0x000070b1cc2aecef llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) + 63\n1  libLLVM.so.24.0      0x000070b1cc2ac54b llvm::sys::RunSignalHandlers() + 43\n2  libLLVM.so.24.0      0x000070b1cc2af823\n3  libc.so.6            0x000070b1c6fbf330\n4  libclang-cpp.so.24.0 0x000070b1d21ac5a3 clang::Stmt::getEndLoc() const + 51\n5  libclang-cpp.so.24.0 0x000070b1d1ce0326 clang::TopLevelStmtDecl::getSourceRange() const + 22\n6  libclang-cpp.so.24.0 0x000070b1d302736c clang::CodeGen::CodeGenModule::EmitTopLevelStmt(clang::TopLevelStmtDecl const*) + 828\n7  libclang-cpp.so.24.0 0x000070b1d30ccccc\n8  libclang-cpp.so.24.0 0x000070b1d2fea438 clang::BackendConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 200\n9  libclang-cpp.so.24.0 0x000070b1d3841ffc clang::MultiplexConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 60\n10 libclang-cpp.so.24.0 0x000070b1d3f16322 clang::InProcessPrintingASTConsumer::HandleTopLevelDecl(clang::DeclGroupRef) + 258\n11 libclang-cpp.so.24.0 0x000070b1d3f1dbcc clang::IncrementalParser::ParseOrWrapTopLevelDecl() + 764\n12 libclang-cpp.so.24.0 0x000070b1d3f1ebad clang::IncrementalParser::Parse(llvm::StringRef) + 1069\n13 libclang-cpp.so.24.0 0x000070b1d3f220ef clang::Interpreter::Parse(llvm::StringRef) + 367\n14 libclang-cpp.so.24.0 0x000070b1d3f21872 clang::Interpreter::ParseAndExecute(llvm::StringRef, clang::Value*) + 50\n15 clang-repl           0x00005cdecf9015f5 main + 5797\n16 libc.so.6            0x000070b1c6fa41ca\n17 libc.so.6            0x000070b1c6fa428b __libc_start_main + 139\n18 clang-repl           0x00005cdecf8ff145 _start + 37\n",
+   "title": "A `return 3;` at top level",
+   "cpp_repl": "ends the program with 3, as main() would"
+  },
+  "goto_label": {
+   "verdict": "an error",
+   "exit": 0,
+   "seconds": 0.03,
+   "output": "In file included from <<< inputs >>>:1:\ninput_line_3:1:6: error: use of undeclared label 'nowhere'\n    1 | goto nowhere;\n      |      ^\nerror: Parsing failed.\nafter\n\n",
+   "title": "A `goto` to a label clang-repl never saw",
+   "cpp_repl": "the same error, or a restored session on 18"
+  },
+  "init_capture": {
+   "verdict": "prints f 1: the closure holds zero",
+   "exit": 0,
+   "seconds": 0.03,
+   "output": "f 1\n\n",
+   "title": "A file-scope lambda whose init-capture is not a constant",
+   "cpp_repl": "the same (a clang-repl limit, README Limits)"
+  },
   "help": {
    "verdict": "known",
    "exit": 0,
-   "seconds": 0.03,
+   "seconds": 0.02,
    "output": "%help\t\tlist clang-repl %commands\n%undo\t\tundo the previous input\n%lib\t<path>\tlink a dynamic library\n%quit\t\texit clang-repl\n\n",
    "title": "`%help`",
    "cpp_repl": "its own %help"
@@ -158,7 +182,7 @@
   "undo": {
    "verdict": "works",
    "exit": 0,
-   "seconds": 0.03,
+   "seconds": 0.02,
    "output": "\n",
    "title": "`%undo`",
    "cpp_repl": "replays the journal without the last input"

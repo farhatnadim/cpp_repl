@@ -442,6 +442,7 @@ misprints on everyday input. In what follows:
   [`tests/compat/harness.py`](tests/compat/harness.py);
 - *cpp-repl* means the same input typed into cpp-repl.
 
+python3 scripts/compat_table.py tests/compat/results/*.json
 | Raw clang-repl | 18.1.3 | 23.1.4 | 24.0.0 | cpp-repl |
 | --- | --- | --- | --- | --- |
 | A line ending in an open `{` | hangs (killed after 20 s) | hangs (killed after 20 s) | hangs (killed after 20 s) | waits for the block to close |
@@ -450,7 +451,7 @@ misprints on everyday input. In what follows:
 | A top-level `try`/`catch` | link error, and later inputs fail | works | works | runs it inside a function |
 | A lambda called in a top-level statement | works | crashes (SIGSEGV) | works | runs the statement inside a function |
 | A lambda passed to a template in a top-level statement | works | crashes (SIGSEGV) | works | runs the statement inside a function |
-| A bare `x + 1`, no semicolon | prints nothing | prints (int) 42 | prints (int) 42 | prints 42 |
+| A bare `x + 1`, no semicolon | prints 'Not implement yet.' | prints (int) 42 | prints (int) 42 | prints 42 |
 | A bare `std::vector<int>{1, 2, 3}` | link error | link error | link error | prints [1, 2, 3] |
 | A bare call of a void function | does not run it | does not run it | does not run it | runs it |
 | Inline assembly, as in Eigen's matrix product | fatal error: no inline asm in the JIT | works | works | the same (a clang-repl limit) |
@@ -462,10 +463,13 @@ misprints on everyday input. In what follows:
 | `-Xcc -O2` in the JIT | __OPTIMIZE__ = 1 | __OPTIMIZE__ = 1 | __OPTIMIZE__ = 1 | -O2 on its command line |
 | The JIT without `-O` | __OPTIMIZE__ undefined | __OPTIMIZE__ undefined | __OPTIMIZE__ undefined | -O0 too; see %timeit's note |
 | `-Xcc -march=native` in the JIT | __AVX2__ = 1 | __AVX2__ = 1 | __AVX2__ = 1 | --native |
+| A `return 3;` at top level | ignored | crashes (SIGSEGV) | crashes (SIGSEGV) | ends the program with 3, as main() would |
+| A `goto` to a label clang-repl never saw | crashes (SIGSEGV) | an error | an error | the same error, or a restored session on 18 |
+| A file-scope lambda whose init-capture is not a constant | prints f 1: the closure holds zero | prints f 1: the closure holds zero | prints f 1: the closure holds zero | the same (a clang-repl limit, README Limits) |
 | `%help` | unknown | known | known | its own %help |
 | `%undo` | works | works | works | replays the journal without the last input |
 
-Probed with tests/compat/harness.py: 18.1.3 on 2026-10-14, 23.1.4 on 2026-10-16, 24.0.0 on 2026-10-16.
+Probed with tests/compat/harness.py: 18.1.3 on 2026-10-16, 23.1.4 on 2026-10-16, 24.0.0 on 2026-10-16.
 
 The way around each problem:
 - **The unclosed `{`:** cpp-repl never sends an incomplete input.

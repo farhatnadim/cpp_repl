@@ -1,7 +1,7 @@
 {
- "clang_repl": "clang-repl-18",
+ "clang_repl": "/usr/bin/clang-repl-18",
  "version": "18.1.3",
- "date": "2026-10-14",
+ "date": "2026-10-16",
  "probes": {
   "unclosed": {
    "verdict": "hangs (killed after 20 s)",
@@ -31,7 +31,7 @@
    "verdict": "link error, and later inputs fail",
    "exit": 1,
    "seconds": 0.03,
-   "output": "JIT session error: Symbols not found: [ e ]\nerror: Failed to materialize symbols: { (main, { __orc_init_func.incr_module_2, $.incr_module_2.__inits.0, DW.ref.__gxx_personality_v0 }) }\nerror: Failed to materialize symbols: { (main, { __orc_init_func.incr_module_2 }) }\n\n",
+   "output": "JIT session error: Symbols not found: [ e ]\nerror: Failed to materialize symbols: { (main, { __orc_init_func.incr_module_2, DW.ref.__gxx_personality_v0, $.incr_module_2.__inits.0 }) }\nerror: Failed to materialize symbols: { (main, { __orc_init_func.incr_module_2 }) }\n\n",
    "title": "A top-level `try`/`catch`",
    "cpp_repl": "runs it inside a function"
   },
@@ -46,13 +46,13 @@
   "lambda_arg": {
    "verdict": "works",
    "exit": 0,
-   "seconds": 0.03,
+   "seconds": 0.04,
    "output": "lambda ran\n\n",
    "title": "A lambda passed to a template in a top-level statement",
    "cpp_repl": "runs the statement inside a function"
   },
   "bare_builtin": {
-   "verdict": "prints nothing",
+   "verdict": "prints 'Not implement yet.'",
    "exit": 0,
    "seconds": 0.03,
    "output": "Not implement yet.\n\n",
@@ -62,8 +62,8 @@
   "bare_class": {
    "verdict": "link error",
    "exit": 1,
-   "seconds": 0.2,
-   "output": "JIT session error: Symbols not found: [ _ZNSaIiED1Ev ]\nerror: Failed to materialize symbols: { (main, { _ZSt14__copy_move_a2ILb0EPKiPiET1_T0_S4_S3_, DW.ref.__gxx_personality_v0, _ZNSt15__new_allocatorIiE10deallocateEPim, _ZNSt12_Vector_baseIiSaIiEE19_M_get_Tp_allocatorEv, _ZSt22__uninitialized_copy_aIPKiPiiET0_T_S4_S3_RSaIT1_E, _ZNSt12_Vector_baseIiSaIiEE12_Vector_implC2ERKS0_, _ZNSt6vectorIiSaIiEE17_S_check_init_lenEmRKS0_, _ZSt8_DestroyIPiEvT_S1_, _ZSt12__niter_baseIPiET_S1_, _ZNSt12_Vector_baseIiSaIiEEC2ERKS0_, _ZNSt11__copy_moveILb0ELb0ESt26random_access_iterator_tagE12__assign_oneIiKiEEvPT_PT0_, $.incr_module_2.__inits.0, _ZNSt6vectorIiSaIiEED2Ev, _ZSt14__copy_move_a1ILb0EPKiPiET1_T0_S4_S3_, _ZSt12__niter_baseIPKiET_S2_, _ZSt12__niter_wrapIPiET_RKS1_S1_, _ZNSt20__uninitialized_copyILb1EE13__uninit_copyIPKiPiEET0_T_S6_S5_, _ZNSt12_Destroy_auxILb1EE9__destroyIPiEEvT_S3_, _ZSt13__copy_move_aILb0EPKiPiET1_T0_S4_S3_, __clang_call_terminate, _ZSt3minImERKT_S2_S2_, _ZNSt6vectorIiSaIiEE19_M_range_initializeIPKiEEvT_S5_St20forward_iterator_tag, _ZNSt6vectorIiSaIiEEC2ESt16initializer_listIiERKS0_, _ZNSt12_Vector_baseIiSaIiEE11_M_allocateEm, _ZNSt6vectorIiSaIiEE11_S_max_sizeERKS0_, _ZNSt15__new_allocatorIiE8allocateEmPKv, _ZNKSt16initializer_listIiE3endEv, _ZNSt12_Vector_baseIiSaIiEE12_Vector_implD2Ev, _ZNSt12_Vector_baseIiSaIiEED2Ev, _ZNSt11__copy_moveILb0ELb1ESt26random_access_iterator_tagE8__copy_mIKiiEEPT0_PT_S7_S5_, _ZNSt12_Vector_baseIiSaIiEE13_M_deallocateEPim, _ZSt18uninitialized_copyIPKiPiET0_T_S4_S3_, _ZSt4copyIPKiPiET0_T_S4_S3_, _ZNSt12_Vector_baseIiSaIiEE17_Vector_impl_dataC2Ev, _ZNKSt16initializer_listIiE4sizeEv, _ZSt12__miter_baseIPKiET_S2_, __orc_init_func.incr_module_2, _ZNKSt16initializer_listIiE5beginEv }) }\n\n",
+   "seconds": 0.21,
+   "output": "JIT session error: Symbols not found: [ _ZNSaIiED1Ev ]\nerror: Failed to materialize symbols: { (main, { _ZNSt12_Vector_baseIiSaIiEED2Ev, _ZSt14__copy_move_a1ILb0EPKiPiET1_T0_S4_S3_, _ZNKSt16initializer_listIiE3endEv, _ZNSt12_Vector_baseIiSaIiEE12_Vector_implC2ERKS0_, _ZSt4copyIPKiPiET0_T_S4_S3_, _ZNSt12_Vector_baseIiSaIiEE19_M_get_Tp_allocatorEv, _ZSt12__niter_baseIPKiET_S2_, _ZNSt12_Vector_baseIiSaIiEE17_Vector_impl_dataC2Ev, _ZNSt11__copy_moveILb0ELb1ESt26random_access_iterator_tagE8__copy_mIKiiEEPT0_PT_S7_S5_, _ZSt18uninitialized_copyIPKiPiET0_T_S4_S3_, _ZNSt15__new_allocatorIiE10deallocateEPim, _ZNSt12_Vector_baseIiSaIiEE12_Vector_implD2Ev, _ZNKSt16initializer_listIiE4sizeEv, _ZSt22__uninitialized_copy_aIPKiPiiET0_T_S4_S3_RSaIT1_E, _ZNSt12_Vector_baseIiSaIiEEC2ERKS0_, _ZSt3minImERKT_S2_S2_, _ZNSt6vectorIiSaIiEED2Ev, _ZSt14__copy_move_a2ILb0EPKiPiET1_T0_S4_S3_, _ZSt8_DestroyIPiEvT_S1_, _ZNSt6vectorIiSaIiEEC2ESt16initializer_listIiERKS0_, __orc_init_func.incr_module_2, _ZNSt20__uninitialized_copyILb1EE13__uninit_copyIPKiPiEET0_T_S6_S5_, _ZSt12__niter_baseIPiET_S1_, _ZNSt6vectorIiSaIiEE19_M_range_initializeIPKiEEvT_S5_St20forward_iterator_tag, DW.ref.__gxx_personality_v0, $.incr_module_2.__inits.0, _ZNSt11__copy_moveILb0ELb0ESt26random_access_iterator_tagE12__assign_oneIiKiEEvPT_PT0_, _ZNKSt16initializer_listIiE5beginEv, _ZNSt12_Destroy_auxILb1EE9__destroyIPiEEvT_S3_, _ZSt13__copy_move_aILb0EPKiPiET1_T0_S4_S3_, _ZNSt6vectorIiSaIiEE11_S_max_sizeERKS0_, _ZNSt6vectorIiSaIiEE17_S_check_init_lenEmRKS0_, __clang_call_terminate, _ZNSt12_Vector_baseIiSaIiEE13_M_deallocateEPim, _ZSt12__miter_baseIPKiET_S2_, _ZNSt15__new_allocatorIiE8allocateEmPKv, _ZNSt12_Vector_baseIiSaIiEE11_M_allocateEm, _ZSt12__niter_wrapIPiET_RKS1_S1_ }) }\n\n",
    "title": "A bare `std::vector<int>{1, 2, 3}`",
    "cpp_repl": "prints [1, 2, 3]"
   },
@@ -102,7 +102,7 @@
   "prompt": {
    "verdict": "prints no prompt",
    "exit": 0,
-   "seconds": 0.02,
+   "seconds": 0.03,
    "output": "\n",
    "title": "A prompt written to a pipe",
    "cpp_repl": "learns it at startup and strips it"
@@ -110,7 +110,7 @@
   "lib_error": {
    "verdict": "error: <path>: cannot open shared object file: No such file or directory",
    "exit": 1,
-   "seconds": 0.02,
+   "seconds": 0.03,
    "output": "error: /nonexistent/cpp-repl/MARKER: cannot open shared object file: No such file or directory\n\n",
    "title": "The error `%lib` prints for a missing file",
    "cpp_repl": "uses it as the end-of-output marker"
@@ -118,7 +118,7 @@
   "parse_error": {
    "verdict": "error: Parsing failed.",
    "exit": 1,
-   "seconds": 0.02,
+   "seconds": 0.03,
    "output": "In file included from <<< inputs >>>:1:\ninput_line_2:1:2: error: probe\n    1 | #error probe\n      |  ^\nerror: Parsing failed.\n\n",
    "title": "How a parse error ends",
    "cpp_repl": "classifies it as an error"
@@ -126,7 +126,7 @@
   "opt": {
    "verdict": "__OPTIMIZE__ = 1",
    "exit": 0,
-   "seconds": 0.03,
+   "seconds": 0.04,
    "output": "__OPTIMIZE__=1\n\n",
    "title": "`-Xcc -O2` in the JIT",
    "cpp_repl": "-O2 on its command line"
@@ -142,10 +142,34 @@
   "native": {
    "verdict": "__AVX2__ = 1",
    "exit": 0,
-   "seconds": 0.03,
+   "seconds": 0.04,
    "output": "__AVX2__=1\n\n",
    "title": "`-Xcc -march=native` in the JIT",
    "cpp_repl": "--native"
+  },
+  "return_top": {
+   "verdict": "ignored",
+   "exit": 0,
+   "seconds": 0.03,
+   "output": "after\n\n",
+   "title": "A `return 3;` at top level",
+   "cpp_repl": "ends the program with 3, as main() would"
+  },
+  "goto_label": {
+   "verdict": "crashes (SIGSEGV)",
+   "exit": -11,
+   "seconds": 0.03,
+   "output": "",
+   "title": "A `goto` to a label clang-repl never saw",
+   "cpp_repl": "the same error, or a restored session on 18"
+  },
+  "init_capture": {
+   "verdict": "prints f 1: the closure holds zero",
+   "exit": 0,
+   "seconds": 0.03,
+   "output": "f 1\n\n",
+   "title": "A file-scope lambda whose init-capture is not a constant",
+   "cpp_repl": "the same (a clang-repl limit, README Limits)"
   },
   "help": {
    "verdict": "unknown",

@@ -463,7 +463,7 @@ def test_inputs_from_a_file_sit_at_their_lines(tmp_path, monkeypatch, made):
     name = str(tmp_path / 'p.cpp')
     assert sent[0] == in_function('cpp_repl_1', f'\n#line 3 "{name}"\n  say("one");\n') + '\n'
     assert sent[1] == in_function('cpp_repl_2', f'\n#line 4 "{name}"\n  if (1) {{\n    say("two");\n  }}\n') + '\n'
-    assert f'repl::print_expr(((\n#line 7 "{name}"\n  42), repl::printer' in sent[2]
+    assert f'repl::print_expr(((\n#line 7 "{name}"\n  42\n), repl::printer' in sent[2]   # the line is the user's
     assert s.sources == {name}
 
 

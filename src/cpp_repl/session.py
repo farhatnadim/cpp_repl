@@ -579,9 +579,11 @@ class Session:
         if kind == 'expr':
             # Run in a function, for the local struct that print_expr needs, and
             # because a lambda in a top-level statement crashes clang-repl 23.
+            # A placed expression ends its line, so that a diagnostic's source
+            # line shows the user's text, and none of this plumbing.
             printed = in_function(self._fresh(), 'struct cpp_repl_tag; '
-                                  f'repl::print_expr((({send.text}), repl::printer<cpp_repl_tag>{{}}));',
-                                  exceptions=self.cfg.exceptions)
+                                  f'repl::print_expr((({send.text}{chr(10) if send.via_file else ""}), '
+                                  'repl::printer<cpp_repl_tag>{}));', exceptions=self.cfg.exceptions)
             line = self._file(printed) if send.via_file else printed
             output, result = self._send(line, echo=False)
             if result != 'error':

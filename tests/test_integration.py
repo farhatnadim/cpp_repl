@@ -420,6 +420,16 @@ def test_a_warning_inside_a_block_is_not_silenced(tmp_path):
         result.stdout + result.stderr
 
 
+def test_a_warning_on_a_bare_expression_shows_the_user_s_line_only(tmp_path):
+    """The warning stays (the comma is the user's); its source line used to
+    run on into the function the expression is printed from."""
+    (tmp_path / 'p.repl').write_text('int left = 1, right = 2;\nleft, right\n')
+    result = run_cpp_repl(['--no-config', '--batch', '--no-color', 'p.repl'], tmp_path)
+    out = result.stdout
+    assert 'warning: left operand of comma operator has no effect [-Wunused-value]' in out, out
+    assert '\n    2 | left, right\n' in out and 'repl::' not in out and out.endswith('2\n')
+
+
 def test_an_error_names_its_line_in_the_file(tmp_path):
     """Each input reaches clang at its own line and column: errors, __FILE__
     and __LINE__ name the file. Brief diagnostics, the default with --batch,

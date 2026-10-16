@@ -38,6 +38,8 @@ from _common import (CPP_REPL_BIN, FAILED, OK, TIMEOUT, USAGE, elf_kind, ignore_
                      project_root, state_dir_status, toml_text, toolchain)
 
 CRASH = re.compile(r'^\[(clang-repl (?:crashed \([^)]*\)|exited \(code -?\d+\)|got stuck on that input))\]$', re.M)
+# cpp-repl's note on an exception nothing caught: the input ran, and ended the program.
+EXCEPTION = re.compile(r'^\[uncaught exception: ', re.M)
 UNPRINTABLE = re.compile(r'^<[^\n]*>$')
 # cpp-repl's note on a type that printed as <type>, after the input's output.
 PRINTER_HINT = re.compile(r'^\[[^\n]* prints as <[^\n]*>: [^\n]*\]\n', re.M)
@@ -92,6 +94,17 @@ HINTS = [
     (r'clang-repl failed to start', 'failed-to-start',
      'the session did not start: see startup.diagnosis, then CPP_REPL_TRACES=1 for a crash trace'),
 ]
+
+
+def image_clang_version(image):
+    """(major, minor, patch) of the clang-repl in a Docker image, or None."""
+    try:
+        out = subprocess.run(['docker', 'run', '--rm', image, 'clang-repl', '--version'], capture_output=True,
+                             text=True, timeout=300).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    m = re.search(r'LLVM version (\d+)\.(\d+)\.(\d+)', out)
+    return tuple(int(g) for g in m.groups()) if m else None
 
 
 def after_rerun(output):
@@ -159,12 +172,17 @@ class Checker:
         self.common += [] if args.with_project_config else ['--no-config']
         if args.clang_repl:
             self.common += ['--clang-repl', args.clang_repl]
+        self.image = None
         if args.docker:
             self.common += ['--docker'] + (['--image', args.image] if args.image else [])
+            from cpp_repl.docker import DEFAULT_IMAGE
+            self.image = args.image or os.environ.get('CPP_REPL_IMAGE') or DEFAULT_IMAGE
         self.report['cpp_repl'] = shlex.join(self.cpp_repl)
         try:
+            # The session runs in the image, under its clang-repl's default standard.
             self.cfg = Config(Options(cwd=self.cwd, configs=[str(self.toml)], no_config=not args.with_project_config,
-                                      clang_repl=args.clang_repl), backend=False)
+                                      clang_repl=args.clang_repl), backend=False,
+                              clang_version=image_clang_version(self.image) if self.image else None)
         except ConfigError as e:
             self.cfg = None
             self.config_error = str(e)
@@ -247,8 +265,8 @@ class Checker:
         source.write_text(''.join(f'#include "{h}"\n' for h in self.cfg.preludes) + 'int main() {}\n')
         flags = list(self.cfg.compiler_flags)
         if self.args.docker:
-            from cpp_repl.docker import DEFAULT_IMAGE, mounts
-            image = self.args.image or os.environ.get('CPP_REPL_IMAGE') or DEFAULT_IMAGE
+            from cpp_repl.docker import mounts
+            image = self.image
             volumes = [str(p) for p in mounts(self.cfg, [], [])] + [str(self.tmp)]
             cmd = ['docker', 'run', '--rm', '--user', f'{os.getuid()}:{os.getgid()}']
             for v in dict.fromkeys(volumes):
@@ -361,7 +379,10 @@ class Checker:
                 if timed_out and i == last:
                     entry['status'] = 'timeout'
                 elif crash:
-                    entry['status'] = 'stuck' if 'stuck' in crash.group(1) else 'crash'
+                    what = crash.group(1)
+                    entry['status'] = 'stuck' if 'stuck' in what else 'exit' if 'exited' in what else 'crash'
+                elif EXCEPTION.search(output):
+                    entry['status'] = 'exception'
                 else:
                     entry['status'] = outcome(output)
                 if reran:

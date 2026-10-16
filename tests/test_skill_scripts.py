@@ -165,7 +165,8 @@ def test_linker_script_is_followed(tmp_path):
 
 def test_compile_flags():
     res = resolution()
-    for flag in ('-DSPDLOG_SHARED_LIB', '-pthread', '-std=c++23', '-Werror', '-fopenmp', '-stdlib=libc++', '-Xclang'):
+    for flag in ('-DSPDLOG_SHARED_LIB', '-pthread', '-std=c++23', '-Werror', '-fopenmp', '-stdlib=libc++', '-Xclang',
+                 '-stdlib=libstdc++'):
         res.compile_flag(flag)
     res.compile_flag('-include', 'config.h')
     res.include('/usr/include')
@@ -174,6 +175,7 @@ def test_compile_flags():
     assert res.std == 'c++23'
     assert {p['kind'] for p in res.problems} == {'openmp', 'libcxx', 'include-file', 'unsupported-flag'}
     assert any(p['item'] == '-stdlib=libc++' and p['kind'] == 'libcxx' for p in res.problems)
+    assert any(d['item'] == '-stdlib=libstdc++' for d in res.dropped)   # the default, no libc++ build
     assert any(d['item'] == '/usr/include' for d in res.dropped)
 
 
@@ -360,3 +362,23 @@ def test_check_profile_end_to_end(tmp_path):
     code, out = script('check_profile.py', *env_cmd[:4], '--runs', '1', cwd=tmp_path)
     assert code == 1 and not out['steps']['prelude']['ok']
     assert out['hints'][0]['anchor'] == 'file-not-found'
+
+
+def test_profile_std_is_the_package_s_own_floored():
+    """A package that names its standard gets it pinned, floored to C++20 as
+    cpp-repl floors it; one that names none takes cpp-repl's default, the
+    newest the clang knows, and the check's hint says if the headers refuse."""
+    assert probe_library.profile_std('c++17') == 'c++20'
+    assert probe_library.profile_std('gnu++20') == 'gnu++20'
+    assert probe_library.profile_std('c++23') == 'c++23'
+    assert probe_library.profile_std(None) is None
+
+
+def test_classify_knows_an_exit_and_an_exception():
+    """cpp-repl's --json statuses: a program that called exit() is `exit`,
+    not `crash`, and an exception nothing caught is `exception`, so that
+    first_failure names the input that threw, not the one after it."""
+    c = checker()
+    results = c.classify([('say("x");', 'x\n'), ('std::stoi("abc")', '[uncaught exception: std::invalid_argument: stoi]\n'),
+                          ('exit(3);', 'bye\n[clang-repl exited (code 3)]\n'), ('after', None)])
+    assert [r['status'] for r in results] == ['ok', 'exception', 'exit', 'not-run']

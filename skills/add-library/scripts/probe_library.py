@@ -450,9 +450,11 @@ class Resolution:
                                                             'file as a prelude')
         elif flag == '-imacros' and value:
             self.problem(f'{flag} {value}', 'unsupported-flag', f'#include "{value}" at the top of the prelude header')
-        elif flag.startswith('-stdlib='):
+        elif flag == '-stdlib=libc++':
             self.problem(flag, 'libcxx', 'a libc++ build: "-stdlib=libc++" in flags, and libc++ builds only in the '
                                          'session; cpp-repl then compiles against libc++ and loads its runtime first')
+        elif flag.startswith('-stdlib='):
+            self.drop(flag, 'libstdc++ is what cpp-repl compiles against unless told otherwise')
         elif flag.startswith(('-Xclang', '-x')):
             self.problem(flag, 'unsupported-flag', 'cpp-repl does not pass this flag on; check whether the '
                                                    'library needs it')
@@ -703,6 +705,18 @@ def resolve_headers(args, res):
     return {'kind': 'headers', 'dirs': args.headers, 'version': None}
 
 
+def profile_std(std):
+    """The `std` a profile pins for a package that names its own standard
+    (-std=c++17 among its flags): that standard, floored to C++20 as cpp-repl
+    floors it. None when the package names none: the default is then the
+    newest standard the clang knows, and the check's older-standard hint
+    says when the headers do not take it."""
+    if not std:
+        return None
+    from cpp_repl.config import floor_std
+    return floor_std(f'-std={std}')[0].removeprefix('-std=')
+
+
 def in_project(path, root, dot):
     """path relative to the .cpp-repl directory when it lies inside the
     project, else None. Paths in a TOML are relative to the TOML."""
@@ -757,10 +771,8 @@ def cmd_resolve(args):
     libs = [in_project(lib['path'], root, dot) or lib['path'] for lib in res.libs]
     data = {'include': include, 'flags': flags, 'defines': res.defines, 'libs': libs,
             'prelude': [f'{name}_repl.h']}
-    if res.std:
-        m = re.fullmatch(r'(?:c|gnu)\+\+(\w+)', res.std)
-        if m and m.group(1) in ('23', '2b', '26', '2c'):
-            data['std'] = res.std
+    if profile_std(res.std):
+        data['std'] = profile_std(res.std)
     # The Debian packages that hold what the profile reads, for a Docker
     # image: the libraries' owners, include directories that one package
     # owns (/usr/include/opencv4 belongs to every OpenCV module), and for a

@@ -126,7 +126,8 @@ library is the common case. List shared objects only, never an `.a`.
 
 Start from the templates in `${CLAUDE_SKILL_DIR}/templates/`.
 
-**`<lib>.toml`:** start from the draft, which already follows these rules.
+**`<lib>.toml`:** start from the draft, which already follows these rules; it
+pins `std` only when the package names its own standard.
 - **Third-party include directories as `flags = ["-isystem", "/abs/dir"]`.**
   `include` gives `-I`, which shows the library's own warnings. A relative
   path in `flags`, as everywhere in the TOML, is relative to the TOML.
@@ -140,8 +141,9 @@ Start from the templates in `${CLAUDE_SKILL_DIR}/templates/`.
   build of a `%save-cpp` file does not: it needs every library on its link
   line.
 - **`std = "gnu++20"` when the headers fail under C++26**, cpp-repl's default
-  with clang 17 and newer. The check's prelude step shows the error; OpenCV
-  4.6 gives `invalid arithmetic between different enumeration types`.
+  with clang 17 and newer, and the package's flags name no standard of their
+  own. The check's prelude step shows the error; OpenCV 4.6 gives `invalid
+  arithmetic between different enumeration types`.
 
 **`<lib>_repl.h`:**
 - `#include "cpp_repl.h"` first.

@@ -511,3 +511,12 @@ def test_a_project_file_of_another_user_is_left_alone(tmp_path, monkeypatch):
     assert notes == [f'{tmp_path / "cpp-repl.toml"} is owned by another user: not read']
     other = Config(Options(cwd=sub), backend=False)
     assert other.project_file is None and '-DFROM_TOML=1' not in other.compiler_flags and other.notes == notes
+
+
+def test_the_default_standard_can_follow_another_clang_repl(tmp_path):
+    """The skills' checker configures a session that runs in a Docker image:
+    the default standard is the image's clang-repl's, not this machine's."""
+    assert Config(Options(cwd=tmp_path, no_config=True), backend=False, clang_version=(23, 1, 4)).std == '-std=gnu++26'
+    assert Config(Options(cwd=tmp_path, no_config=True), backend=False, clang_version=(16, 0, 6)).std == '-std=gnu++23'
+    assert Config(Options(cwd=tmp_path, no_config=True, flags=['-std=gnu++20']), backend=False,
+                  clang_version=(23, 1, 4)).std == '-std=gnu++20'

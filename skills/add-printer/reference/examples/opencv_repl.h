@@ -1,5 +1,7 @@
 // opencv_repl.h: an OpenCV profile's prelude, parsed after cpp_repl.h. A worked
-// example for the add-printer skill, checked with OpenCV 4.6 on clang-repl 18.
+// example for the add-printer skill, checked with OpenCV 4.6 on clang-repl 18 and
+// 23 as gnu++20: OpenCV 4.6's headers do not compile as C++26, cpp-repl's default
+// from clang 17, so its profile pins std = "gnu++20".
 //
 // <opencv2/core.hpp> and <opencv2/imgproc.hpp>, and how a cv::Mat prints:
 // its shape and type, then its elements in columns, the first and last three

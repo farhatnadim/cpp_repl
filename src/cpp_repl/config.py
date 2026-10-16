@@ -632,7 +632,10 @@ class Config:
     links False, no -l library either (cpp-repl --docker, whose image
     looks for them)."""
 
-    def __init__(self, options, backend=True, links=True):
+    def __init__(self, options, backend=True, links=True, clang_version=None):
+        """clang_version, (major, minor, patch), is the clang-repl the session
+        will run when it is not this machine's, an image's: the default
+        standard is the newest that clang knows."""
         self.options = options
         # Paths on the command line are relative to where cpp-repl runs, like
         # the files, -c, --lib and --compile-commands; --cwd is the session's
@@ -651,7 +654,9 @@ class Config:
         # its clang knows. Without a backend (cpp-repl --docker, --cflags)
         # there may be none, and the default is then an unknown clang's.
         self.clang_repl = self.version = self.version_text = self.argv = None
-        if backend or std is None:
+        if clang_version is not None:
+            self.version, self.version_text = tuple(clang_version), '.'.join(map(str, clang_version))
+        elif backend or std is None:
             try:
                 self.clang_repl = find_clang_repl(options.clang_repl)
                 self.version, self.version_text = clang_repl_version(self.clang_repl)

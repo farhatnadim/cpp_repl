@@ -11,7 +11,8 @@ CPP_SUFFIXES = {'.cpp', '.cc', '.cxx', '.c++', '.C', '.h', '.hh', '.hpp', '.hxx'
 
 # The prelude headers. Every session has loaded them already, so an #include
 # of one in a source (a saved session has them) is skipped.
-PRELUDE_NAMES = frozenset({'cpp_repl.h', 'cpp_repl_std.h', 'cpp_repl_usd.h', 'cpp_repl_eigen.h', 'cpp_repl_glm.h'})
+PRELUDE_NAMES = frozenset({'cpp_repl.h', 'cpp_repl_std.h', 'cpp_repl_usd.h', 'cpp_repl_eigen.h', 'cpp_repl_glm.h',
+                          'cpp_repl_torch.h'})
 
 
 class Input(str):

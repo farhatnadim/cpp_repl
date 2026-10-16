@@ -1,0 +1,43 @@
+// libtorch at the prompt, on the GPU: cpp-repl -p torch examples/torch.repl
+torch::manual_seed(0);
+auto device = torch::cuda::is_available() ? torch::kCUDA : torch::kCPU;
+device
+auto x = torch::arange(6, torch::kFloat32).reshape({2, 3}).to(device);
+x
+x.sum().item<float>()
+(x * x).sizes()
+// One block of a transformer: attention over a sequence, then a feed-forward.
+struct Block : torch::nn::Module {
+  Block(int64_t dim, int64_t heads)
+      : attention(register_module("attention", torch::nn::MultiheadAttention(dim, heads))),
+        norm(register_module("norm", torch::nn::LayerNorm(torch::nn::LayerNormOptions({dim})))),
+        feed_forward(register_module("feed_forward", torch::nn::Linear(dim, dim))) {}
+  torch::Tensor forward(torch::Tensor seq)
+  {
+    auto [attended, weights] = attention(seq, seq, seq);
+    return norm(seq + feed_forward(attended));
+  }
+  torch::nn::MultiheadAttention attention;
+  torch::nn::LayerNorm norm;
+  torch::nn::Linear feed_forward;
+};
+auto block = std::make_shared<Block>(16, 4);
+block->to(device);
+auto seq = torch::randn({5, 2, 16}, device);   // 5 steps, batch of 2, 16 features
+block->forward(seq).sizes()
+// Train it to copy its input: the loss goes down.
+torch::optim::AdamW optimizer(block->parameters(), torch::optim::AdamWOptions(1e-2));
+std::vector<float> losses;
+for (int step = 0; step < 20; ++step) {
+  optimizer.zero_grad();
+  auto loss = torch::mse_loss(block->forward(seq), seq);
+  loss.backward();
+  optimizer.step();
+  losses.push_back(loss.item<float>());
+}
+losses.front() > losses.back()
+// A shape mismatch throws c10::Error, whose what() carries a backtrace.
+try { torch::matmul(seq, seq); } catch (const c10::Error &e) { std::cout << e.what_without_backtrace() << '\n'; }
+block->parameters().size()
+// Timing GPU work: synchronize, or the time is the launch alone.
+%time torch::matmul(torch::randn({1024, 1024}, device), torch::randn({1024, 1024}, device)); torch::cuda::synchronize();

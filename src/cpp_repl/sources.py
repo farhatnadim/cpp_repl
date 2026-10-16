@@ -4,8 +4,8 @@ import re
 import textwrap
 from pathlib import Path
 
-from .lexer import (CONDITIONAL_LINE, TYPE_WORDS, Origin, angle_end, completeness, initialiser_brace, lex,
-                    located, match_bracket, split_statements, token_is)
+from .lexer import (CONDITIONAL_LINE, TYPE_WORDS, Origin, angle_end, completeness, ends_with_if, initialiser_brace,
+                    lex, located, match_bracket, split_statements, token_is)
 
 CPP_SUFFIXES = {'.cpp', '.cc', '.cxx', '.c++', '.C', '.h', '.hh', '.hpp', '.hxx', '.h++'}
 
@@ -75,9 +75,11 @@ class BlockReader:
                 self.line = number
             lines.append(line)
             state = completeness('\n'.join(lines))
-            if state == 'complete':
+            # A complete if may still take an else from the next line, with
+            # braces or without: the reader looks ahead, as a prompt cannot.
+            if state == 'complete' and not ends_with_if('\n'.join(lines)):
                 return '\n'.join(lines)
-            extendable = state == 'extendable'
+            extendable = state != 'incomplete'
 
 
 def inputs_from_repl(text, path=None):

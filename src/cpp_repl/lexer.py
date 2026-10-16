@@ -331,10 +331,22 @@ def completeness(text):
             return 'incomplete'
         if head == 'try' and not any(t.kind == 'ident' and t.text == 'catch' for t in toks):
             return 'incomplete'
-        if head in ('if', 'try') and last.text == '}' and '\n' in s:
+        if head in ('if', 'try') and '\n' in s:   # an else or a catch may follow, braces or not
             return 'extendable'
         return 'complete'
     return _head_state(toks) or 'complete'
+
+
+def ends_with_if(text):
+    """Whether text's last statement is an if, which an `else` on the next
+    line would still extend: a file's reader, which can look ahead, waits
+    for one even after `if (x) f();` on one line."""
+    stmts = split_statements(lex(unsplice(text).strip())[0])
+    if not stmts:
+        return False
+    toks, control = stmts[-1]
+    first = next((t for t in toks if t.kind != 'directive'), None)
+    return control and first is not None and first.kind == 'ident' and first.text == 'if'
 
 
 # Things that may come just before a declaration's type.

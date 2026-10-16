@@ -217,3 +217,11 @@ c++> fp == nullptr
 true
 c++> std::cout << "fatal error: not really\n";
 fatal error: not really
+c++> if (answer > 40)
+...>   std::cout << "big\n";
+...> else
+...>   std::cout << "small\n";
+big
+c++> if (answer > 40) std::cout << "A\n";
+...> else std::cout << "B\n";
+A

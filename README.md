@@ -6,7 +6,7 @@ would inside `main()`, and:
 
 - **Blocks finish themselves.** Enter runs an input once its brackets balance
   and its statement is complete, and opens a new line otherwise. A multi-line
-  `if` waits for its `else`, a function head such as `int f()` for its body,
+  `if`, braces or not, waits for its `else`, a function head such as `int f()` for its body,
   and a `template <...>` line, an attribute or `struct S` for what they head,
   so C++ is typed as it is written.
 - **Names can be declared again.** `int x = 1;` then `double x = 2.5;`: the

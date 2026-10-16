@@ -28,6 +28,12 @@ def fresh():
     ('if (x) { f(); }', 'complete'),
     ('if (x) {\n  f();\n} else {\n  g();\n}', 'extendable'),
     ('if (x)', 'incomplete'),
+    # Braces or not, a multi-line if waits for its else; a one-line one runs.
+    ('if (x)\n  f();', 'extendable'),
+    ('if (x)\n  f();\nelse\n  g();', 'extendable'),
+    ('if (x) f();', 'complete'),
+    ('for (int i = 0; i < 3; ++i)\n  f(i);', 'complete'),
+    ('while (x)\n  f();', 'complete'),
     ('try {\n  f();\n}', 'incomplete'),
     ('try {\n  f();\n} catch (...) {\n}', 'extendable'),
     ('do {\n  f();\n}', 'incomplete'),

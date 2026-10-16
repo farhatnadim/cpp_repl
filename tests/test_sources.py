@@ -213,6 +213,15 @@ def test_block_reader_waits_for_else():
     assert reader.read() == 'g();'
 
 
+def test_block_reader_waits_for_else_without_braces():
+    """A braceless if on its own line waits for its body, then for an else;
+    in a file, `if (x) f();` on one line takes an else from the next line
+    too, since the reader can look ahead."""
+    text = 'if (x)\n  f();\nelse\n  g();\nh();\nif (y) a();\nelse b();\nc();\nif (z) d();\n'
+    assert inputs_from_repl(text) == ['if (x)\n  f();\nelse\n  g();', 'h();', 'if (y) a();\nelse b();', 'c();',
+                                      'if (z) d();']
+
+
 def test_block_reader_waits_for_a_body():
     """A function head, a template head, attributes and a type's head take
     the lines that go on with them, in the style that puts a brace on a

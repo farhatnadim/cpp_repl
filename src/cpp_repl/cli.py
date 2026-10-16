@@ -201,6 +201,13 @@ def _run(argv):
                          '--diagnostics, -q, --json and --fresh apply to the run')
         return connect(args, _fail)
 
+    # Without files, --batch would start clang-repl, run nothing and exit 0,
+    # and --serve would never run them: both say so instead.
+    if args.batch and not args.files and not (args.serve or args.emit or args.cflags or args.libs):
+        return _fail('--batch runs files: name one, or leave out --batch to run inputs piped in')
+    if args.serve and args.files:
+        return _fail('--serve runs no files: start it without them, then send them with --connect')
+
     if args.docker:
         from .docker import run_in_docker
         try:

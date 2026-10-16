@@ -592,6 +592,26 @@ def test_batch_says_what_the_configuration_changed(tmp_path):
     assert json.loads(run.stdout.splitlines()[0]) == {'note': '-std=c++17 raised to -std=c++20: the prelude needs C++20'}
 
 
+def test_batch_without_files_and_serve_with_them_say_so(tmp_path):
+    """--batch with no files would run nothing and exit 0, the inputs piped
+    in going to a program that never runs; --serve never runs files. Both
+    stop before clang-repl starts, with what to do instead."""
+    env = dict(os.environ, CPP_REPL_CLANG_REPL=str(FAKE), NO_COLOR='1')
+    run = subprocess.run([sys.executable, str(CPP_REPL), '--no-config', '--batch'], cwd=tmp_path, env=env,
+                         input='say("hi");\n', capture_output=True, text=True, timeout=60)
+    assert (run.returncode, run.stdout) == (2, '')
+    assert run.stderr == 'cpp-repl: --batch runs files: name one, or leave out --batch to run inputs piped in\n'
+    run = subprocess.run([sys.executable, str(CPP_REPL), '--no-config'], cwd=tmp_path, env=env,
+                         input='say("hi");\n', capture_output=True, text=True, timeout=60)
+    assert (run.returncode, run.stdout) == (0, 'c++> say("hi");\nhi\n')
+    (tmp_path / 'p.repl').write_text('say("hi");\n')
+    run = subprocess.run([sys.executable, str(CPP_REPL), '--no-config', '--serve', 'repl.sock', 'p.repl'],
+                         cwd=tmp_path, env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=60)
+    assert run.returncode == 2 and not (tmp_path / 'repl.sock').exists()
+    assert run.stderr == ('cpp-repl: --serve runs no files: start it without them, then send them with '
+                          '--connect\n')
+
+
 def test_a_session_that_stays(tmp_path):
     """cpp-repl --serve SOCKET runs what cpp-repl --connect SOCKET sends, and
     the client exits with the run's status; %quit stops the server."""

@@ -14,7 +14,7 @@ Before working through the table:
 
 | id | Text | Cause | Fix |
 | --- | --- | --- | --- |
-| not-a-flag | `not a compiler flag cpp-repl passes on: -lfoo` | A link flag (`-l`, `-L`, `-Wl,`) or an unsupported option in `flags`. | Put libraries in `libs` as absolute `.so` paths. Move `-include` into the prelude. |
+| not-a-flag | `not a compiler flag cpp-repl passes on: -lfoo` | A link flag (`-l`, `-L`, `-Wl,`) or an unsupported option in `flags`. | Put libraries in `libs` as absolute `.so` paths. (`-include FILE` is accepted: cpp-repl parses the file as a prelude.) |
 | no-profile | `no profile 'x'; the profiles are: ...` | A user TOML named in `profiles`, or in `-p x`. | Load a TOML with `-c FILE`, or with `-p path/to/x.toml`. `profiles` takes built-in names only. |
 | unknown-keys | `unknown keys X; the keys are ...` | A key cpp-repl does not read. | Use only `std`, `include`, `defines`, `flags`, `libs`, `prelude`, `profiles` and `compile_commands`. |
 | no-library | `no library P` or `no prelude header P` | A wrong path. Paths in a TOML are relative to the TOML. | Fix the path. Under Docker, the file may be missing from the image instead: see docker.md. |
@@ -40,13 +40,13 @@ Before working through the table:
 | symbols-not-found | `JIT session error: Symbols not found: [ _ZN... ]` | The code calls a function that no loaded library defines. When the list names `repl::` symbols (`_ZN4repl`), see stale-template. | `probe_library.py symbol '_ZN...' --config .cpp-repl/<lib>.toml` names the library that defines it. Add that library to `libs`. It also takes a demangled prefix such as `cv::GaussianBlur`. |
 | stale-template | `Symbols not found` naming `repl::put`, `repl::show` or a standard-library template, for a correct input that follows one that failed to compile | clang-repl 18, 23 and 24 keep the template instantiations of an input that failed to compile, but not their code. A later input that needs one of them cannot link. No library is missing. | Nothing for that input: cpp-repl restores the session and runs it again, at the prompt and under `--batch`, and the check marks it `reran`. Fix the input that failed to compile. |
 | materialize | `error: Failed to materialize symbols`, with no `Symbols not found` | Seen only with a cpp-repl from before 2026-10-15, which kept the session after a link failure; it then failed on everything. The current one restores the session. | Update cpp-repl. Until then, fix the first failure only. |
-| libcxx | symbols with `St3__1` in them | The library was built against libc++. | Unsupported: see resolve.md, `libcxx`. |
+| libcxx | symbols with `St3__1` in them | The library was built against libc++. | `"-stdlib=libc++"` in `flags`, with libc++ builds only in the session: see resolve.md, `libcxx`. |
 | old-abi | `std::string` symbols without `B5cxx11` (`_ZN...Ss...`) | The library was built with the old libstdc++ string ABI, as some prebuilt binaries are (older libtorch releases). | `defines = ["_GLIBCXX_USE_CXX11_ABI=0"]`. |
 | openmp | symbols such as `__kmpc_fork_call` or `omp_get_num_threads` | The code uses OpenMP. | `-fopenmp` in `flags`, and the matching `libomp.so` in `libs`. |
 | inline-asm | `error in backend: Inline asm not supported by this streamer` | A clang-repl 18 limit: its JIT cannot assemble inline asm (Eigen's dynamic products, some SIMD code). | Use clang-repl 23 through `--docker`. For a few libraries, a define turns the asm off. |
-| stuck | `[clang-repl got stuck on that input]` | A header incompatible with C++20 or with clang flooded the compiler with errors. | Read the first error above it. |
+| stuck | `[clang-repl got stuck on that input]` | A header incompatible with the standard in use (`%flags` shows it) or with clang flooded the compiler with errors. | Read the first error above it. |
 | name-clash | `redefinition of 'index' as different kind of symbol` | Inputs typed at the prompt are globals, and some names clash with C library functions. | Use another name in the example. |
-| redefinition | `redefinition of 'x'` | The same variable is defined twice in one session. | Use a new name, or assign instead. |
+| redefinition | `redefinition of 'x'`, then `[x stays as it is: ...]` | A name the session declared is declared again. cpp-repl replaces the old declaration by replaying the inputs around it, and keeps the old one when the new input fails or a later input needs the old one; the note says which. A prelude's or a library's name cannot be replaced (name-clash). | Fix the new declaration, or use another name. |
 
 ## Printing
 

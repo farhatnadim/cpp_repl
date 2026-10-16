@@ -74,7 +74,8 @@ HINTS = [
      'a static archive or a linker script is listed in libs: list the shared library it stands for'),
     (r'cannot open shared object file', 'dependency-not-found',
      'a dependency of a listed library is not on the loader path: list its absolute path in libs first'),
-    (r'St3__1', 'libcxx', 'the library was built with libc++; cpp-repl uses libstdc++'),
+    (r'St3__1', 'libcxx', 'the library was built with libc++: "-stdlib=libc++" in flags, with libc++ builds only '
+                          '(resolve.md, libcxx)'),
     (r'__kmpc_|omp_get_', 'openmp', 'the code uses OpenMP: add -fopenmp to flags and the matching libomp.so to libs'),
     (r'use of undeclared identifier|no member named .* in namespace', 'undeclared',
      'a name the example uses is not declared: check the prelude step, then the prelude includes'),

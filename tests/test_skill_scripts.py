@@ -165,14 +165,15 @@ def test_linker_script_is_followed(tmp_path):
 
 def test_compile_flags():
     res = resolution()
-    for flag in ('-DSPDLOG_SHARED_LIB', '-pthread', '-std=c++23', '-Werror', '-fopenmp', '-stdlib=libc++'):
+    for flag in ('-DSPDLOG_SHARED_LIB', '-pthread', '-std=c++23', '-Werror', '-fopenmp', '-stdlib=libc++', '-Xclang'):
         res.compile_flag(flag)
     res.compile_flag('-include', 'config.h')
     res.include('/usr/include')
     assert res.defines == ['SPDLOG_SHARED_LIB']
     assert res.flags == ['-pthread']
     assert res.std == 'c++23'
-    assert {p['kind'] for p in res.problems} == {'openmp', 'unsupported-flag'}
+    assert {p['kind'] for p in res.problems} == {'openmp', 'libcxx', 'include-file', 'unsupported-flag'}
+    assert any(p['item'] == '-stdlib=libc++' and p['kind'] == 'libcxx' for p in res.problems)
     assert any(d['item'] == '/usr/include' for d in res.dropped)
 
 

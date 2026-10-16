@@ -16,5 +16,6 @@ libs = []
 # The prelude: the library's headers and its printers, parsed once at startup.
 prelude = ["<lib>_repl.h"]
 
-# Only when the library needs a newer standard than C++20 (cpp-repl's floor):
-# std = "c++23"
+# The standard, when the default (the newest the clang knows: gnu++26 from clang 17)
+# does not suit the headers. C++20 is the floor.
+# std = "gnu++20"

@@ -444,11 +444,18 @@ class Resolution:
         elif flag.startswith('-fopenmp'):
             self.problem(flag, 'openmp', 'add "-fopenmp" to flags and the libomp.so that matches the clang-repl '
                                          '(libomp-N-dev) to libs, or drop OpenMP from the package options')
-        elif flag in ('-include', '-imacros') and value:
+        elif flag == '-include' and value:
+            self.problem(f'{flag} {value}', 'include-file', f'#include "{value}" at the top of the prelude header, '
+                                                            f'or "-include", "{value}" in flags: cpp-repl parses the '
+                                                            'file as a prelude')
+        elif flag == '-imacros' and value:
             self.problem(f'{flag} {value}', 'unsupported-flag', f'#include "{value}" at the top of the prelude header')
-        elif flag.startswith(('-Xclang', '-stdlib=', '-x')):
+        elif flag.startswith('-stdlib='):
+            self.problem(flag, 'libcxx', 'a libc++ build: "-stdlib=libc++" in flags, and libc++ builds only in the '
+                                         'session; cpp-repl then compiles against libc++ and loads its runtime first')
+        elif flag.startswith(('-Xclang', '-x')):
             self.problem(flag, 'unsupported-flag', 'cpp-repl does not pass this flag on; check whether the '
-                                                   'library needs it (-stdlib=libc++ means a libc++ build)')
+                                                   'library needs it')
         elif flag.startswith('-Werror'):
             self.drop(flag, 'warnings stay warnings in the REPL')
         elif flag == '-pthread' or flag.startswith(('-m', '-f', '-W')):
@@ -557,8 +564,8 @@ class Resolution:
                              'the loader cannot find it: list its absolute path in libs before this library')
             abi = defines_cxx_abi(lib['path'])
             if abi:
-                self.problem(lib['path'], 'libcxx', 'built against libc++; cpp-repl uses libstdc++, so this '
-                                                    'library cannot be mixed in')
+                self.problem(lib['path'], 'libcxx', 'built against libc++: usable with "-stdlib=libc++" in flags '
+                                                    'and no libstdc++ library beside it')
 
 
 STATIC_FIX = ('cpp-repl loads shared libraries only: install or build the shared variant '

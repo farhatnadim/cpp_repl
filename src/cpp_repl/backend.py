@@ -19,11 +19,11 @@ import time
 _PARSE_FAILED = re.compile(r'^error: Parsing failed\.|^fatal error: ', re.M)
 _LINK_FAILED = re.compile(r'^JIT session error: |^error: Failed to materialize symbols'
                           r'|^error: Duplicate definition of symbol', re.M)
-_ANY_ERROR = re.compile(r'^error: ', re.M)
+ANY_ERROR = re.compile(r'^error: ', re.M)
 # At startup, an error anywhere: a prelude that fails to compile shows as
 # "/x/prelude.h:3:1: error: ..." or "...: fatal error: ...", and clang-repl
 # carries on without the rest of it.
-_STARTUP_ERROR = re.compile(r'^(?:.*?:\d+:\d+: )?(?:fatal )?error: ', re.M)
+STARTUP_ERROR = re.compile(r'^(?:.*?:\d+:\d+: )?(?:fatal )?error: ', re.M)
 _NOISE = re.compile(r'In file included from <<< inputs >>>:\d+:\s*$')
 # Clang's line when an input reaches -ferror-limit. clang-repl 18 can loop
 # forever after it; a newer one, or a limit asked for, answers the marker.

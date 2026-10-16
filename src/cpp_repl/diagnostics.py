@@ -25,7 +25,7 @@ BRIEF_FLAGS = ('-ferror-limit=1', '-ftemplate-backtrace-limit=2', '-fconstexpr-b
 MOST_SYMBOLS = 3
 
 _HEADER = re.compile(r'(?P<file>[^\s:][^:\n]*):\d+:\d+: (?P<severity>fatal error|error|warning|note|remark): ')
-_SNIPPET = re.compile(r' *\d* \|(?: |$)')   # a source line under a diagnostic, or its carets
+SNIPPET = re.compile(r' *\d* \|(?: |$)')   # a source line under a diagnostic, or its carets
 _PLUMBING = re.compile(r'In file included from input_line_\d+:\d+:$')
 _INCLUDED = re.compile(r'In file included from ')
 _DROPPED = re.compile(r'fatal error: too many errors emitted|error: Failed to materialize symbols')
@@ -55,7 +55,7 @@ class Diagnostics:
 
     def _line(self, line):
         p = plain(line).rstrip('\r\n')
-        if self.under and _SNIPPET.match(p):
+        if self.under and SNIPPET.match(p):
             return line if self.shown and self.snippets else ''
         self.under = False
         if _PLUMBING.match(p):

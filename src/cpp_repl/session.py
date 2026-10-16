@@ -13,10 +13,10 @@ from datetime import date
 from functools import partial
 from pathlib import Path
 
-from .backend import _ANY_ERROR, _STARTUP_ERROR, Backend, BackendError, outcome, plain
+from .backend import ANY_ERROR, STARTUP_ERROR, Backend, BackendError, outcome, plain
 from .config import session_dir_name
-from .diagnostics import _SNIPPET, Diagnostics
-from .lexer import (Origin, _open_end, _unsplice, declared_names, in_function, is_definition, join, lex,
+from .diagnostics import SNIPPET, Diagnostics
+from .lexer import (Origin, open_end, unsplice, declared_names, in_function, is_definition, join, lex,
                     located, split_statements, trailing_expression, transform)
 from .sources import PRELUDE_NAMES, Input, inputs_from_file, split_directives
 
@@ -68,7 +68,7 @@ _END_MARK = re.compile('\x1d(!?)(-?\\d+)([^\x1d]*)\x1d\n?')
 # back until the program's own output starts, so that an error cpp-repl
 # handles itself (a redefinition) is never shown.
 _DIAGNOSTIC_LINE = re.compile(r'(?:\S[^:\n]*:\d+:\d+: )?(?:fatal error|error|warning|note|remark): '
-                              r'|In file included from |' + _SNIPPET.pattern)
+                              r'|In file included from |' + SNIPPET.pattern)
 # What clang says of a name declared again.
 _REDEFINED = re.compile(r"error: redefinition of '([^']+)'")
 
@@ -256,7 +256,7 @@ class Session:
             b = candidate or self._backend()
             try:
                 output, alive = b.collect(b.ready, deadline=STARTUP_DEADLINE)
-                if alive and outcome(output) == 'ok' and not _STARTUP_ERROR.search(plain(output)):
+                if alive and outcome(output) == 'ok' and not STARTUP_ERROR.search(plain(output)):
                     if b.calibrate(deadline=60):
                         return b
                     output = b.how_it_ended()
@@ -551,7 +551,7 @@ class Session:
         return self._after(text, [line], output, result, kind, again=again) or not self.batch
 
     def _declares(self, entry, name):
-        return entry.kind == 'stmt' and name in declared_names(lex(_unsplice(entry.text))[0])
+        return entry.kind == 'stmt' and name in declared_names(lex(unsplice(entry.text))[0])
 
     def _redefine(self, name, text):
         """text declares name again: run it in the place of the newest
@@ -645,7 +645,7 @@ class Session:
         scope, the rest inside main(), bare expressions through show()."""
         includes, libs, definitions, body = [], [], [], []
         for entry in self.journal:
-            text = _unsplice(entry.text).strip()
+            text = unsplice(entry.text).strip()
             tokens, _ = lex(text)
             if entry.kind == 'pp':
                 lines = [line for line in entry.text.strip().split('\n')
@@ -663,7 +663,7 @@ class Session:
                 definitions.append(entry.text.strip())
             else:
                 stmts = split_statements(tokens)
-                if stmts and _open_end(*stmts[-1]):
+                if stmts and open_end(*stmts[-1]):
                     body.append(join(tokens) + ';')
                 else:
                     body.append(entry.text.strip())
@@ -748,7 +748,7 @@ class Session:
         elif name == '%lib':
             line = f'%lib {Path(arg).expanduser()}' if arg else '%lib'
             output, result = self._send(line)
-            if result == 'ok' and _ANY_ERROR.search(plain(output)):
+            if result == 'ok' and ANY_ERROR.search(plain(output)):
                 result = 'error'
             return self._after(text, [line], output, result, 'lib') or not self.batch
         elif name == '%time':

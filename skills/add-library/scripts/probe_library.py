@@ -811,7 +811,7 @@ def included_headers(cfg):
 
 def cmd_image(args):
     from cpp_repl.config import Config, ConfigError, Options
-    from cpp_repl.docker import DEFAULT_IMAGE, _image_has
+    from cpp_repl.docker import DEFAULT_IMAGE, image_has
     image = args.image or os.environ.get('CPP_REPL_IMAGE') or DEFAULT_IMAGE
     try:
         cfg = Config(Options(cwd=Path.cwd(), configs=[args.config], no_config=True), backend=False)
@@ -827,7 +827,7 @@ def cmd_image(args):
     # /usr/include (glm) adds no path to the profile.
     paths += included_headers(cfg)
     # Anything outside the image's own directories is mounted by cpp-repl --docker.
-    inside = sorted({p for p in paths if _image_has(Path(p).resolve())})
+    inside = sorted({p for p in paths if image_has(Path(p).resolve())})
     if not shutil.which('docker'):
         emit({'error': 'docker is not installed'}, TOOL_MISSING)
     code, out, err = run(['docker', 'run', '--rm', '--entrypoint', 'sh', image, '-c',

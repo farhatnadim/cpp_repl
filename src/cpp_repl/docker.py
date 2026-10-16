@@ -26,7 +26,7 @@ CHECKOUT = PACKAGE.parent.parent
 _IMAGE_HAS = ('/usr/', '/lib/', '/lib64/', '/bin/', '/sbin/', '/etc/', '/opt/bench-venv/', '/opt/eigen-')
 
 
-def _image_has(path):
+def image_has(path):
     text = str(path) + '/'
     return text.startswith(_IMAGE_HAS) and not text.startswith('/usr/local/')
 
@@ -48,7 +48,7 @@ def mounts(cfg, extra, files):
     if cfg.compile_commands:
         candidates.append(cfg.compile_commands.parent)
     candidates += [Path(f).resolve().parent for f in files]
-    found = sorted({c.resolve() for c in candidates if c.exists() and not _image_has(c.resolve())},
+    found = sorted({c.resolve() for c in candidates if c.exists() and not image_has(c.resolve())},
                    key=lambda p: len(p.parts))
     kept = []
     for p in found:

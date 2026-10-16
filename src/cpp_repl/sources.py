@@ -4,8 +4,8 @@ import re
 import textwrap
 from pathlib import Path
 
-from .lexer import (_CONDITIONAL, Origin, _angle_end, _initialiser_brace, _is, _match, completeness, lex,
-                    located, split_statements)
+from .lexer import (CONDITIONAL_LINE, TYPE_WORDS, Origin, angle_end, completeness, initialiser_brace, lex,
+                    located, match_bracket, split_statements, token_is)
 
 CPP_SUFFIXES = {'.cpp', '.cc', '.cxx', '.c++', '.C', '.h', '.hh', '.hpp', '.hxx', '.h++'}
 
@@ -108,8 +108,8 @@ def _declares_type(tokens, i):
     j = i
     while j < len(tokens) and tokens[j].kind == 'directive':
         j += 1
-    if _is(tokens, j, 'template', 'ident') and _is(tokens, j + 1, '<'):
-        j = _angle_end(tokens, j + 1)
+    if token_is(tokens, j, 'template', 'ident') and token_is(tokens, j + 1, '<'):
+        j = angle_end(tokens, j + 1)
     return j < len(tokens) and tokens[j].kind == 'ident' and tokens[j].text in _TYPE_HEADS
 
 
@@ -129,14 +129,14 @@ def _item_end(tokens, i):
             initialiser = True
         elif t.text in '([{':
             if depth == 0 and t.text == '{':
-                mem_init = _initialiser_brace(tokens, j, mem_inits)
+                mem_init = initialiser_brace(tokens, j, mem_inits)
             depth += 1
         elif t.text in ')]}':
             depth -= 1
-            if depth == 0 and t.text == ')' and _is(tokens, j + 1, ':'):
+            if depth == 0 and t.text == ')' and token_is(tokens, j + 1, ':'):
                 mem_inits = True
             if (depth == 0 and t.text == '}' and not initialiser and not type_body and not mem_init
-                    and not _is(tokens, j + 1, ';') and not _is(tokens, j + 1, 'catch', 'ident')):
+                    and not token_is(tokens, j + 1, ';') and not token_is(tokens, j + 1, 'catch', 'ident')):
                 return j
         elif t.text == ';' and depth == 0:
             return j
@@ -148,12 +148,12 @@ def _main(item):
     main's definition, else None."""
     for k, t in enumerate(item):
         if (t.kind == 'ident' and t.text == 'main' and k and item[k - 1].text in ('int', 'auto')
-                and _is(item, k + 1, '(')):
-            close = _match(item, k + 1)
+                and token_is(item, k + 1, '(')):
+            close = match_bracket(item, k + 1)
             for b in range(close + 1, len(item)):
-                if _is(item, b, '{'):
-                    return item[k + 2:close], item[b + 1:_match(item, b)]
-                if _is(item, b, ';'):
+                if token_is(item, b, '{'):
+                    return item[k + 2:close], item[b + 1:match_bracket(item, b)]
+                if token_is(item, b, ';'):
                     return None
     return None
 
@@ -178,9 +178,6 @@ def _input(text, toks, origin):
     return Input(source, where._replace(indent=where.indent + indent))
 
 
-_TYPE_WORDS = {'int', 'char', 'const', 'void', 'unsigned', 'signed', 'auto', 'wchar_t'}
-
-
 def _parameters(params):
     """The names of a function's parameters, from the tokens between its
     parentheses."""
@@ -193,7 +190,7 @@ def _parameters(params):
         elif t.kind == 'op' and t.text == ',' and depth == 0:
             names.append(current)
             current = None
-        elif t.kind == 'ident' and depth == 0 and t.text not in _TYPE_WORDS:
+        elif t.kind == 'ident' and depth == 0 and t.text not in TYPE_WORDS:
             current = t.text
     names.append(current)
     return [n for n in names if n]
@@ -221,7 +218,7 @@ def _cpp_items(text, program='main', origin=None):
     tokens, _ = lex(text)
     items, i = [], 0
     while i < len(tokens):
-        if _is(tokens, i, ';'):
+        if token_is(tokens, i, ';'):
             i += 1
             continue
         end = _item_end(tokens, i)
@@ -270,11 +267,11 @@ def split_directives(text):
         line = lines[i]
         if line.lstrip().startswith('#') and not _PRAGMA_LINE.match(line) and at_file_scope():
             flush()
-            m = _CONDITIONAL.match(line)
+            m = CONDITIONAL_LINE.match(line)
             if m and m.group(1) in ('if', 'ifdef', 'ifndef'):
                 region, depth, first = [], 0, i
                 while i < len(lines):
-                    m = _CONDITIONAL.match(lines[i])
+                    m = CONDITIONAL_LINE.match(lines[i])
                     if m and m.group(1) in ('if', 'ifdef', 'ifndef'):
                         depth += 1
                     elif m and m.group(1) == 'endif':

@@ -63,7 +63,7 @@ _PRAGMA = re.compile(r'#\s*pragma\b\s*(.*)\Z', re.S)
 # Pragmas that apply to the statement after them.
 _STATEMENT_PRAGMA = re.compile(r'#\s*pragma\s+(omp|clang\s+loop|unroll|nounroll|GCC\s+(unroll|ivdep)|ivdep|simd|loop)\b')
 # A line of a conditional region, and a directive token that is one.
-_CONDITIONAL = re.compile(r'^[ \t]*#[ \t]*(if|ifdef|ifndef|elif|elifdef|elifndef|else|endif)\b', re.M)
+CONDITIONAL_LINE = re.compile(r'^[ \t]*#[ \t]*(if|ifdef|ifndef|elif|elifdef|elifndef|else|endif)\b', re.M)
 _CONDITIONAL_DIRECTIVE = re.compile(r'#[ \t]*(if|ifdef|ifndef|elif|elifdef|elifndef|else|endif)\b')
 
 
@@ -143,11 +143,11 @@ def join(tokens, lines=False):
     return ''.join(out)
 
 
-def _is(tokens, i, text, kind='op'):
+def token_is(tokens, i, text, kind='op'):
     return i < len(tokens) and tokens[i].text == text and tokens[i].kind == kind
 
 
-def _match(tokens, i):
+def match_bracket(tokens, i):
     """Index of the bracket that closes the one at i (the last token if none does)."""
     depth = 0
     for j in range(i, len(tokens)):
@@ -161,7 +161,7 @@ def _match(tokens, i):
     return len(tokens) - 1
 
 
-def _initialiser_brace(tokens, j, mem_inits):
+def initialiser_brace(tokens, j, mem_inits):
     """Whether the '{' at j opens an initialiser rather than a block or a
     body: `x{1}` among a constructor's member initialisers (mem_inits: a
     ')' and a ':' came before), which the body's '{' follows."""
@@ -179,15 +179,15 @@ def _plain_end(tokens, i):
             continue
         if t.text in '([{':
             if depth == 0 and t.text == '{':
-                initialiser = _initialiser_brace(tokens, j, mem_inits)
+                initialiser = initialiser_brace(tokens, j, mem_inits)
             depth += 1
         elif t.text in ')]}':
             depth -= 1
-            if depth == 0 and t.text == ')' and _is(tokens, j + 1, ':'):
+            if depth == 0 and t.text == ')' and token_is(tokens, j + 1, ':'):
                 mem_inits = True
             if depth == 0 and t.text == '}' and not initialiser and j + 1 < len(tokens):
                 after = tokens[j + 1]
-                if (after.kind == 'ident' and after.text in CONTROL) or _is(tokens, j + 1, '{'):
+                if (after.kind == 'ident' and after.text in CONTROL) or token_is(tokens, j + 1, '{'):
                     return j
         elif t.text == ';' and depth == 0:
             return j
@@ -200,44 +200,44 @@ def _stmt_end(tokens, i):
     if i >= n:
         return n - 1
     t = tokens[i]
-    if _is(tokens, i, '{'):
-        return _match(tokens, i)
+    if token_is(tokens, i, '{'):
+        return match_bracket(tokens, i)
     if t.kind != 'ident' or t.text not in CONTROL:
         return _plain_end(tokens, i)
     j = i + 1
     if t.text in ('for', 'while', 'switch', 'if'):
         if t.text == 'if':
-            if _is(tokens, j, '!'):
+            if token_is(tokens, j, '!'):
                 j += 1
-            if _is(tokens, j, 'constexpr', 'ident') or _is(tokens, j, 'consteval', 'ident'):
+            if token_is(tokens, j, 'constexpr', 'ident') or token_is(tokens, j, 'consteval', 'ident'):
                 j += 1
-        if _is(tokens, j, '('):
-            j = _match(tokens, j) + 1
+        if token_is(tokens, j, '('):
+            j = match_bracket(tokens, j) + 1
         if j >= n:
             return n - 1
         end = _stmt_end(tokens, j)
-        if t.text == 'if' and _is(tokens, end + 1, 'else', 'ident'):
+        if t.text == 'if' and token_is(tokens, end + 1, 'else', 'ident'):
             return _stmt_end(tokens, end + 2) if end + 2 < n else n - 1
         return end
     if t.text == 'do':
         end = _stmt_end(tokens, j) if j < n else n - 1
-        if _is(tokens, end + 1, 'while', 'ident'):
+        if token_is(tokens, end + 1, 'while', 'ident'):
             k = end + 2
-            if _is(tokens, k, '('):
-                k = _match(tokens, k) + 1
-            return k if _is(tokens, k, ';') else min(k, n) - 1
+            if token_is(tokens, k, '('):
+                k = match_bracket(tokens, k) + 1
+            return k if token_is(tokens, k, ';') else min(k, n) - 1
         return end
     # try
-    if not _is(tokens, j, '{'):
+    if not token_is(tokens, j, '{'):
         return _plain_end(tokens, i)
-    end = _match(tokens, j)
-    while _is(tokens, end + 1, 'catch', 'ident'):
+    end = match_bracket(tokens, j)
+    while token_is(tokens, end + 1, 'catch', 'ident'):
         k = end + 2
-        if _is(tokens, k, '('):
-            k = _match(tokens, k) + 1
-        if not _is(tokens, k, '{'):
+        if token_is(tokens, k, '('):
+            k = match_bracket(tokens, k) + 1
+        if not token_is(tokens, k, '{'):
             return n - 1
-        end = _match(tokens, k)
+        end = match_bracket(tokens, k)
     return end
 
 
@@ -246,7 +246,7 @@ def split_statements(tokens):
     belong to the statement after them, as a #pragma does."""
     out, i, n = [], 0, len(tokens)
     while i < n:
-        if _is(tokens, i, ';'):
+        if token_is(tokens, i, ';'):
             i += 1
             continue
         j = i
@@ -257,13 +257,13 @@ def split_statements(tokens):
             break
         end = _stmt_end(tokens, j)
         first = tokens[j]
-        control = _is(tokens, j, '{') or (first.kind == 'ident' and first.text in CONTROL)
+        control = token_is(tokens, j, '{') or (first.kind == 'ident' and first.text in CONTROL)
         out.append((tokens[i:end + 1], control))
         i = end + 1
     return out
 
 
-def _unsplice(text):
+def unsplice(text):
     """Join backslash-continued lines."""
     return re.sub(r'\\[ \t]*\n', ' ', text)
 
@@ -292,7 +292,7 @@ def completeness(text):
     if or try that an else or catch on the next line would still extend, or
     a function head such as `int f()` that its body on the next line
     would."""
-    s = _unsplice(text).strip()
+    s = unsplice(text).strip()
     if not s:
         return 'complete'
     if s.endswith('\\'):
@@ -341,7 +341,7 @@ def completeness(text):
 _SPECIFIERS = {'const', 'constexpr', 'constinit', 'static', 'inline', 'thread_local', 'volatile',
                'extern', 'mutable', 'register', 'unsigned', 'signed', 'long', 'short', 'typename',
                'struct', 'class', 'enum', 'union'}
-_TYPE_WORDS = {'auto', 'int', 'char', 'bool', 'float', 'double', 'void', 'wchar_t', 'char8_t',
+TYPE_WORDS = {'auto', 'int', 'char', 'bool', 'float', 'double', 'void', 'wchar_t', 'char8_t',
                'char16_t', 'char32_t', 'long', 'short', 'unsigned', 'signed', 'const', 'volatile'}
 # What ends a lambda's introducer [...].
 _AFTER_CAPTURES = {'(', '{', '<', '->'}
@@ -355,7 +355,7 @@ def fresh_name():
     return f'cpp_repl_{next(_names)}'
 
 
-def _angle_end(tokens, i):
+def angle_end(tokens, i):
     """Index just past the template argument list opening at tokens[i]. A
     bracketed part, as in enable_if_t<(N > 4)>, is skipped whole."""
     depth, j = 0, i
@@ -367,7 +367,7 @@ def _angle_end(tokens, i):
             elif t.text in ('>', '>>'):
                 depth -= len(t.text)
             elif t.text in '([{':
-                j = _match(tokens, j)
+                j = match_bracket(tokens, j)
             if depth <= 0:
                 return j + 1
         j += 1
@@ -378,11 +378,11 @@ def _skip_attributes(tokens, i):
     """Index past the [[...]], alignas(...) and __attribute__((...)) at i."""
     n = len(tokens)
     while i < n:
-        if _is(tokens, i, '[') and _is(tokens, i + 1, '['):
-            i = _match(tokens, i) + 1
+        if token_is(tokens, i, '[') and token_is(tokens, i + 1, '['):
+            i = match_bracket(tokens, i) + 1
         elif (tokens[i].kind == 'ident' and tokens[i].text in ('alignas', '__attribute__', '__declspec')
-                and _is(tokens, i + 1, '(')):
-            i = _match(tokens, i + 1) + 1
+                and token_is(tokens, i + 1, '(')):
+            i = match_bracket(tokens, i + 1) + 1
         else:
             break
     return i
@@ -391,7 +391,7 @@ def _skip_attributes(tokens, i):
 def _declares(tokens, i):
     """Whether tokens[i] is a declared name: an identifier that =, {, (, [,
     ; or , follows, or a declarator in parentheses, as in int (*f)(int)."""
-    if _is(tokens, i, '(') and (_is(tokens, i + 1, '*') or _is(tokens, i + 1, '&')):
+    if token_is(tokens, i, '(') and (token_is(tokens, i + 1, '*') or token_is(tokens, i + 1, '&')):
         return True
     return (i + 1 < len(tokens) and tokens[i].kind == 'ident'
             and tokens[i + 1].kind == 'op' and tokens[i + 1].text in ('=', '{', '(', '[', ';', ','))
@@ -409,19 +409,19 @@ def _declarator_at(tokens):
     i, n = _skip_attributes(tokens, 0), len(tokens)
     typed = False   # the specifiers hold a type word: `unsigned long n` needs no other
     while i < n and tokens[i].kind == 'ident' and tokens[i].text in _SPECIFIERS:
-        typed = typed or tokens[i].text in _TYPE_WORDS
+        typed = typed or tokens[i].text in TYPE_WORDS
         i += 1
     if i < n and tokens[i].kind == 'ident' and not (typed and _declares(tokens, i)):
-        if tokens[i].text == 'decltype' and _is(tokens, i + 1, '('):
-            i = _match(tokens, i + 1) + 1
+        if tokens[i].text == 'decltype' and token_is(tokens, i + 1, '('):
+            i = match_bracket(tokens, i + 1) + 1
         else:
             i += 1
         while i < n:
-            if _is(tokens, i, '::') and i + 1 < n and tokens[i + 1].kind == 'ident':
+            if token_is(tokens, i, '::') and i + 1 < n and tokens[i + 1].kind == 'ident':
                 i += 2
-            elif _is(tokens, i, '<'):
-                i = _angle_end(tokens, i)
-            elif tokens[i].kind == 'ident' and tokens[i].text in _TYPE_WORDS:
+            elif token_is(tokens, i, '<'):
+                i = angle_end(tokens, i)
+            elif tokens[i].kind == 'ident' and tokens[i].text in TYPE_WORDS:
                 i += 1
             else:
                 break
@@ -430,7 +430,7 @@ def _declarator_at(tokens):
     while i < n and (tokens[i].text in ('*', '&', '&&') and tokens[i].kind == 'op'
                      or tokens[i].kind == 'ident' and tokens[i].text in ('const', 'volatile')):
         i += 1
-    if _is(tokens, i, '[') or _declares(tokens, i):   # a structured binding: auto [a, b] = ...
+    if token_is(tokens, i, '[') or _declares(tokens, i):   # a structured binding: auto [a, b] = ...
         return i
     return None
 
@@ -449,9 +449,9 @@ def _has_body_or_end(tokens):
         t = tokens[i]
         if t.kind == 'ident' and t.text == 'requires' and depth == 0:
             j = i + 1
-            if _is(tokens, j, '('):
-                j = _match(tokens, j) + 1
-            i = _match(tokens, j) + 1 if _is(tokens, j, '{') else i + 1
+            if token_is(tokens, j, '('):
+                j = match_bracket(tokens, j) + 1
+            i = match_bracket(tokens, j) + 1 if token_is(tokens, j, '{') else i + 1
             continue
         if t.kind == 'op':
             if t.text in '([{':
@@ -474,9 +474,9 @@ def _function_head(tokens):
     is still to come: a declaration whose name a parameter list follows,
     then trailers only (const, noexcept, override, -> T, requires C<T>)."""
     k = _declarator_at(tokens)
-    if k is None or not _is(tokens, k + 1, '('):
+    if k is None or not token_is(tokens, k + 1, '('):
         return False
-    close = _match(tokens, k + 1)
+    close = match_bracket(tokens, k + 1)
     return not any(t.kind == 'op' and t.text == '=' for t in tokens[close + 1:])
 
 
@@ -491,7 +491,7 @@ def _head_state(toks):
     if not code or _has_body_or_end(code):
         return None
     i = _skip_attributes(code, 0)
-    if i == len(code) or _is(code, i, 'template', 'ident'):
+    if i == len(code) or token_is(code, i, 'template', 'ident'):
         return 'incomplete'
     while i < len(code) and code[i].kind == 'ident' and code[i].text in _SPECIFIERS - _TYPE_HEADS:
         i += 1
@@ -505,14 +505,14 @@ def _has_lambda(tokens):
     name, a ) or a ] (which would make it a subscript), closed by a ] that a
     parameter list, a body, or a lambda specifier follows."""
     for i, t in enumerate(tokens):
-        if not _is(tokens, i, '['):
+        if not token_is(tokens, i, '['):
             continue
         if i > 0:
             before = tokens[i - 1]
             if (before.kind in ('ident', 'num', 'str', 'chr', 'raw') and before.text != 'return'
                     or before.kind == 'op' and before.text in (')', ']')):
                 continue
-        close = _match(tokens, i)
+        close = match_bracket(tokens, i)
         if close + 1 < len(tokens):
             after = tokens[close + 1]
             if (after.kind == 'op' and after.text in _AFTER_CAPTURES
@@ -574,10 +574,10 @@ def transform(text, wrap=True, fresh=fresh_name, origin=None, statement=False):
     With an origin (see Origin), code and #if regions go through a file in
     which they sit at their source's lines and columns. An input with a line
     splice outside a directive goes as one line, as without an origin."""
-    s = _unsplice(text).strip()
+    s = unsplice(text).strip()
     if origin is not None:
         origin = located(origin, text, len(text) - len(text.lstrip())) if s == text.strip() else None
-    if _CONDITIONAL.match(s):
+    if CONDITIONAL_LINE.match(s):
         return Send(_place(s, 0, len(s), origin) if origin else s, 'pp', True)   # an #if region
     tokens, _ = lex(s)
     if tokens and all(t.kind == 'directive' for t in tokens):
@@ -590,9 +590,9 @@ def transform(text, wrap=True, fresh=fresh_name, origin=None, statement=False):
     if not stmts:
         return Send('', 'empty', False)
     lines = needs_lines(tokens)
-    if len(stmts) == 1 and _open_end(*stmts[0]) and _statement_shaped(stmts[0][0]):
+    if len(stmts) == 1 and open_end(*stmts[0]) and _statement_shaped(stmts[0][0]):
         statement = True   # `int x = 5` without its ';': a statement, with no value to print
-    if not statement and not lines and len(stmts) == 1 and _open_end(*stmts[0]):
+    if not statement and not lines and len(stmts) == 1 and open_end(*stmts[0]):
         toks = stmts[0][0]
         if origin:
             # The caller writes the expression into a call: its first line
@@ -601,12 +601,12 @@ def transform(text, wrap=True, fresh=fresh_name, origin=None, statement=False):
         return Send(join(toks), 'expr', False)
     parts = []
     for toks, control in stmts:
-        semicolon = statement and _open_end(toks, control)
+        semicolon = statement and open_end(toks, control)
         if origin:
             line = _place(s, toks[0].start, _end(toks), origin) + (';' if semicolon else '')
         else:
             line = join(toks, lines) + (';' if semicolon else '')
-        complete = control or semicolon or _is(toks, len(toks) - 1, ';')
+        complete = control or semicolon or token_is(toks, len(toks) - 1, ';')
         if wrap and complete and needs_function(toks, control):
             # Placed, the function's head and tail keep lines of their own,
             # out of the source lines a diagnostic shows.
@@ -636,16 +636,16 @@ def _skip_initialisers(tokens, i):
     the ':': `x(1), y{2}, Base<T>(args)...`, up to the body's '{'."""
     n = len(tokens)
     while i < n:
-        while i < n and (tokens[i].kind == 'ident' or _is(tokens, i, '::')):
+        while i < n and (tokens[i].kind == 'ident' or token_is(tokens, i, '::')):
             i += 1
-        if _is(tokens, i, '<'):
-            i = _angle_end(tokens, i)
-        if not (_is(tokens, i, '(') or _is(tokens, i, '{')):
+        if token_is(tokens, i, '<'):
+            i = angle_end(tokens, i)
+        if not (token_is(tokens, i, '(') or token_is(tokens, i, '{')):
             break
-        i = _match(tokens, i) + 1
-        if _is(tokens, i, '...'):
+        i = match_bracket(tokens, i) + 1
+        if token_is(tokens, i, '...'):
             i += 1
-        if not _is(tokens, i, ','):
+        if not token_is(tokens, i, ','):
             break
         i += 1
     return i
@@ -655,7 +655,7 @@ def _definition(tokens):
     """is_definition() for an input already lexed."""
     tokens = [t for t in tokens if t.kind != 'directive']
     i, n = _skip_attributes(tokens, 0), len(tokens)
-    if i >= n or _is(tokens, i, '['):   # nothing, or a lambda
+    if i >= n or token_is(tokens, i, '['):   # nothing, or a lambda
         return False
     while i < n and tokens[i].kind == 'ident' and tokens[i].text in ('inline', 'static', 'constexpr', 'consteval',
                                                                      'constinit', 'export'):
@@ -663,7 +663,7 @@ def _definition(tokens):
     head = tokens[i].text if i < n else ''
     if head in _DEFINITION_HEADS:
         return True
-    if head in CONTROL or not _is(tokens, n - 1, '}'):
+    if head in CONTROL or not token_is(tokens, n - 1, '}'):
         return False
     # A function definition: a parameter list, then its trailers (const,
     # noexcept, -> T, requires C<T>, a constructor's member initialisers),
@@ -681,7 +681,7 @@ def _definition(tokens):
                 if t.text == '->' and params:
                     trailing = True
                 elif t.text == ':' and params:
-                    return _is(tokens, _skip_initialisers(tokens, i + 1), '{')
+                    return token_is(tokens, _skip_initialisers(tokens, i + 1), '{')
                 elif t.text == '{':
                     return params and (trailing or tokens[i - 1].text in _BEFORE_BODY)
             if t.text in '([{':
@@ -696,7 +696,7 @@ def _definition(tokens):
 def is_definition(text):
     """Whether an input belongs at file scope in a C++ program: a type,
     namespace, template or function definition."""
-    tokens, _ = lex(_unsplice(text))
+    tokens, _ = lex(unsplice(text))
     return _definition(tokens)
 
 
@@ -734,16 +734,16 @@ def _after_type_head(tokens, i):
     """The names a struct, class, union or enum at i declares: its own, an
     unscoped enum's enumerators, and any declarator after the body."""
     n, head = len(tokens), tokens[i].text
-    scoped = head == 'enum' and (_is(tokens, i + 1, 'class', 'ident') or _is(tokens, i + 1, 'struct', 'ident'))
+    scoped = head == 'enum' and (token_is(tokens, i + 1, 'class', 'ident') or token_is(tokens, i + 1, 'struct', 'ident'))
     j = _skip_attributes(tokens, i + 1 + scoped)
     names = [tokens[j].text] if j < n and tokens[j].kind == 'ident' else []
-    body = next((k for k in range(j, n) if _is(tokens, k, '{')), None)
+    body = next((k for k in range(j, n) if token_is(tokens, k, '{')), None)
     if body is None:
         return names
-    end = _match(tokens, body)
+    end = match_bracket(tokens, body)
     if head == 'enum' and not scoped:
         names += [t.text for k, t in enumerate(tokens[body + 1:end], body + 1) if t.kind == 'ident'
-                  and (k == body + 1 or _is(tokens, k - 1, ','))]
+                  and (k == body + 1 or token_is(tokens, k - 1, ','))]
     return names + _declarators(tokens, end + 1)
 
 
@@ -756,12 +756,12 @@ def declared_names(tokens):
     code = [t for t in tokens if t.kind != 'directive']
     n = len(code)
     i = _skip_attributes(code, 0)
-    if _is(code, i, 'template', 'ident') and _is(code, i + 1, '<'):
-        i = _angle_end(code, i + 1)
-        if _is(code, i, 'requires', 'ident'):
+    if token_is(code, i, 'template', 'ident') and token_is(code, i + 1, '<'):
+        i = angle_end(code, i + 1)
+        if token_is(code, i, 'requires', 'ident'):
             i = next((k for k in range(i + 1, n) if code[k].kind == 'ident' and (
-                code[k].text in _DEFINITION_HEADS | _TYPE_WORDS or _declarator_at(code[k:]) is not None)), n)
-    while _is(code, i, 'extern', 'ident') and i + 1 < n and code[i + 1].kind == 'str':
+                code[k].text in _DEFINITION_HEADS | TYPE_WORDS or _declarator_at(code[k:]) is not None)), n)
+    while token_is(code, i, 'extern', 'ident') and i + 1 < n and code[i + 1].kind == 'str':
         i += 2
     while i < n and code[i].kind == 'ident' and code[i].text in ('inline', 'static', 'constexpr', 'consteval',
                                                                  'constinit', 'export', 'friend'):
@@ -774,24 +774,24 @@ def declared_names(tokens):
     if head in ('namespace', 'concept'):
         return [code[i + 1].text] if i + 1 < n and code[i + 1].kind == 'ident' else []
     if head == 'using':
-        if _is(code, i + 1, 'namespace', 'ident'):
+        if token_is(code, i + 1, 'namespace', 'ident'):
             return []
         names = [t.text for k, t in enumerate(code[i + 1:], i + 1) if t.kind == 'ident'
-                 and (_is(code, k + 1, '=') or _is(code, k + 1, ';'))]
+                 and (token_is(code, k + 1, '=') or token_is(code, k + 1, ';'))]
         return names[:1]
     if head == 'typedef':
         last = next((t.text for t in reversed(code[i:]) if t.kind == 'ident'), None)
         return [last] if last else []
     for k, t in enumerate(code):
         if t.kind == 'ident' and t.text == 'operator' and k + 1 < n:
-            end = next((m for m in range(k + 1, n) if _is(code, m, '(')), n)
+            end = next((m for m in range(k + 1, n) if token_is(code, m, '(')), n)
             return ['operator' + ''.join(x.text for x in code[k + 1:end])]
     k = _declarator_at(code)
     if k is not None:
-        if _is(code, k, '['):
-            return [t.text for t in code[k + 1:_match(code, k)] if t.kind == 'ident']
-        if _is(code, k, '('):   # int (*fp)(int)
-            return [t.text for t in code[k + 1:_match(code, k)] if t.kind == 'ident'][:1]
+        if token_is(code, k, '['):
+            return [t.text for t in code[k + 1:match_bracket(code, k)] if t.kind == 'ident']
+        if token_is(code, k, '('):   # int (*fp)(int)
+            return [t.text for t in code[k + 1:match_bracket(code, k)] if t.kind == 'ident'][:1]
         return _declarators(code, k)
     # A function defined under a qualified name, `int S::f() {}`, or a
     # constructor `S::S() {}`: the name before its parameter list.
@@ -810,13 +810,13 @@ def declared_names(tokens):
     return []
 
 
-def _open_end(toks, control):
+def open_end(toks, control):
     """Whether a statement ends without its ';', as a bare expression does.
     A '}' ends a block or a definition, but a '}' that closes a brace
     initialiser, as in std::vector<int>{1, 2}, ends an expression."""
-    if control or _is(toks, len(toks) - 1, ';') or toks[-1].kind == 'directive':
+    if control or token_is(toks, len(toks) - 1, ';') or toks[-1].kind == 'directive':
         return False
-    return not _is(toks, len(toks) - 1, '}') or not _definition(toks)
+    return not token_is(toks, len(toks) - 1, '}') or not _definition(toks)
 
 
 def trailing_expression(text):
@@ -825,10 +825,10 @@ def trailing_expression(text):
     text), so that the expression's value can be printed, as a notebook cell
     prints its last value. None otherwise. The place is None when a line
     splice moved it."""
-    s = _unsplice(text).strip()
+    s = unsplice(text).strip()
     tokens, _ = lex(s)
     stmts = split_statements(tokens)
-    if len(stmts) < 2 or not _open_end(*stmts[-1]):
+    if len(stmts) < 2 or not open_end(*stmts[-1]):
         return None
     start = stmts[-1][0][0].start
     lead = len(text) - len(text.lstrip())

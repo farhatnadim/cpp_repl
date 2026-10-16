@@ -27,8 +27,8 @@ which GitHub does not show, say how each is checked:
         run with another, the tutorial is skipped.
 
 Everything runs in one temporary directory per tutorial, which links to the
-top-level entries of --root (the repository the tutorial is in). Paths in it
-show as `…` in the output. A transcript block outside a session, sh or off is
+top-level entries of --root (the repository the tutorial is in). That
+directory and the repository show as `…` in the output. A transcript block outside a session, sh or off is
 an error, so that every transcript is checked, or visibly not. The comparison
 follows the golden sessions' (tests/sessions): addresses and input_line_N are
 normalised, <any> matches a line and <any lines> any number of them; and
@@ -302,7 +302,8 @@ class Runner:
         self.failures = []   # (block, expected, actual)
 
     def clean(self, text):
-        for d in {str(self.work), str(self.work.resolve())}:
+        """text with the run's directory and the repository's as `…`."""
+        for d in sorted({str(self.work), str(self.work.resolve()), str(self.root)}, key=len, reverse=True):
             text = text.replace(d, '…')
         return text
 

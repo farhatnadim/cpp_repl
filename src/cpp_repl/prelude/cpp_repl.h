@@ -618,23 +618,38 @@ void print_expr(printer<Tag>)
 // expression, an expression statement) runs as the body of a function of its
 // own:
 //   repl::ended cpp_repl_N() { try { STATEMENT } catch (...) { return repl::uncaught(); } return {}; }
-//   repl::finish(cpp_repl_N());
+//   repl::finish(repl::timed(cpp_repl_N));
 // A `return EXPR;` inside it, as in main()'s `if (bad) return 1;`, converts
 // EXPR to the status main() would have returned. An exception that leaves the
 // statement would otherwise end the program through std::terminate(), and the
 // session with it: uncaught() names it and ends the program as abort() would,
-// with status 134, what a shell reports for the compiled program. finish()
-// writes the status between two end marks, and cpp-repl ends the program as
-// the compiled one would: --batch exits with the status, and the prompt says
-// so. Nothing is rewritten and no diagnostic is turned off, so a lambda inside
-// the statement that falls off its end still warns.
+// with status 134, what a shell reports for the compiled program. timed()
+// times the call. finish() writes how long the statement ran between two end
+// marks, and the status between two more when it ended the program; cpp-repl
+// then ends the program as the compiled one would: --batch exits with the
+// status, and the prompt says so. Nothing is rewritten and no diagnostic is
+// turned off, so a lambda inside the statement that falls off its end still
+// warns.
 struct ended {
-  std::optional<int> status;   // main's return value, if the statement returned
-  std::string thrown;          // what an uncaught exception was, if one ended it
+  std::optional<int> status;        // main's return value, if the statement returned
+  std::string thrown;               // what an uncaught exception was, if one ended it
+  std::chrono::nanoseconds run{0};  // how long the statement ran
 
   ended() = default;
   ended(int value) : status(value) {}   // implicit: `return 1;` converts
 };
+
+// The statement's run, timed: %time tells it from compiling and linking the
+// input, and --json carries it as run_seconds. A plain function, not a
+// template: clang-repl keeps the instantiations of an input that fails to
+// compile without their code, so the next input could not link a timed<>.
+inline ended timed(ended (*statement)())
+{
+  const auto start = std::chrono::steady_clock::now();
+  ended e = statement();
+  e.run = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start);
+  return e;
+}
 
 inline constexpr char end_mark = '\x1d';
 inline constexpr int abort_status = 134;   // 128 + SIGABRT
@@ -663,13 +678,14 @@ inline ended uncaught()
 
 inline void finish(const ended &e)
 {
-  if (e.status) {
-    // Through stdout itself, past any redirection of std::cout. An
-    // exception's mark starts with '!' and carries the exception's name.
+  // Through stdout itself, past any redirection of std::cout. The run's
+  // nanoseconds follow a '~'; an exception's mark starts with '!' and carries
+  // the exception's name.
+  std::fprintf(stdout, "%c~%lld%c\n", end_mark, static_cast<long long>(e.run.count()), end_mark);
+  if (e.status)
     std::fprintf(stdout, "%c%s%d%s%c\n", end_mark, e.thrown.empty() ? "" : "!", *e.status, e.thrown.c_str(),
                  end_mark);
-    std::fflush(stdout);
-  }
+  std::fflush(stdout);
 }
 
 // keep(x) makes the compiler assume x is used, so that a computation timed

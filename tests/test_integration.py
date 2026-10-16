@@ -492,6 +492,24 @@ def test_timeit_times_statements_and_expressions(tmp_path):
     assert result.stdout.count('per loop') == 3 and 'error' not in result.stdout
 
 
+def test_time_tells_the_run_from_the_compile(tmp_path):
+    """%time of a statement says how long the code itself ran, apart from
+    compiling and linking it, and --json carries that as run_seconds. A
+    declaration at file scope runs in no function, so it has neither."""
+    (tmp_path / 'p.repl').write_text('int n = 0;\n%time for (int i = 0; i < 1000; ++i) n += i;\n%time int m = n;\n')
+    result = run_cpp_repl(['--no-config', '--batch', '-q', 'p.repl'], tmp_path)
+    assert result.returncode == 0, result.stdout + result.stderr
+    timed, plain = result.stdout.splitlines()
+    assert timed.startswith('wall time: ') and ', of which the code ran ' in timed, result.stdout
+    assert plain.startswith('wall time: ') and 'of which' not in plain, result.stdout
+    (tmp_path / 'q.repl').write_text('int n = 0;\nfor (int i = 0; i < 1000; ++i) n += i;\nn\n')
+    result = run_cpp_repl(['--no-config', '--batch', '--json', 'q.repl'], tmp_path)
+    records = [json.loads(line) for line in result.stdout.splitlines()]
+    assert 'run_seconds' not in records[0]
+    assert 0 < records[1]['run_seconds'] < 0.1
+    assert records[2]['output'] == '499500\n' and 0 < records[2]['run_seconds'] < 0.1
+
+
 def test_a_library_named_with_l(tmp_path):
     """-L DIR -l NAME loads libNAME.so, and --libs links a saved program with it."""
     clangxx = sibling_clangxx()

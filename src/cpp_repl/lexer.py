@@ -539,15 +539,17 @@ def needs_function(tokens, control):
     return _has_lambda(code) or not (first.kind == 'ident' and _MACRO_NAME.fullmatch(first.text))
 
 
-def in_function(name, body):
+def in_function(name, body, timed=True):
     """body as the body of a new function, and a call of it. The function
     returns repl::ended, which an int converts to: `return 1;` inside body,
     as in main()'s `if (bad) return 1;`, becomes the program's exit status,
     an exception that leaves body is named and ends the program as abort()
-    would, and body falling off its end returns nothing. repl::finish()
-    reports the end to the session."""
+    would, and body falling off its end returns nothing. repl::timed() times
+    the call, unless timed is off, and repl::finish() reports the run and
+    the end to the session."""
+    call = f'repl::timed({name})' if timed else f'{name}()'
     return (f'repl::ended {name}() {{ try {{ {body} }} catch (...) {{ return repl::uncaught(); }} return {{}}; }} '
-            f'repl::finish({name}());')
+            f'repl::finish({call});')
 
 
 def _end(toks):

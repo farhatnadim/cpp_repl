@@ -148,10 +148,12 @@ def test_in_function():
     """`return 1;` from a main() body becomes the program's exit status: the
     function a statement runs in returns repl::ended, which an int converts
     to, and falls off its end otherwise. An exception that leaves the
-    statement is caught and named."""
+    statement is caught and named. The call is timed, unless the caller
+    times the statement itself, as %timeit does."""
     assert in_function('f1', 'if (x) return 1;') == (
         'repl::ended f1() { try { if (x) return 1; } catch (...) { return repl::uncaught(); } return {}; } '
-        'repl::finish(f1());')
+        'repl::finish(repl::timed(f1));')
+    assert in_function('f2', 'g();', timed=False).endswith(' repl::finish(f2());')
 
 
 def test_regions_and_block_directives_go_through_a_file():

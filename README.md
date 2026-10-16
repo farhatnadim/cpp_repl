@@ -139,7 +139,7 @@ c++> std::map<std::string, int>{{"one", 1}, {"two", 2}}
 | `%save FILE`, `%save-cpp FILE` | the journal as a `.repl` file, or as a C++ program |
 | `%load FILE` | run a C++ source or a `.repl` file |
 | `%lib PATH` | load a shared library |
-| `%time INPUT` | run INPUT, then print how long it took, compiling included |
+| `%time INPUT` | run INPUT, then print its wall time and how long the code itself ran, compiling apart (a bare expression's run includes printing it) |
 | `%timeit INPUT` | time INPUT in a loop, as IPython does |
 | `%flags` | the session's flags, preludes and libraries |
 | `%help`, `%quit` | |
@@ -204,10 +204,11 @@ cpp-repl --batch --json prog.cpp              # a JSON object per input
   the configuration (a `-std` raised, a profile's note) goes to stderr.
 - **`--json`** writes a JSON object per input instead: `input`, `file`,
   `line`, `status` (`ok`, `error`, `link`, `crash`, `exit`, `stuck`,
-  `timeout`, `interrupted`, `exception`), `seconds`, `output`, `notes`, and
-  `returned` when the input returned from `main()`. The last line holds the
-  exit status, the number of inputs, the failures, and the inputs skipped
-  once the program ended.
+  `timeout`, `interrupted`, `exception`), `seconds`, `output`, `notes`,
+  `run_seconds` for a statement (how long its code ran, compiling it apart;
+  a declaration at file scope has none), and `returned` when the input
+  returned from `main()`. The last line holds the exit status, the number
+  of inputs, the failures, and the inputs skipped once the program ended.
 - **The exit status is the program's:** what `main()` returned, the `N` of
   its `exit(N)`, or 128 + the signal that killed it (139 for a segfault, 134
   for `abort()` and for an exception nothing caught, which cpp-repl names:

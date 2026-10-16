@@ -427,12 +427,26 @@ def test_json_output(tmp_path, monkeypatch, made):
     records = [json.loads(line) for line in stream.getvalue().splitlines()]
     name = str(tmp_path / 'p.repl')
     assert [{k: v for k, v in r.items() if k != 'seconds'} for r in records] == [
-        {'input': 1, 'file': name, 'line': 1, 'status': 'ok', 'output': 'one\n'},
+        {'input': 1, 'file': name, 'line': 1, 'status': 'ok', 'run_seconds': 1.5e-06, 'output': 'one\n'},
         {'input': 2, 'file': name, 'line': 3, 'status': 'error', 'output': records[1]['output']},
-        {'input': 3, 'file': name, 'line': 4, 'status': 'ok', 'output': '42\n'},
+        {'input': 3, 'file': name, 'line': 4, 'status': 'ok', 'run_seconds': 1.5e-06, 'output': '42\n'},
         {'exit': 1, 'inputs': 3, 'failures': 1, 'skipped': 0},
     ]
     assert "undeclared identifier 'error_here'" in records[1]['output']
+
+
+def test_time_tells_the_run_from_the_compile(tmp_path, monkeypatch, made):
+    """%time says how long the code itself ran, which the prelude reports for
+    a statement that ran in a function. A declaration at file scope runs in
+    none, so its line has the wall time alone."""
+    s, stream = make(tmp_path, monkeypatch)
+    made.append(s)
+    assert s.run_input('%time say("timed");')
+    timed = stream.getvalue()
+    assert timed.startswith('timed\nwall time: ') and timed.endswith(', of which the code ran 1.5 µs\n')
+    assert s.run_input('%time int plain = 1;')
+    rest = stream.getvalue()[len(timed):]
+    assert rest.startswith('wall time: ') and 'of which' not in rest
 
 
 def test_quiet_leaves_out_the_echo(tmp_path, monkeypatch):

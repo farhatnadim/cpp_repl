@@ -40,7 +40,7 @@ abort() would (status 134): the prompt says what was thrown and goes on.
   %reset          start again, empty       %journal        list the inputs so far
   %save FILE      the journal as a .repl   %save-cpp FILE  the journal as a C++ program
   %load FILE      run a .cpp or a .repl    %lib PATH       load a shared library
-  %time INPUT     run INPUT and print how long it took, compiling included
+  %time INPUT     run INPUT and print how long it took, and how long the code ran
   %timeit INPUT   time INPUT in a loop, as IPython does
   %flags          this session's compiler flags, preludes and libraries
   %quit           leave (or Ctrl-D)
@@ -63,6 +63,9 @@ _UNPRINTABLE = re.compile('\x1f<(.*?)>\x1f')
 # its own: the status between two marks; after an uncaught exception, '!',
 # the status and what was thrown.
 _END_MARK = re.compile('\x1d(!?)(-?\\d+)([^\x1d]*)\x1d\n?')
+# What repl::finish writes for every statement that ran in a function: how
+# long the run took, in nanoseconds after a '~', between two marks.
+_RUN_MARK = re.compile('\x1d~(\\d+)\x1d\n?')
 # A line of clang's diagnostics: a header, clang-repl's verdict, an include
 # chain, or a source line or carets under a header. The echo holds these
 # back until the program's own output starts, so that an error cpp-repl
@@ -119,6 +122,9 @@ class Output:
     def returned(self, status):
         """The input returned from main() with status."""
 
+    def ran(self, seconds):
+        """The input's code ran for seconds, compiling it apart."""
+
     def end(self):
         pass
 
@@ -126,11 +132,13 @@ class Output:
 class JsonOutput(Output):
     """One JSON object per line for each input, in place of the transcript
     (cpp-repl --json): {"input": N, "file": PATH, "line": N, "status": S,
-    "seconds": T, "output": TEXT, "notes": [TEXT, ...], "returned": N}, where
-    status is the first of ok, error (it did not compile), link, exception
-    (one left the input uncaught), crash, exit (the program called exit()),
-    stuck, timeout or interrupted, and returned is main's return value when
-    the input returned. Anything written between inputs is {"output": TEXT}
+    "seconds": T, "run_seconds": T, "output": TEXT, "notes": [TEXT, ...],
+    "returned": N}, where status is the first of ok, error (it did not
+    compile), link, exception (one left the input uncaught), crash, exit (the
+    program called exit()), stuck, timeout or interrupted, run_seconds is how
+    long a statement's code ran, compiling it apart (a declaration at file
+    scope has none), and returned is main's return value when the input
+    returned. Anything written between inputs is {"output": TEXT}
     or {"note": TEXT}, and the last line is {"exit": STATUS, "inputs": N,
     "failures": N, "skipped": N}, skipped being the inputs left unrun once
     the program ended or --stop-on-error stopped the run."""
@@ -174,12 +182,19 @@ class JsonOutput(Output):
         if self.records:
             self.records[-1]['returned'] = status
 
+    def ran(self, seconds):
+        if self.records:
+            self.records[-1]['run_seconds'] = round(seconds, 9)
+
     def end(self):
         r = self.records.pop()
         record = {'input': r['input']}
         if r['origin']:
             record.update(file=str(r['origin'].path), line=r['origin'].line)
-        record.update(status=r['status'], seconds=round(time.monotonic() - r['start'], 3), output=r['output'])
+        record.update(status=r['status'], seconds=round(time.monotonic() - r['start'], 3))
+        if 'run_seconds' in r:
+            record['run_seconds'] = r['run_seconds']
+        record['output'] = r['output']
         if r['notes']:
             record['notes'] = r['notes']
         if 'returned' in r:
@@ -230,6 +245,7 @@ class Session:
         self.tainted = False   # an input failed to compile in this clang-repl
         self.returned = None   # the status the input running ended the program with (see _show)
         self.thrown = None     # what an uncaught exception was, when that ended it
+        self.run_seconds = None   # how long the input's code ran, when it ran in a function
         self.spare = None
         self.files = 0
         self.functions = 0   # functions made to run inputs in: cpp_repl_1, ...
@@ -331,8 +347,13 @@ class Session:
         """Write backend output, its diagnostics filtered and the prelude's
         marks taken out, painted when colour is on."""
         text = _UNPRINTABLE.sub(self._unprintable, self.diagnostics.feed(text))
-        text = _END_MARK.sub(self._returned, text)
+        text = _END_MARK.sub(self._returned, _RUN_MARK.sub(self._ran, text))
         self.out.write(self.painter.feed(text) if self.painter else text)
+
+    def _ran(self, m):
+        self.run_seconds = int(m.group(1)) / 1e9
+        self.out.ran(self.run_seconds)
+        return ''
 
     def _unprintable(self, m):
         self.unprintable.setdefault(m.group(1), False)
@@ -359,7 +380,7 @@ class Session:
         nothing else came and hold(text) says so, they stay held, in
         self.held, for the caller to act on or show."""
         self.diagnostics.start()
-        self.returned = self.thrown = None
+        self.returned = self.thrown = self.run_seconds = None
         self.held = ''
         held, live = [], False
 
@@ -634,7 +655,8 @@ class Session:
             body = f'repl::keep_result([&]() -> decltype(auto) {{ return ({send.text}); }});'
         else:
             body = send.text
-        output, result = self._send(in_function(self._fresh(), f'repl::timeit([]{{ {body} }}, {self.cfg.opt_level});'))
+        output, result = self._send(in_function(self._fresh(), f'repl::timeit([]{{ {body} }}, {self.cfg.opt_level});',
+                                                timed=False))
         return self._after(text, [], output, result, journal=False)
 
     # -- saving -----------------------------------------------------------
@@ -755,9 +777,14 @@ class Session:
                 self.out.write('usage: %time INPUT\n')
                 return True
             start = time.monotonic()
+            self.run_seconds = None
             ok = self.run_input(arg)
+            wall = format_seconds(time.monotonic() - start)
             self.out.end_line()
-            self.out.write(f'wall time: {format_seconds(time.monotonic() - start)}\n')
+            if self.run_seconds is None:   # a declaration at file scope: no function ran
+                self.out.write(f'wall time: {wall}\n')
+            else:
+                self.out.write(f'wall time: {wall}, of which the code ran {format_seconds(self.run_seconds)}\n')
             return ok
         elif name == '%timeit':
             if not arg:

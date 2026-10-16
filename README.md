@@ -225,7 +225,9 @@ cpp-repl --batch --json prog.cpp              # a JSON object per input
   0.06 s, against about 2 s for a new cpp-repl, or 4 s with `-p usd`. The
   session's names carry over from run to run. `--fresh` starts a run from an
   empty session instead, for a program run again after an edit, in the spare
-  clang-repl the server keeps warm. `--timeout`, `--stop-on-error`,
+  clang-repl the server keeps warm: 0.1 s when the spare is ready, and the
+  next spare takes a start-up to warm, so a `--fresh` run sooner than that
+  after the last waits for it. `--timeout`, `--stop-on-error`,
   `--diagnostics`, `-q` and `--json` apply to the run; the flags, profiles
   and libraries are the server's. `%quit` stops the server. Whoever connects
   runs code as the server's user, so the socket is created readable and

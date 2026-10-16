@@ -536,7 +536,8 @@ What a version lacks is clang-repl's own: 18's JIT cannot assemble inline
   Profiles add their own headers.
 
 cpp-repl began as `repl/usd-repl` in
-[openusd-tutorial](https://github.com/farhatnadim/openusd-tutorial), a REPL for learning OpenUSD's C++ API.
+[openusd-tutorial](https://github.com/farhatnadim/openusd-tutorial), a REPL for learning OpenUSD's C++ API,
+and that `repl/usd-repl` now runs cpp-repl's usd profile.
 `scripts/parity.py` checks that cpp-repl runs that tutorial's 20 lessons as
 their compiled programs do: the same output, the same files written.
 

@@ -17,9 +17,10 @@ add a library to cpp-repl: `add-library`, `add-printer` and
 `contribute-profile` in `skills/`.
 
 It began as a fork of `openusd-tutorial/repl/usd-repl` on 2026-10-13: commit
-2c41aad plus that tree's uncommitted `_source()` change. usd-repl lives on in
-openusd-tutorial. A fix to the shared lexer, sources or backend is worth porting
-across, deliberately, in either direction.
+2c41aad plus that tree's uncommitted `_source()` change. Since 2026-10-16 the
+tutorial's `repl/usd-repl` is a launcher over cpp-repl's usd profile, which its
+CMake build fetches at a pinned commit. Fixes land here, and the tutorial moves
+its pin.
 
 ## Who writes the code
 

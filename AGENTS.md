@@ -73,7 +73,8 @@ the rule above.
 ## Commands
 
 ```
-make check          # before a pull request, what CI runs: every test against the host's clang-repl (23 or newer), then claude plugin validate
+make check          # before a pull request: every test against the host's clang-repl (23 or newer), then claude plugin validate
+make check-docker   # the same inside cpp-repl:llvm23, built first: what CI runs
 make pr             # make check, push the branch N-slug and open its pull request, which closes issue N
 make issue KIND=bug|feature|task TITLE="..." [BODY="..."]   # file an issue on the board
 make test           # unit and fake-backend tests; no clang-repl needed
@@ -104,11 +105,12 @@ for the user and for agents alike.
 - **A branch per issue.** `gh issue develop N --checkout` makes `N-slug`,
   linked to the issue. Nothing goes to main directly: a ruleset requires a
   pull request with a passing `check`, for the owner too.
-- **`make check` before the pull request.** It runs what CI runs
-  (`.github/workflows/check.yml`): every test against clang-repl 23 or newer,
-  then `claude plugin validate`. `make pr` runs it, pushes, and opens the pull
-  request titled as the issue, with `Closes #N`. A pull request that closes no
-  issue fails CI.
+- **`make check` before the pull request.** Every test against clang-repl 23
+  or newer, then `claude plugin validate`. CI (`.github/workflows/check.yml`)
+  runs the same suite inside the `cpp-repl:llvm23` image, `make check-docker`,
+  where clang compiles against GCC 13 as on the author's machine. `make pr`
+  runs `make check`, pushes, and opens the pull request titled as the issue,
+  with `Closes #N`. A pull request that closes no issue fails CI.
 - **CI on the pull request is the evidence;** a passing local run is not.
   Merges are rebases, the branch is deleted on merge, the issue closes with
   it. The user merges (`gh pr merge --rebase`, or `--auto` to queue it),

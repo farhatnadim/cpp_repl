@@ -18,14 +18,18 @@ DOCKER_RUN = docker run --rm --init -i --user $$(id -u):$$(id -g) -e HOME=/tmp \
 	-v $(CURDIR):$(CURDIR):ro -w $(CURDIR) \
 	$(if $(USD_ROOT),-e USD_ROOT=$(USD_ROOT) -v $(USD_ROOT):$(USD_ROOT):ro)
 
-.PHONY: help check need-clang-repl pr need-issue-branch issue test test-host test-docker test-snapshot parity tutorials tutorials-update \
+.PHONY: help check check-docker validate need-clang-repl pr need-issue-branch issue test test-host test-docker test-snapshot parity tutorials tutorials-update \
         compat compat-docker compat-table compare compare-docker compare-doc docker docker-bench docker-snapshot \
         docker-src bench bench-quick bench-host
 
 help:  ## this list
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | sed -E 's/:.*## /\t/' | expand -t 18
 
-check: need-clang-repl test-host  ## before a pull request, what CI runs: every test against the host's clang-repl (23 or newer), then the plugin's manifests
+check: need-clang-repl test-host validate  ## before a pull request: every test against the host's clang-repl (23 or newer), then the plugin's manifests
+
+check-docker: docker test-docker validate  ## what CI runs: the same inside cpp-repl:llvm23, built first, where clang compiles against GCC 13
+
+validate:  ## the plugin's manifests and skills (claude plugin validate)
 	claude plugin validate .
 
 # Without a clang-repl the backend tests skip, and a passing make check would say nothing.

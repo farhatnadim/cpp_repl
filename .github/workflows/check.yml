@@ -1,8 +1,14 @@
-# make check on every pull request and on main: what AGENTS.md's "How changes
-# land" asks for before a pull request, run again where it counts. The job is
-# named check because the ruleset on main requires a passing check of that name.
+# make check-docker on every pull request and on main: the test suite inside
+# cpp-repl:llvm23, built here from docker/Dockerfile, then claude plugin
+# validate. The image is the environment the README documents the suite
+# passing in: clang-repl 23 from apt.llvm.org, compiling against GCC 13 as on
+# the author's machine. On the runner itself clang-23 picks GCC 14, and the
+# tutorials' transcripts, which show libstdc++'s paths, differ.
 #
-# A pull request also has to close an issue: the board is where work starts.
+# make check, the same suite against the host's clang-repl, is what AGENTS.md's
+# "How changes land" asks for before a pull request. The job is named check
+# because the ruleset on main requires a passing check of that name. A pull
+# request also has to close an issue: the board is where work starts.
 
 name: check
 
@@ -34,28 +40,13 @@ jobs:
                 --json closingIssuesReferences --jq '.closingIssuesReferences | length')
           test "$n" -gt 0 || { echo "::error::the pull request closes no issue: write 'Closes #N' in its description"; exit 1; }
 
-      # As docker/Dockerfile's apt stage: clang-repl 23 from apt.llvm.org, the
-      # libraries the tests load (Eigen, glm, spdlog) and the Python packages.
-      - name: clang-repl 23 from apt.llvm.org
-        run: |
-          sudo install -d -m 0755 /etc/apt/keyrings
-          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/keyrings/apt.llvm.org.asc > /dev/null
-          echo "deb [signed-by=/etc/apt/keyrings/apt.llvm.org.asc] https://apt.llvm.org/noble/ llvm-toolchain-noble-23 main" \
-            | sudo tee /etc/apt/sources.list.d/apt.llvm.org.list > /dev/null
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            clang-23 clang-tools-23 libc++-23-dev libc++abi-23-dev \
-            libeigen3-dev libglm-dev libspdlog-dev \
-            python3-pytest python3-prompt-toolkit python3-pygments
-          /usr/lib/llvm-23/bin/clang-repl --version
-
       # claude plugin validate runs in Claude Code; the version pinned here is
       # the one make check last ran with on the author's machine.
       - name: Claude Code, for claude plugin validate
         run: npm install -g @anthropic-ai/claude-code@2.1.302
 
-      - name: make check
+      - name: make check-docker
         env:
           DISABLE_AUTOUPDATER: "1"
           CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
-        run: make check CLANG_REPL=/usr/lib/llvm-23/bin/clang-repl
+        run: make check-docker

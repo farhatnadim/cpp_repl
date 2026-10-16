@@ -46,6 +46,23 @@ def test_main_s_return_is_an_input():
     assert inputs_from_cpp('int main() { if (x) return -1; }') == ['if (x) return -1;']
 
 
+def test_where_file_scope_items_end():
+    """A '}' inside an initialiser or a type's body ends no item, and a
+    function-try-block goes on with its handlers."""
+    assert inputs_from_cpp('int x = []{ return 1; }();\nint main() { return x; }') == \
+        ['int x = []{ return 1; }();', 'return x;']
+    assert inputs_from_cpp('auto f = [](int a) { return a; };\nint g() { return f(1); }') == \
+        ['auto f = [](int a) { return a; };', 'int g() { return f(1); }']
+    assert inputs_from_cpp('int arr[] = {1, 2}, n = 2;\nauto m = std::map<int, int>{{1, 2}}.size();') == \
+        ['int arr[] = {1, 2}, n = 2;', 'auto m = std::map<int, int>{{1, 2}}.size();']
+    assert inputs_from_cpp('struct S { int x; } s;\nenum class E { a } e;\ntemplate <class T> struct Box { T v; } b{1};') == \
+        ['struct S { int x; } s;', 'enum class E { a } e;', 'template <class T> struct Box { T v; } b{1};']
+    assert inputs_from_cpp('int f() try { return 1; } catch (...) { return 2; }\nint main() { return f(); }') == \
+        ['int f() try { return 1; } catch (...) { return 2; }', 'return f();']
+    assert inputs_from_cpp('namespace n { int k; }\nextern "C" { int c(); }\nint main() {}') == \
+        ['namespace n { int k; }', 'extern "C" { int c(); }']
+
+
 def test_main_parameters_get_stand_ins():
     inputs = inputs_from_cpp('int main(int ac, char *av[]) { use(ac, av); }', program='prog.cpp')
     assert inputs == ['int ac = 1;',

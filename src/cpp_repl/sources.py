@@ -4,7 +4,8 @@ import re
 import textwrap
 from pathlib import Path
 
-from .lexer import _CONDITIONAL, Origin, _is, _match, completeness, lex, located, split_statements
+from .lexer import (_CONDITIONAL, Origin, _angle_end, _is, _match, completeness, lex, located,
+                    split_statements)
 
 CPP_SUFFIXES = {'.cpp', '.cc', '.cxx', '.c++', '.C', '.h', '.hh', '.hpp', '.hxx', '.h++'}
 
@@ -92,20 +93,39 @@ def inputs_from_repl(text, path=None):
         inputs.append(Input(block, Origin(path, reader.line, 0, 0) if path else None))
 
 
+_TYPE_HEADS = {'struct', 'class', 'union', 'enum', 'typedef'}
+
+
+def _declares_type(tokens, i):
+    """Whether the item at i is a type definition, whose body a declarator
+    and a ';' may follow: `struct S { ... } s;`, templates included."""
+    j = i
+    while j < len(tokens) and tokens[j].kind == 'directive':
+        j += 1
+    if _is(tokens, j, 'template', 'ident') and _is(tokens, j + 1, '<'):
+        j = _angle_end(tokens, j + 1)
+    return j < len(tokens) and tokens[j].kind == 'ident' and tokens[j].text in _TYPE_HEADS
+
+
 def _item_end(tokens, i):
     """A file-scope item ends at its ';' at depth 0, or at the '}' closing a
-    function or namespace body that no ';' follows."""
-    depth = 0
+    function or namespace body that no ';' follows. A '}' inside an
+    initialiser (`int x = []{ return 1; }();`) or a type's body
+    (`struct S { } s;`) ends nothing, and a function-try-block goes on with
+    its handlers."""
+    depth, initialiser, type_body = 0, False, _declares_type(tokens, i)
     for j in range(i, len(tokens)):
         t = tokens[j]
         if t.kind != 'op':
             continue
-        if t.text in '([{':
+        if t.text == '=' and depth == 0:
+            initialiser = True
+        elif t.text in '([{':
             depth += 1
         elif t.text in ')]}':
             depth -= 1
-            if (depth == 0 and t.text == '}' and not _is(tokens, j + 1, ';')
-                    and tokens[i].text not in ('struct', 'class', 'union', 'enum', 'typedef')):
+            if (depth == 0 and t.text == '}' and not initialiser and not type_body
+                    and not _is(tokens, j + 1, ';') and not _is(tokens, j + 1, 'catch', 'ident')):
                 return j
         elif t.text == ';' and depth == 0:
             return j

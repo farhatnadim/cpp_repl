@@ -948,7 +948,8 @@ class Session:
                     path.write_text(program)
                     if hoisted:
                         where = f'; {", ".join(hoisted)} at file scope, for the functions and lambdas that use them'
-                self.out.write(f'saved {len(self.journal)} inputs to {path.resolve()}{where}\n')
+                n = len(self.journal)
+                self.out.write(f'saved {n} input{"s" if n != 1 else ""} to {path.resolve()}{where}\n')
         elif name == '%load':
             if not arg or not Path(arg).expanduser().is_file():
                 self.out.write('usage: %load FILE (a C++ source or a .repl)\n')

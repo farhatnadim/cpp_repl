@@ -74,18 +74,21 @@ def test_the_newest_clang_repl_wins(tmp_path, monkeypatch):
     assert find_clang_repl() == str(bin_dir / 'clang-repl')
 
 
-def test_libcxx_needs_its_runtime(tmp_path):
+def test_libcxx_needs_its_runtime(tmp_path, monkeypatch):
     """-stdlib=libc++ loads libc++.so.1 before any code runs, as clang-repl
     itself is linked with libstdc++; without one installed, the start says
     which package brings it."""
     assert stdlib_runtime(['-O2'], '/usr/bin/clang-repl-18') is None
     assert stdlib_runtime(['-stdlib=libc++'], None) is None
-    try:
-        installed = find_library('c++')
-    except ConfigError:
-        installed = None
-    if installed:
-        pytest.skip('libc++ is installed here')
+
+    def no_libcxx(name, dirs=()):
+        if name == 'c++':
+            raise ConfigError('no libc++')
+        return find_library(name, dirs)
+
+    # A machine without libc++, whichever this one is; the fake clang-repl
+    # has no clang++ beside it to ask.
+    monkeypatch.setattr('cpp_repl.config.find_library', no_libcxx)
     fake = Path(__file__).resolve().parent / 'fake_clang_repl.py'
     with pytest.raises(ConfigError, match=r'-stdlib=libc\+\+: no libc\+\+\.so\.1 .* libc\+\+-99-dev'):
         Config(Options(cwd=tmp_path, no_config=True, clang_repl=str(fake), flags=['-stdlib=libc++']))

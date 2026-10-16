@@ -19,7 +19,9 @@ them too.
 | `opencv` | A modular package: a few components, many shared libraries, and an `operator<<` that prints every pixel |
 | `opencv-printers` | add-printer, on a profile whose `cv::Mat` prints every element |
 | `symbols-not-found` | A pasted link error: the library that defines the missing symbol is added |
-| `cmake-question` | A near miss: an OpenCV build question, where add-library must stay quiet |
+| `cmake-question` | A near miss: an OpenCV build question, where add-library and run-cpp must stay quiet |
+| `run-snippet` | run-cpp: two standard-library questions answered from a run |
+| `run-program` | run-cpp: a variable read after `main()` returns, with no build and the source left as it is |
 
 ## Running
 

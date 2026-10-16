@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "cpp-repl",
-  "description": "cpp-repl, a C++ REPL on top of clang-repl, and the skills that add libraries to it.",
+  "description": "cpp-repl, a C++ REPL on top of clang-repl, and the skills that run C++ in it and add libraries to it.",
   "owner": {
     "name": "Nadim Farhat",
     "url": "https://github.com/farhatnadim"
@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "cpp-repl",
-      "description": "Add a C++ library to cpp-repl (headers, shared libraries, printers, a checked example), make a type print, or contribute a built-in profile.",
+      "description": "Run C++ without a build in cpp-repl; add a C++ library to it (headers, shared libraries, printers, a checked example), make a type print, or contribute a built-in profile.",
       "source": "./",
       "category": "development"
     }

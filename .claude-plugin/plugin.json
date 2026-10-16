@@ -1,6 +1,6 @@
 {
   "name": "cpp-repl",
-  "description": "Use any C++ library at the cpp-repl prompt: find its headers and shared libraries, write a profile, make its types print, and prove it with a checked example session.",
+  "description": "Run C++ without a build in cpp-repl, and use any C++ library at its prompt: run snippets and programs and read their values, find a library's headers and shared libraries, write a profile, make its types print, and prove it with a checked example session.",
   "author": {
     "name": "Nadim Farhat",
     "url": "https://github.com/farhatnadim"

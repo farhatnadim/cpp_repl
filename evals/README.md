@@ -55,14 +55,31 @@ There are two ways to fix it:
 - set that sysctl to 0, which weakens a system-wide protection, so weigh that
   first.
 
-Until then, the same prompts can run headless with the plugin loaded from the
-checkout:
+Until then, `evals/headless.py` runs the same cases with `claude -p`, outside
+that sandbox, as you:
 
 ```
-bash evals/yaml-cpp/scaffold.sh       # in an empty directory
-claude -p "$(sed '1,/^---$/d' evals/yaml-cpp/prompt.md)" \
-    --plugin-dir /path/to/cpp_repl --allowedTools Bash Read Write Edit Glob Grep Skill
+evals/headless.py --case run-snippet --case yaml-cpp   # or every case, with no --case
+evals/headless.py --no-plugin --case opencv            # the baseline arm
 ```
 
-The computed graders (`regex`, `tool_used`, `file_exists`) can then be checked
-by hand against the workspace.
+- **The plugin is a `git archive` of HEAD,** loaded with `--plugin-dir`, so
+  commit what a run should see. An installed cpp-repl plugin is turned off
+  for the run, and a run fails when the plugin loads other than once.
+- **Each case's `scaffold.sh` comes from that copy** too, and seeds a
+  temporary workspace (`--keep` keeps it).
+- **The computed graders score the run:**
+  - `tool_used` against the tool calls;
+  - `regex` and `file_exists` against the workspace;
+  - a `regex` with no target, against the final reply.
+
+  An `llm` grader is printed with the reply, for a judgement by hand.
+- **Cost:** a run spends at most `--budget` dollars (0.6), and no run starts
+  once the runs so far cost `--total` (5). Sonnet 5.5 is the default model.
+- **Results** go to `evals/results/headless-<time>.json`.
+
+## What a run needs
+
+A clang-repl 23 or newer on the host (cpp-repl refuses an older one), or the
+`cpp-repl:llvm23` image for the cases that run with `--docker`. The library
+cases need their `-dev` packages: yaml-cpp, spdlog with fmt, OpenCV, glm.

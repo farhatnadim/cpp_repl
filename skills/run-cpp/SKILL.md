@@ -176,8 +176,10 @@ way out it names.
   - The prompt waits for a terminal.
   - Raw clang-repl hangs on a line that ends in an open `{`, and crashes on
     inputs that cpp-repl rewrites.
-- **Where HOME is read-only** (a sandbox), set `XDG_STATE_HOME` to a writable
-  directory. cpp-repl keeps its precompiled headers and session files there.
+- **Leave `XDG_STATE_HOME` alone** unless cpp-repl exits 2 with "cannot write
+  the state directory" (a read-only HOME, as in a sandbox). Then point it at
+  a writable directory and run again. cpp-repl keeps its precompiled headers
+  there, and a new directory builds them again.
 - **Never delete `~/.clang-repl-history` or clang-repl reports in
   `/var/crash`.** Other sessions on the machine write them.
 - **Install nothing.** Installing clang-repl 23 (apt.llvm.org) or building

@@ -194,8 +194,11 @@ def _stmt_end(tokens, i):
         return _plain_end(tokens, i)
     j = i + 1
     if t.text in ('for', 'while', 'switch', 'if'):
-        if t.text == 'if' and _is(tokens, j, 'constexpr', 'ident'):
-            j += 1
+        if t.text == 'if':
+            if _is(tokens, j, '!'):
+                j += 1
+            if _is(tokens, j, 'constexpr', 'ident') or _is(tokens, j, 'consteval', 'ident'):
+                j += 1
         if _is(tokens, j, '('):
             j = _match(tokens, j) + 1
         if j >= n:
@@ -274,7 +277,9 @@ def open_conditionals(text):
 
 def completeness(text):
     """'complete', 'incomplete', or 'extendable': complete, but a multi-line
-    if or try that an else or catch on the next line would still extend."""
+    if or try that an else or catch on the next line would still extend, or
+    a function head such as `int f()` that its body on the next line
+    would."""
     s = _unsplice(text).strip()
     if not s:
         return 'complete'
@@ -316,7 +321,8 @@ def completeness(text):
             return 'incomplete'
         if head in ('if', 'try') and last.text == '}' and '\n' in s:
             return 'extendable'
-    return 'complete'
+        return 'complete'
+    return _head_state(toks) or 'complete'
 
 
 # Things that may come just before a declaration's type.
@@ -379,10 +385,14 @@ def _declares(tokens, i):
             and tokens[i + 1].kind == 'op' and tokens[i + 1].text in ('=', '{', '(', '[', ';', ','))
 
 
-def _declaration(tokens):
-    """Whether a statement looks like a variable declaration: attributes,
-    specifiers, a type (a keyword, or a name with :: and <...>), * and &,
-    then a name and =, {, (, [, ; or a comma."""
+def _declarator_at(tokens):
+    """Where a statement that looks like a variable declaration declares its
+    name: after attributes, specifiers, a type (a keyword, or a name with ::
+    and <...>) and * and &, the index of the name that =, {, (, [, ; or a
+    comma follows, of the [ of a structured binding, or of the ( of a
+    declarator in parentheses. None when the statement is no declaration.
+    Directives are left out first, so the index is into the tokens without
+    them."""
     tokens = [t for t in tokens if t.kind != 'directive']
     i, n = _skip_attributes(tokens, 0), len(tokens)
     typed = False   # the specifiers hold a type word: `unsigned long n` needs no other
@@ -404,13 +414,78 @@ def _declaration(tokens):
             else:
                 break
     elif not typed:
-        return False
+        return None
     while i < n and (tokens[i].text in ('*', '&', '&&') and tokens[i].kind == 'op'
                      or tokens[i].kind == 'ident' and tokens[i].text in ('const', 'volatile')):
         i += 1
-    if _is(tokens, i, '['):   # a structured binding: auto [a, b] = ...
-        return True
-    return _declares(tokens, i)
+    if _is(tokens, i, '[') or _declares(tokens, i):   # a structured binding: auto [a, b] = ...
+        return i
+    return None
+
+
+def _declaration(tokens):
+    """Whether a statement looks like a variable declaration (see
+    _declarator_at)."""
+    return _declarator_at(tokens) is not None
+
+
+def _has_body_or_end(tokens):
+    """Whether a statement holds its ';' or the '{' of its body at depth 0.
+    The braces of a requires-expression are no body."""
+    i, depth, n = 0, 0, len(tokens)
+    while i < n:
+        t = tokens[i]
+        if t.kind == 'ident' and t.text == 'requires' and depth == 0:
+            j = i + 1
+            if _is(tokens, j, '('):
+                j = _match(tokens, j) + 1
+            i = _match(tokens, j) + 1 if _is(tokens, j, '{') else i + 1
+            continue
+        if t.kind == 'op':
+            if t.text in '([{':
+                if t.text == '{' and depth == 0:
+                    return True
+                depth += 1
+            elif t.text in ')]}':
+                depth -= 1
+            elif t.text == ';' and depth == 0:
+                return True
+        i += 1
+    return False
+
+
+_TYPE_HEADS = {'struct', 'class', 'union', 'enum', 'namespace'}
+
+
+def _function_head(tokens):
+    """Whether a statement is the head of a function definition whose body
+    is still to come: a declaration whose name a parameter list follows,
+    then trailers only (const, noexcept, override, -> T, requires C<T>)."""
+    k = _declarator_at(tokens)
+    if k is None or not _is(tokens, k + 1, '('):
+        return False
+    close = _match(tokens, k + 1)
+    return not any(t.kind == 'op' and t.text == '=' for t in tokens[close + 1:])
+
+
+def _head_state(toks):
+    """For a statement with neither its ';' nor the '{' of a body:
+    'incomplete' when it can only be the head of what follows (a template
+    head, attributes alone, the head of a type or a namespace), 'extendable'
+    for a function head such as `int f()`, whose body may follow on the next
+    line, in the style that puts a brace on a line of its own. None when the
+    statement is something else, a bare expression above all."""
+    code = [t for t in toks if t.kind != 'directive']
+    if not code or _has_body_or_end(code):
+        return None
+    i = _skip_attributes(code, 0)
+    if i == len(code) or _is(code, i, 'template', 'ident'):
+        return 'incomplete'
+    while i < len(code) and code[i].kind == 'ident' and code[i].text in _SPECIFIERS - _TYPE_HEADS:
+        i += 1
+    if i < len(code) and code[i].kind == 'ident' and code[i].text in _TYPE_HEADS and not _declaration(code):
+        return 'incomplete'
+    return 'extendable' if _function_head(code) else None
 
 
 def _has_lambda(tokens):

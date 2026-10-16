@@ -183,3 +183,17 @@ def test_block_reader_waits_for_else():
     reader = BlockReader(lambda more: next(lines))
     assert reader.read() == 'if (x) {\n  f();\n}'
     assert reader.read() == 'g();'
+
+
+def test_block_reader_waits_for_a_body():
+    """A function head, a template head, attributes and a type's head take
+    the lines that go on with them, in the style that puts a brace on a
+    line of its own."""
+    text = ('int f()\n{\n  return 1;\n}\nf()\n'
+            'struct S\n{\n  int x = 1;\n};\n'
+            'template <class T>\nT id(T x) { return x; }\n'
+            '[[nodiscard]]\nint g();\n'
+            'int h()\n\nint k();\n')
+    assert inputs_from_repl(text) == ['int f()\n{\n  return 1;\n}', 'f()', 'struct S\n{\n  int x = 1;\n};',
+                                      'template <class T>\nT id(T x) { return x; }', '[[nodiscard]]\nint g();',
+                                      'int h()', 'int k();']

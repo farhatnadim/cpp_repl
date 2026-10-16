@@ -26,6 +26,12 @@ class Input(str):
         return self
 
 
+# What a line that extends an 'extendable' input starts with: an else or a
+# catch after a block, and after a function head its body's brace, a
+# constructor's initialisers, a requires-clause or a trailing return type.
+_EXTENDS = re.compile(r'\s*(?:(?:else|catch|requires)\b|\{|:(?!:)|->)')
+
+
 class BlockReader:
     """Groups lines into complete inputs. next_line(more) returns the next line
     (more: a block is in progress) and raises EOFError at the end. line is the
@@ -59,7 +65,7 @@ class BlockReader:
                 raise EOFError
             if extendable:
                 extendable = False
-                if not re.match(r'\s*(?:else|catch)\b', line):
+                if not _EXTENDS.match(line):
                     if line.strip():
                         self.pending = (line, number)
                     return '\n'.join(lines)

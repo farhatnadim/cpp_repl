@@ -6,7 +6,9 @@ would inside `main()`, and:
 
 - **Blocks finish themselves.** Enter runs an input once its brackets balance
   and its statement is complete, and opens a new line otherwise. A multi-line
-  `if` waits for its `else`.
+  `if` waits for its `else`, a function head such as `int f()` for its body,
+  and a `template <...>` line, an attribute or `struct S` for what they head,
+  so C++ is typed as it is written.
 - **Values print.** A bare expression prints its value: containers, maps,
   tuples and optionals, and your own types through their `operator<<`.
   Profiles add Eigen matrices and OpenUSD stages.

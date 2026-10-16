@@ -27,8 +27,9 @@ TYPED = Origin('<input>', 1, 0, 0)
 HELP = """\
 Type C++ as you would inside main(). Enter runs the input once its brackets
 balance and its statement is finished, and starts a new line otherwise. A
-multi-line if or try runs after an empty line, so that an else or catch can
-still follow. Esc then Enter runs a block as it stands.
+multi-line if or try, and a function head such as `int f()`, run after an
+empty line, so that an else, a catch or the body can still follow. Esc then
+Enter runs a block as it stands.
 
 A bare expression, with no semicolon, prints its value; show(x) does the same.
 A `return N;` ends the program as main()'s return does: a file stops there,

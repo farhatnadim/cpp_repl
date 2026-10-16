@@ -17,6 +17,7 @@ It reads one input per line and answers:
   stale()              "linked", or a JIT link error in a process that has seen taint()
   syntax error         anything with 'error_here' in it fails to parse
   ...repl::print_expr(((N), ...))...   prints N; with void_call() for N, the void mark
+  ...return N; ... repl::finish(...)   the end mark around N, as a statement that returned from main
   #include "FILE"      FILE's lines but #line directives, joined into one, and answered as above
 anything else is silently accepted.
 
@@ -140,6 +141,10 @@ def main():
                 out('\x1e')
             elif re.fullmatch(r'-?\d+', expr):
                 out(expr + '\n')
+            continue
+        m = re.search(r'\breturn (-?\d+);', line) if 'repl::finish(' in line else None
+        if m:
+            out(f'\x1d{m.group(1)}\x1d\n')
             continue
 
 

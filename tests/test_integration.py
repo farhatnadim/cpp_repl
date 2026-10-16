@@ -263,9 +263,9 @@ int main(int argc, char **argv)
 
 
 def test_a_return_inside_main_s_control_flow(tmp_path):
-    """`if (...) { ...; return 1; }` in main() runs, taken or not, with no
-    warning about the function cpp-repl runs it in. A return leaves that
-    input only: the file's later inputs still run."""
+    """`if (...) { ...; return 2; }` in main() ends the program as it does
+    compiled: nothing after it runs, and cpp-repl exits with 2. No warning
+    about the function cpp-repl runs the statement in."""
     (tmp_path / 'prog.cpp').write_text('''\
 #include <cstdio>
 int main()
@@ -284,9 +284,20 @@ int main()
 }
 ''')
     result = run_cpp_repl(['--batch', '--no-color', 'prog.cpp'], tmp_path)
-    assert result.returncode == 0, result.stdout + result.stderr
-    assert '\ntwo\n' in result.stdout and '\nn=2\n' in result.stdout and '\nnone\n' not in result.stdout
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert '\ntwo\n[main returned 2]\n' in result.stdout
+    assert '\nn=2\n' not in result.stdout and '\nnone\n' not in result.stdout
     assert 'warning' not in result.stdout + result.stderr
+
+
+def test_a_warning_inside_a_block_is_not_silenced(tmp_path):
+    """Nothing about the function cpp-repl runs a block in turns a diagnostic
+    off: a lambda that falls off its end warns inside an if as it does at
+    top level."""
+    (tmp_path / 'p.repl').write_text('if (true) { auto bad = []() -> int { }; }\nauto bad2 = []() -> int { };\n')
+    result = run_cpp_repl(['--no-config', '--batch', '--no-color', 'p.repl'], tmp_path)
+    assert result.stdout.count('warning: non-void lambda does not return a value [-Wreturn-type]') == 2, \
+        result.stdout + result.stderr
 
 
 def test_an_error_names_its_line_in_the_file(tmp_path):
@@ -320,10 +331,10 @@ int main()
 
 
 @pytest.mark.parametrize('end, status', [('std::abort();', 134), ('std::exit(5);', 5),
-                                         ('*(volatile int *)nullptr = 1;', 139)])
+                                         ('*(volatile int *)nullptr = 1;', 139), ('return 7;', 7)])
 def test_the_exit_status_is_the_program_s(tmp_path, end, status):
-    """A program that crashes or calls exit() ends cpp-repl --batch with the
-    status a shell would report for it."""
+    """A program that returns from main, crashes or calls exit() ends
+    cpp-repl --batch with the status a shell would report for it."""
     (tmp_path / 'p.repl').write_text(f'std::puts("before");\n{end}\nstd::puts("after");\n')
     result = run_cpp_repl(['--no-config', '--batch', '--no-color', 'p.repl'], tmp_path)
     assert result.returncode == status, result.stdout + result.stderr
@@ -423,7 +434,7 @@ def test_a_session_that_stays_keeps_its_names(tmp_path):
 
 def test_emit_and_flags(tmp_path):
     (tmp_path / 'p.cpp').write_text('int main() { int a = 1; return a; }\n')
-    assert run_cpp_repl(['--emit', 'p.cpp'], tmp_path).stdout == 'int a = 1;\na;\n'
+    assert run_cpp_repl(['--emit', 'p.cpp'], tmp_path).stdout == 'int a = 1;\nreturn a;\n'
     cflags = run_cpp_repl(['--cflags', '-O2', '-DX=1'], tmp_path).stdout
     assert '-O2' in cflags and '-DX=1' in cflags and 'prelude' in cflags
 

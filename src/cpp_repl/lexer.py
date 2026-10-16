@@ -401,26 +401,25 @@ def _has_lambda(tokens):
 
 def needs_function(tokens, control):
     """Whether a statement has to run inside a function: control flow, which
-    clang-repl 18 mis-compiles at top level, and a statement with a lambda in
-    it, which crashes clang-repl 23 at top level. A declaration such as
-    `auto f = [](int x) { ... };` is fine where it is, and so is a definition:
-    a struct, namespace or function whose body holds a lambda belongs at file
-    scope, where later inputs can see it."""
-    return control or (_has_lambda(tokens) and not _declaration(tokens) and not _definition(tokens))
-
-
-# `return 1;` inside an if of a main() body leaves the function the input runs
-# in. Clang rejects a value returned from a void function under -Wreturn-type,
-# an error by default but only a diagnostic: off for this function alone, the
-# value is dropped. (A deduced return type would trap, SIGILL, whenever the
-# input ran off the end instead.)
-_RETURN_WARNING_OFF = '_Pragma("clang diagnostic push") _Pragma("clang diagnostic ignored \\"-Wreturn-type\\"")'
-_RETURN_WARNING_ON = '_Pragma("clang diagnostic pop")'
+    clang-repl 18 mis-compiles at top level; a `return`, which ends the
+    program as main()'s would (see in_function); and a statement with a
+    lambda in it, which crashes clang-repl 23 at top level. A declaration
+    such as `auto f = [](int x) { ... };` is fine where it is, and so is a
+    definition: a struct, namespace or function whose body holds a lambda
+    belongs at file scope, where later inputs can see it."""
+    first = next((t for t in tokens if t.kind != 'directive'), None)
+    if control or (first is not None and first.kind == 'ident' and first.text == 'return'):
+        return True
+    return _has_lambda(tokens) and not _declaration(tokens) and not _definition(tokens)
 
 
 def in_function(name, body):
-    """body as the body of a new function, and a call of it."""
-    return f'{_RETURN_WARNING_OFF} void {name}() {{ {body} }} {_RETURN_WARNING_ON} {name}();'
+    """body as the body of a new function, and a call of it. The function
+    returns repl::ended, which an int converts to: `return 1;` inside body,
+    as in main()'s `if (bad) return 1;`, becomes the program's exit status,
+    which repl::finish() reports to the session; body falling off its end
+    returns nothing."""
+    return f'repl::ended {name}() {{ {body} return {{}}; }} repl::finish({name}());'
 
 
 def _end(toks):

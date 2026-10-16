@@ -138,13 +138,13 @@ def _source(text, toks):
     return dedented.strip(), len(whole.split('\n')[0]) - len(dedented.split('\n')[0])
 
 
-def _input(text, toks, origin, suffix=''):
+def _input(text, toks, origin):
     """The input for toks, with its origin when the text's is known."""
     source, indent = _source(text, toks)
     if origin is None:
-        return Input(source + suffix)
+        return Input(source)
     where = located(origin, text, toks[0].start)
-    return Input(source + suffix, where._replace(indent=where.indent + indent))
+    return Input(source, where._replace(indent=where.indent + indent))
 
 
 _TYPE_WORDS = {'int', 'char', 'const', 'void', 'unsigned', 'signed', 'auto', 'wchar_t'}
@@ -182,18 +182,11 @@ def _main_inputs(params, program):
     return inputs
 
 
-_CONSTANT = {'EXIT_SUCCESS', 'EXIT_FAILURE', 'true', 'false'}
-
-
-def _constant(toks):
-    """Whether an expression is a constant, as in `return 0;`."""
-    return all(t.kind == 'num' or (t.kind == 'op' and t.text in '-+()')
-               or (t.kind == 'ident' and t.text in _CONSTANT) for t in toks)
-
-
 def _cpp_items(text, program='main', origin=None):
     """The inputs of a stretch of a C++ source with no directive at file
-    scope; origin is where text starts, or None."""
+    scope; origin is where text starts, or None. main()'s statements come one
+    by one, its `return` included: run, it ends the program with its value,
+    as it does compiled."""
     tokens, _ = lex(text)
     items, i = [], 0
     while i < len(tokens):
@@ -211,14 +204,7 @@ def _cpp_items(text, program='main', origin=None):
             name = next(t.start for t in item if t.kind == 'ident' and t.text == 'main')
             items.extend(Input(t.text.strip()) for t in item if t.kind == 'directive' and t.start < name)
             items.extend(Input(line) for line in _main_inputs(params, program))
-            stmts = [toks for toks, _ in split_statements(body)]
-            ret = stmts.pop() if stmts and _is(stmts[-1], 0, 'return', 'ident') else None
-            items.extend(_input(text, toks, origin) for toks in stmts)
-            if ret is not None:
-                # `return 0;` means nothing at the prompt, but `return run();` still runs run().
-                expr = ret[1:-1] if _is(ret, len(ret) - 1, ';') else ret[1:]
-                if expr and not _constant(expr):
-                    items.append(_input(text, expr, origin, ';'))
+            items.extend(_input(text, toks, origin) for toks, _ in split_statements(body))
         i = end + 1
     return items
 

@@ -31,6 +31,8 @@ multi-line if or try runs after an empty line, so that an else or catch can
 still follow. Esc then Enter runs a block as it stands.
 
 A bare expression, with no semicolon, prints its value; show(x) does the same.
+A `return N;` ends the program as main()'s return does: a file stops there,
+and cpp-repl --batch exits with N.
 
   %undo           drop the last input      %restart        rebuild from the journal
   %reset          start again, empty       %journal        list the inputs so far
@@ -54,6 +56,9 @@ Entry = namedtuple('Entry', 'text sent kind')
 VOID_MARK = '\x1e'   # what repl::print_expr writes after a void expression
 # What the prelude writes for a value with no printer: <type> between two marks.
 _UNPRINTABLE = re.compile('\x1f<(.*?)>\x1f')
+# What repl::finish writes when a statement returned from main(): the status
+# between two marks, on a line of its own.
+_END_MARK = re.compile('\x1d(-?\\d+)\x1d\n?')
 
 
 def printer_hint(name):
@@ -99,6 +104,9 @@ class Output:
     def failed(self, status):
         pass
 
+    def returned(self, status):
+        """The input returned from main() with status."""
+
     def end(self):
         pass
 
@@ -106,9 +114,10 @@ class Output:
 class JsonOutput(Output):
     """One JSON object per line for each input, in place of the transcript
     (cpp-repl --json): {"input": N, "file": PATH, "line": N, "status": S,
-    "seconds": T, "output": TEXT, "notes": [TEXT, ...]}, where status is the
-    first of ok, error (it did not compile), link, crash, exit (the program
-    called exit()), stuck, timeout or interrupted. Anything written between
+    "seconds": T, "output": TEXT, "notes": [TEXT, ...], "returned": N}, where
+    status is the first of ok, error (it did not compile), link, crash, exit
+    (the program called exit()), stuck, timeout or interrupted, and returned
+    is main's return value when the input returned. Anything written between
     inputs is {"output": TEXT} or {"note": TEXT}, and the last line is
     {"exit": STATUS, "inputs": N, "failures": N}."""
 
@@ -147,6 +156,10 @@ class JsonOutput(Output):
         if self.records and self.records[-1]['status'] == 'ok':
             self.records[-1]['status'] = status
 
+    def returned(self, status):
+        if self.records:
+            self.records[-1]['returned'] = status
+
     def end(self):
         r = self.records.pop()
         record = {'input': r['input']}
@@ -155,6 +168,8 @@ class JsonOutput(Output):
         record.update(status=r['status'], seconds=round(time.monotonic() - r['start'], 3), output=r['output'])
         if r['notes']:
             record['notes'] = r['notes']
+        if 'returned' in r:
+            record['returned'] = r['returned']
         self._emit(record)
 
     def finish(self, status, session):
@@ -193,6 +208,7 @@ class Session:
         self.new_run()
         self.echo = not (cfg.options.quiet or cfg.options.json)   # whether run_inputs shows each input
         self.tainted = False   # an input failed to compile in this clang-repl
+        self.returned = None   # main's return value, when the input running returned (see _show)
         self.spare = None
         self.files = 0
         self.functions = 0   # functions made to run inputs in: cpp_repl_1, ...
@@ -247,10 +263,10 @@ class Session:
         """Count afresh what a run of files reports: for each that
         cpp-repl --serve runs."""
         self.failures = 0
-        self.inputs_run = 0    # inputs run from files
-        self.timeouts = 0      # inputs stopped at --timeout
-        self.ends = 0          # inputs that ended clang-repl
-        self.ended = None      # the exit status a program's end stands for (see _status)
+        self.inputs_run = 0      # inputs run from files
+        self.timeouts = 0        # inputs stopped at --timeout
+        self.program_ends = 0    # inputs that ended the program: a return from main, exit(), a crash
+        self.end_status = None   # the exit status the first of those stands for (see _status)
 
     def restore(self, journal, reason, then='', note=True):
         """Replace the backend with a fresh one that has replayed journal.
@@ -290,14 +306,19 @@ class Session:
     # -- running ----------------------------------------------------------
 
     def _show(self, text):
-        """Write backend output, its diagnostics filtered, painted when colour
-        is on."""
+        """Write backend output, its diagnostics filtered and the prelude's
+        marks taken out, painted when colour is on."""
         text = _UNPRINTABLE.sub(self._unprintable, self.diagnostics.feed(text))
+        text = _END_MARK.sub(self._returned, text)
         self.out.write(self.painter.feed(text) if self.painter else text)
 
     def _unprintable(self, m):
         self.unprintable.setdefault(m.group(1), False)
         return f'<{m.group(1)}>'
+
+    def _returned(self, m):
+        self.returned = int(m.group(1))
+        return ''
 
     def _show_end(self):
         if self.painter:
@@ -312,6 +333,7 @@ class Session:
         """Run one line. Returns (output, result), result being 'ok', 'error',
         'link', 'dead', 'interrupted' or 'timeout'."""
         self.diagnostics.start()
+        self.returned = None
         try:
             output, alive = self.backend.run(line, echo=self._show if echo else None,
                                              deadline=self.cfg.options.timeout)
@@ -336,6 +358,14 @@ class Session:
         if result == 'ok':
             if journal:
                 self.journal.append(Entry(text, sent, kind))
+            if self.returned is not None:
+                # The statement returned from main(): the program is over,
+                # with that status. A file's final `return 0;` goes without
+                # saying; anything else is said.
+                self._program_ended(self.returned)
+                self.out.returned(self.returned)
+                if self.returned != 0 or getattr(text, 'origin', TYPED) is TYPED:
+                    self._note(f'[main returned {self.returned}]')
             return True
         if result == 'link' and again and self.tainted:
             # clang-repl keeps the template instantiations of an input that
@@ -347,8 +377,7 @@ class Session:
         status = None
         if result == 'dead':
             how, status = self.backend.how_it_ended(), self._status()
-            self.ended = self.ended or status
-            self.ends += 1
+            self._program_ended(status)
         self.out.failed(self._label(result, status))
         if status != 0:   # exit(0) ends the program as it would end compiled
             self.failures += 1
@@ -371,6 +400,13 @@ class Session:
             return result not in ('dead', 'interrupted')
         return False
 
+    def _program_ended(self, status):
+        """The program is over, as the compiled one would be: main returned,
+        exit() was called, or it crashed. The first end's status counts."""
+        if self.end_status is None:
+            self.end_status = status
+        self.program_ends += 1
+
     def _status(self):
         """The exit status the end of clang-repl stands for, as a shell
         reports a program's: 128 + the signal that killed it, or the status
@@ -390,10 +426,10 @@ class Session:
 
     def exit_status(self):
         """What cpp-repl exits with after running files: the status of the
-        program's end, if it crashed or called exit() with one; else 124, as
-        timeout(1) reports it, if an input ran past --timeout; else 1 if an
-        input failed; else 0."""
-        return self.ended or (124 if self.timeouts else 1 if self.failures else 0)
+        program's end, if main returned one, or it crashed or called exit()
+        with one; else 124, as timeout(1) reports it, if an input ran past
+        --timeout; else 1 if an input failed; else 0."""
+        return self.end_status or (124 if self.timeouts else 1 if self.failures else 0)
 
     def _fresh(self):
         self.functions += 1
@@ -459,17 +495,17 @@ class Session:
 
     def run_inputs(self, inputs, echo):
         """Run inputs in order. Returns False when the run should stop: once
-        the program crashed or exited, as it would compiled (a session at the
-        prompt goes on, rebuilt), and with --stop-on-error at the first input
-        that fails."""
+        the program ended, by a return from main, exit() or a crash, as it
+        would compiled (a session at the prompt goes on, rebuilt), and with
+        --stop-on-error at the first input that fails."""
         for i, text in enumerate(inputs):
             self.inputs_run += 1
             self.out.begin(self.inputs_run, getattr(text, 'origin', None))
             try:
                 if echo and self.echo:
                     self._echo_input(text)
-                failures, ends = self.failures, self.ends
-                if not self.run_input(text) or self.ends > ends:
+                failures, ends = self.failures, self.program_ends
+                if not self.run_input(text) or self.program_ends > ends:
                     return False
                 if self.failures > failures and self.cfg.options.stop_on_error:
                     left = len(inputs) - i - 1
@@ -544,7 +580,9 @@ class Session:
         out += ['', 'int main()', '{']
         for stmt in body:
             out += [('  ' + line) if line.strip() else '' for line in stmt.split('\n')]
-        out += ['  return 0;', '}', '']
+        if not body or not body[-1].startswith('return'):
+            out.append('  return 0;')
+        out += ['}', '']
         return '\n'.join(out)
 
     def describe_flags(self):

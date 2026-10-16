@@ -74,6 +74,8 @@ def test_completeness(text, state):
     ('int n = count(v, [](int x) { return x > 1; });', 'stmt', 'int n = count(v, [](int x) { return x > 1; });'),
     ('x = arr[i](3);', 'stmt', 'x = arr[i](3);'),
     ('int a = 1; a', 'stmt', 'int a = 1; a'),
+    ('return run();', 'stmt', in_function('f1', 'return run();')),
+    ('#pragma unroll\nreturn 0;', 'stmt', in_function('f1', '_Pragma("unroll") return 0;')),
     ('#include <vector>', 'pp', '#include <vector>'),
     ('#define TWICE(x) \\\n  ((x) * 2)', 'pp', '#define TWICE(x)    ((x) * 2)'),
     ('int f() { return 1; }', 'stmt', 'int f() { return 1; }'),
@@ -93,12 +95,11 @@ def test_transform(text, kind, sent):
 
 
 def test_in_function():
-    """`return 1;` from a main() body leaves the function a statement runs in:
-    the diagnostic for a value returned from a void function is off for that
-    function alone."""
-    assert in_function('f1', 'if (x) return 1;') == (
-        '_Pragma("clang diagnostic push") _Pragma("clang diagnostic ignored \\"-Wreturn-type\\"") '
-        'void f1() { if (x) return 1; } _Pragma("clang diagnostic pop") f1();')
+    """`return 1;` from a main() body becomes the program's exit status: the
+    function a statement runs in returns repl::ended, which an int converts
+    to, and falls off its end otherwise."""
+    assert in_function('f1', 'if (x) return 1;') == \
+        'repl::ended f1() { if (x) return 1; return {}; } repl::finish(f1());'
 
 
 def test_regions_and_block_directives_go_through_a_file():
@@ -108,7 +109,7 @@ def test_regions_and_block_directives_go_through_a_file():
     send = transform(block, fresh=fresh())
     assert send.kind == 'stmt' and send.file
     assert '\n#ifdef X\n' in send.text and '\n#endif\n' in send.text
-    assert 'void f1() { for' in send.text
+    assert 'repl::ended f1() { for' in send.text
 
 
 def test_transform_without_wrapping():
@@ -219,6 +220,8 @@ def test_open_conditionals():
     ('int twice_each(std::vector<int> v) { std::for_each(v.begin(), v.end(), [](int &x) { x *= 2; }); return v[0]; }',
      False),
     ('std::enable_if_t<(N > 4), int> k = count(v, [](int x) { return x > 1; });', False),
+    ('return 1;', True),
+    ('returned = 1;', False),
 ])
 def test_needs_function(text, wrapped):
     tokens, _ = lex(text)

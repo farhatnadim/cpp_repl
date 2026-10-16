@@ -19,7 +19,7 @@ from cpp_repl import session as session_module
 from cpp_repl.config import Config, Options
 from cpp_repl.diagnostics import Diagnostics
 from cpp_repl.session import JsonOutput, Output, Session, SessionError
-from cpp_repl.sources import inputs_from_file
+from cpp_repl.sources import inputs_from_file, inputs_from_repl
 
 FAKE = Path(__file__).resolve().parent / 'fake_clang_repl.py'
 CPP_REPL = Path(__file__).resolve().parent.parent / 'bin' / 'cpp-repl'
@@ -113,6 +113,24 @@ def test_recovery_from_the_journal(tmp_path, monkeypatch, made, text, reason):
     assert [e.text for e in s.journal] == ['int a = 1;', 'int b = 2;']
     assert s.run_input('say("alive");')
     assert stream.getvalue().endswith('alive\n')
+
+
+def test_a_return_ends_the_program(tmp_path, monkeypatch, made):
+    """`return N;` ends the program as main()'s return would: a run of files
+    stops there and cpp-repl exits with N; the prompt says so and goes on."""
+    s, stream = make(tmp_path, monkeypatch)
+    made.append(s)
+    inputs = inputs_from_repl('say("before");\nreturn 3;\nsay("after");\n')
+    assert s.run_inputs(inputs, echo=False) is False
+    assert stream.getvalue() == 'before\n[main returned 3]\n'
+    assert s.exit_status() == 3 and s.failures == 0
+    assert [e.text for e in s.journal] == ['say("before");', 'return 3;']
+    s, stream = make(tmp_path, monkeypatch, batch=False)
+    made.append(s)
+    assert s.run_input('if (true) return 2;')
+    assert stream.getvalue() == '[main returned 2]\n'
+    assert s.run_input('say("still here");')
+    assert stream.getvalue().endswith('still here\n')
 
 
 def test_an_error_limit_asked_for_is_no_hang(tmp_path, monkeypatch, made):
@@ -284,8 +302,8 @@ def test_inputs_from_a_file_sit_at_their_lines(tmp_path, monkeypatch, made):
     sent = [Path(e.sent[0][len('#include "'):-1]).read_text() for e in s.journal]
     name = str(tmp_path / 'p.cpp')
     assert sent[0] == f'#line 3 "{name}"\n  say("one");\n'
-    assert sent[1].endswith(f'\n#line 4 "{name}"\n  if (1) {{\n    say("two");\n  }}\n }} '
-                            '_Pragma("clang diagnostic pop") cpp_repl_1();\n')
+    assert sent[1].endswith(f'\n#line 4 "{name}"\n  if (1) {{\n    say("two");\n  }}\n return {{}}; }} '
+                            'repl::finish(cpp_repl_1());\n')
     assert f'repl::print_expr(((\n#line 7 "{name}"\n  42), repl::printer' in sent[2]
     assert s.sources == {name}
 

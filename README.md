@@ -142,7 +142,8 @@ A C++ source becomes inputs like this:
 - An `#if ... #endif` region is one input.
 - `main()`'s body runs one statement at a time. Its `argc` and `argv` get
   stand-in values.
-- A final `return 0;` is dropped, and `return run();` still runs `run()`.
+- A `return` in `main()` runs as it is and ends the program with its value,
+  as it does compiled: nothing after it runs, and `--batch` exits with it.
 - Quoted includes next to the source are found. A `#pragma` stays with the
   statement after it. `CPP_REPL` is defined, so a source can tell where it
   runs.
@@ -184,13 +185,14 @@ cpp-repl --batch --json prog.cpp              # a JSON object per input
   `--diagnostics full` shows everything clang prints, as at the prompt.
 - **`-q`** leaves out the echo of each input, so that the output is the
   program's own, with the errors where they arise.
-- **`--json`** writes a JSON object per input instead: `file`, `line`,
-  `status` (`ok`, `error`, `link`, `crash`, `exit`, `stuck`, `timeout`),
-  `seconds`, `output` and `notes`. The last line holds the exit status, the
-  number of inputs and the failures.
-- **The exit status is the program's:** 0, the `N` of its `exit(N)`, or
-  128 + the signal that killed it (139 for a segfault, 134 for `abort()`). It
-  is 1 if an input failed to compile or link.
+- **`--json`** writes a JSON object per input instead: `input`, `file`,
+  `line`, `status` (`ok`, `error`, `link`, `crash`, `exit`, `stuck`,
+  `timeout`, `interrupted`), `seconds`, `output`, `notes`, and `returned`
+  when the input returned from `main()`. The last line holds the exit status,
+  the number of inputs and the failures.
+- **The exit status is the program's:** what `main()` returned, the `N` of
+  its `exit(N)`, or 128 + the signal that killed it (139 for a segfault, 134
+  for `abort()`). It is 1 if an input failed to compile or link.
 - **`--stop-on-error`** stops at the first input that fails, as the rest
   usually depends on it.
 - **`--timeout SECONDS`** stops an input that takes longer, compiling

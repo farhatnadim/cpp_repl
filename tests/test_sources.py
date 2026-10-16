@@ -34,13 +34,16 @@ def test_main_body_one_statement_at_a_time():
         'static int twice(int x)\n{\n  return 2 * x;   // kept with its function\n}',
         'int a = twice(2);',
         "for (int i = 0; i < a; ++i) {\n  std::cout << i << '\\n';\n}",
+        'return 0;',
     ]
 
 
-def test_a_final_return_still_runs_its_expression():
-    assert inputs_from_cpp('int run();\nint main() { return run(); }') == ['int run();', 'run();']
-    assert inputs_from_cpp('int main() { f(); return EXIT_SUCCESS; }') == ['f();']
-    assert inputs_from_cpp('int main() { return -1; }') == []
+def test_main_s_return_is_an_input():
+    """A `return` in main() is run as it is: it ends the program with its
+    value, which cpp-repl --batch exits with."""
+    assert inputs_from_cpp('int run();\nint main() { return run(); }') == ['int run();', 'return run();']
+    assert inputs_from_cpp('int main() { f(); return EXIT_SUCCESS; }') == ['f();', 'return EXIT_SUCCESS;']
+    assert inputs_from_cpp('int main() { if (x) return -1; }') == ['if (x) return -1;']
 
 
 def test_main_parameters_get_stand_ins():
@@ -127,7 +130,7 @@ def test_inputs_know_where_they_start():
         ('int a = 1;', Origin('p.cpp', 5, 2, 2)),
         ('int b = twice(a);', Origin('p.cpp', 5, 13, 0)),
         ('for (int i = 0; i < b; ++i) {\n  std::printf("%d\\n", i);\n}', Origin('p.cpp', 6, 2, 2)),
-        ('twice(b);', Origin('p.cpp', 9, 9, 0)),
+        ('return twice(b);', Origin('p.cpp', 9, 2, 2)),
     ]
     repl = inputs_from_repl('int a = 1;\n\nif (a) {\n  f();\n}\na\n', path='s.repl')
     assert [(text, text.origin.line) for text in repl] == [('int a = 1;', 1), ('if (a) {\n  f();\n}', 3), ('a', 6)]

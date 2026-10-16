@@ -349,6 +349,32 @@ void print_expr(printer<Tag>)
   std::cout << void_mark << std::flush;
 }
 
+// A statement that cannot run at top level (control flow, a lambda, a bare
+// expression) runs as the body of a function of its own:
+//   repl::ended cpp_repl_N() { STATEMENT return {}; }  repl::finish(cpp_repl_N());
+// A `return EXPR;` inside it, as in main()'s `if (bad) return 1;`, converts
+// EXPR to the status main() would have returned, and finish() writes that
+// status between two end marks. cpp-repl then ends the program as the
+// compiled one would: --batch exits with the status, and the prompt says so.
+// Nothing is rewritten and no diagnostic is turned off, so a lambda inside
+// the statement that falls off its end still warns.
+struct ended {
+  std::optional<int> status;   // main's return value, if the statement returned
+
+  ended() = default;
+  ended(int value) : status(value) {}   // implicit: `return 1;` converts
+};
+
+inline constexpr char end_mark = '\x1d';
+
+inline void finish(ended e)
+{
+  if (e.status) {
+    std::fprintf(stdout, "%c%d%c\n", end_mark, *e.status, end_mark);   // past any std::cout redirection
+    std::fflush(stdout);
+  }
+}
+
 // keep(x) makes the compiler assume x is used, so that a computation timed
 // with %timeit is not optimised away. An expression template with .eval(),
 // as Eigen's are, is evaluated first.

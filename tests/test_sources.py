@@ -110,6 +110,16 @@ def test_pragmas_stay_with_their_code():
     ]
 
 
+def test_a_raw_string_s_lines_are_no_directives():
+    """A '#' at the start of a line inside a raw string literal, as a shader
+    or a script embedded in a source has, is text: the literal stays whole,
+    in a file and typed line by line."""
+    src = 'const char *vs = R"(\n#version 330 core\nvoid main() {}\n)";\nint main() { puts(vs); }\n'
+    assert inputs_from_cpp(src) == ['const char *vs = R"(\n#version 330 core\nvoid main() {}\n)";', 'puts(vs);']
+    assert inputs_from_repl(src) == ['const char *vs = R"(\n#version 330 core\nvoid main() {}\n)";',
+                                     'int main() { puts(vs); }']
+
+
 def test_split_directives():
     assert split_directives('#include <a>\n#define X \\\n  1\nint x;\n#ifdef Y\nint y;\n#endif\nint z;') == [
         ('directive', '#include <a>', 0),

@@ -243,9 +243,11 @@ def split_directives(text):
     code_start = 0
 
     def at_file_scope():
-        tokens, open_comment = lex('\n'.join(code))
+        """Whether the code so far ends at file scope: brackets balanced,
+        and no comment or raw string left open (a '#' inside one is text)."""
+        tokens, unclosed = lex('\n'.join(code))
         depth = sum((t.text in '([{') - (t.text in ')]}') for t in tokens if t.kind == 'op')
-        return depth == 0 and not open_comment
+        return depth == 0 and not unclosed
 
     def flush():
         if code:

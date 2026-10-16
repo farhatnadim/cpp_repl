@@ -11,13 +11,14 @@ _TOKEN = re.compile(r'''
   | (?P<comment>//[^\n]*|/\*.*?\*/)
   | (?P<open_comment>/\*)
   | (?P<raw>(?:u8|[uUL])?R"(?P<delim>[^()\\\s"]{0,16})\(.*?\)(?P=delim)")
+  | (?P<open_raw>(?:u8|[uUL])?R"[^()\\\s"]{0,16}\()
   | (?P<str>(?:u8|[uUL])?"(?:\\.|[^"\\\n])*"?)
   | (?P<chr>(?:u8|[uUL])?'(?:\\.|[^'\\\n])*'?)
   | (?P<ident>[A-Za-z_]\w*)
   | (?P<num>\.?\d(?:[eEpP][+-]|[\w.'])*)
   | (?P<op>::|->|\.\.\.|<<=|>>=|<=>|&&|\|\||<<|>>|\+\+|--|[-+*/%&|^!=<>]=|.)
 ''', re.X | re.S)
-_KINDS = ('ws', 'comment', 'open_comment', 'raw', 'str', 'chr', 'ident', 'num', 'op')
+_KINDS = ('ws', 'comment', 'open_comment', 'raw', 'open_raw', 'str', 'chr', 'ident', 'num', 'op')
 
 # kind is one of _KINDS[3:] or 'directive': a preprocessor line inside code.
 Token = namedtuple('Token', 'kind text space start')   # space: whitespace came before it
@@ -61,7 +62,9 @@ def _place(s, start, end, origin):
 _PRAGMA = re.compile(r'#\s*pragma\b\s*(.*)\Z', re.S)
 # Pragmas that apply to the statement after them.
 _STATEMENT_PRAGMA = re.compile(r'#\s*pragma\s+(omp|clang\s+loop|unroll|nounroll|GCC\s+(unroll|ivdep)|ivdep|simd|loop)\b')
+# A line of a conditional region, and a directive token that is one.
 _CONDITIONAL = re.compile(r'^[ \t]*#[ \t]*(if|ifdef|ifndef|elif|elifdef|elifndef|else|endif)\b', re.M)
+_CONDITIONAL_DIRECTIVE = re.compile(r'#[ \t]*(if|ifdef|ifndef|elif|elifdef|elifndef|else|endif)\b')
 
 
 def _directive_end(text, pos):
@@ -78,9 +81,9 @@ def _directive_end(text, pos):
 
 
 def lex(text):
-    """The significant tokens of text, and whether a /* comment is left open.
-    A '#' that starts a line starts a directive token, which runs to the end
-    of the line."""
+    """The significant tokens of text, and whether a /* comment or a raw
+    string literal is left open at its end. A '#' that starts a line starts
+    a directive token, which runs to the end of the line."""
     tokens, space, pos = [], False, 0
     while pos < len(text):
         if text[pos] == '#' and not text[text.rfind('\n', 0, pos) + 1:pos].strip():
@@ -93,7 +96,7 @@ def lex(text):
         pos = m.end()
         if kind in ('ws', 'comment'):
             space = True
-        elif kind == 'open_comment':
+        elif kind in ('open_comment', 'open_raw'):
             return tokens, True
         else:
             tokens.append(Token(kind, m.group(kind), space, m.start()))
@@ -250,15 +253,23 @@ def _unsplice(text):
     return re.sub(r'\\[ \t]*\n', ' ', text)
 
 
-def open_conditionals(text):
-    """How many #if, #ifdef and #ifndef lines in text have no #endif yet."""
+def _open_conditionals(tokens):
+    """How many #if, #ifdef and #ifndef directives among tokens have no
+    #endif yet."""
     depth = 0
-    for m in _CONDITIONAL.finditer(text):
-        if m.group(1) in ('if', 'ifdef', 'ifndef'):
+    for t in tokens:
+        m = _CONDITIONAL_DIRECTIVE.match(t.text) if t.kind == 'directive' else None
+        if m and m.group(1) in ('if', 'ifdef', 'ifndef'):
             depth += 1
-        elif m.group(1) == 'endif':
+        elif m and m.group(1) == 'endif':
             depth -= 1
     return depth
+
+
+def open_conditionals(text):
+    """How many #if, #ifdef and #ifndef lines in text have no #endif yet.
+    A '#' inside a comment or a raw string is no directive."""
+    return _open_conditionals(lex(text)[0])
 
 
 def completeness(text):
@@ -269,12 +280,10 @@ def completeness(text):
         return 'complete'
     if s.endswith('\\'):
         return 'incomplete'
-    if open_conditionals(s) > 0:
-        return 'incomplete'
     if s[0] == '%' and '\n' not in s:
         return 'complete'
-    tokens, open_comment = lex(s)
-    if open_comment:
+    tokens, unclosed = lex(s)
+    if unclosed or _open_conditionals(tokens) > 0:
         return 'incomplete'
     if not tokens:
         return 'complete'

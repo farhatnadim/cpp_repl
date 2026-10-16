@@ -38,6 +38,11 @@ def fresh():
     ("char c = '{';", 'complete'),
     ('auto r = R"(a { raw\nstring)";', 'complete'),
     ('auto r = R"x(a )" raw\n)x";', 'complete'),
+    ('const char *glsl = R"(', 'incomplete'),
+    ('const char *glsl = R"(\n#version 330 core', 'incomplete'),
+    ('const char *glsl = R"(\n#version 330 core\nvoid main() {}\n)";', 'complete'),
+    ('auto s = R"(\n#if 0\n)";', 'complete'),
+    ('auto s = u8R"x(\n#endif\n)x";', 'complete'),
     ('int big = 1\'000\'000;', 'complete'),
     ('#include <vector>', 'complete'),
     ('#define TWICE(x) \\', 'incomplete'),
@@ -204,6 +209,13 @@ def test_open_conditionals():
     assert open_conditionals('#if A\n#ifdef B\n#endif') == 1
     assert open_conditionals('#ifndef A\n#else\n#endif') == 0
     assert open_conditionals('int x;  // a #if after code is no directive') == 0
+    assert open_conditionals('auto s = R"(\n#if 0\n)";\n/*\n#ifdef X\n*/') == 0
+
+
+def test_an_open_raw_string_is_unclosed():
+    assert lex('auto s = R"x(abc')[1] is True
+    assert lex('auto s = R"x(abc)x";')[1] is False
+    assert [t.kind for t in lex('auto s = R"x(abc)x";')[0]] == ['ident', 'ident', 'op', 'raw', 'op']
 
 
 @pytest.mark.parametrize('text, wrapped', [

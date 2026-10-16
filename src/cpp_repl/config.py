@@ -708,7 +708,9 @@ class Config:
         self.compile_commands = compile_commands_file(compile_commands) if compile_commands else None
         ctx = SimpleNamespace(compile_commands=self.compile_commands, env=os.environ, cwd=cwd)
         self.profiles = [load_profile(n, ctx) for n in names]
-        self.notes += [note for p in self.profiles for note in p.notes]
+        # What a profile has to say stands whatever the command line: the
+        # prompt's first line and %flags say it; a batch run does not.
+        self.profile_notes = [note for p in self.profiles for note in p.notes]
         return tomls
 
     def _flag_layers(self, options, tomls):

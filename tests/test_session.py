@@ -485,9 +485,14 @@ def test_brief_diagnostics():
 def test_batch_says_what_the_configuration_changed(tmp_path):
     (tmp_path / 'p.repl').write_text('say("hi");\n')
     env = dict(os.environ, CPP_REPL_CLANG_REPL=str(FAKE), NO_COLOR='1')
-    out = subprocess.run([sys.executable, str(CPP_REPL), '--no-config', '-std=c++17', '--batch', 'p.repl'],
-                         cwd=tmp_path, env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True).stdout
-    assert out.startswith('[-std=c++17 raised to -std=c++20: the prelude needs C++20]\n')
+    run = subprocess.run([sys.executable, str(CPP_REPL), '--no-config', '-std=c++17', '--batch', 'p.repl'],
+                         cwd=tmp_path, env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True)
+    # On stderr: a batch run's stdout is the program's own.
+    assert run.stderr == '[-std=c++17 raised to -std=c++20: the prelude needs C++20]\n'
+    assert run.stdout == 'c++> say("hi");\nhi\n'
+    run = subprocess.run([sys.executable, str(CPP_REPL), '--no-config', '-std=c++17', '--batch', '--json', 'p.repl'],
+                         cwd=tmp_path, env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True)
+    assert json.loads(run.stdout.splitlines()[0]) == {'note': '-std=c++17 raised to -std=c++20: the prelude needs C++20'}
 
 
 def test_a_session_that_stays(tmp_path):

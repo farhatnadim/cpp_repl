@@ -200,7 +200,8 @@ cpp-repl --batch --json prog.cpp              # a JSON object per input
   A wrong `std::sort` comparator costs 23 lines instead of 241.
   `--diagnostics full` shows everything clang prints, as at the prompt.
 - **`-q`** leaves out the echo of each input, so that the output is the
-  program's own, with the errors where they arise.
+  program's own, with the errors where they arise. What cpp-repl says of
+  the configuration (a `-std` raised, a profile's note) goes to stderr.
 - **`--json`** writes a JSON object per input instead: `input`, `file`,
   `line`, `status` (`ok`, `error`, `link`, `crash`, `exit`, `stuck`,
   `timeout`, `interrupted`, `exception`), `seconds`, `output`, `notes`, and
@@ -377,7 +378,7 @@ misprints on everyday input. In what follows:
   [`tests/compat/harness.py`](tests/compat/harness.py);
 - *cpp-repl* means the same input typed into cpp-repl.
 
-| Raw clang-repl | 18.1.3 | 23.1.2 | 24.0.0 | cpp-repl |
+| Raw clang-repl | 18.1.3 | 23.1.4 | 24.0.0 | cpp-repl |
 | --- | --- | --- | --- | --- |
 | A line ending in an open `{` | hangs (killed after 20 s) | hangs (killed after 20 s) | hangs (killed after 20 s) | waits for the block to close |
 | Two top-level range-for loops | prints '1 1 1' and '' | works | works | runs each loop inside a function |
@@ -400,7 +401,7 @@ misprints on everyday input. In what follows:
 | `%help` | unknown | known | known | its own %help |
 | `%undo` | works | works | works | replays the journal without the last input |
 
-Probed with tests/compat/harness.py: 18.1.3 on 2026-10-14, 23.1.2 on 2026-10-14, 24.0.0 on 2026-10-14.
+Probed with tests/compat/harness.py: 18.1.3 on 2026-10-14, 23.1.4 on 2026-10-16, 24.0.0 on 2026-10-16.
 
 The way around each problem:
 - **The unclosed `{`:** cpp-repl never sends an incomplete input.

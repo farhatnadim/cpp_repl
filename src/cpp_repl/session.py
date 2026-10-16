@@ -702,7 +702,7 @@ class Session:
             lines.append(f'from:        {cfg.compile_commands}')
         for t in cfg.tomls:
             lines.append(f'from:        {t.name}')
-        lines += cfg.notes
+        lines += cfg.notes + cfg.profile_notes
         return '\n'.join(lines) + '\n'
 
     # -- commands ---------------------------------------------------------

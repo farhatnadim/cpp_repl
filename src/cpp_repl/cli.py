@@ -228,7 +228,7 @@ def _run(argv):
     painter = Painter.create(cfg.blocks, cfg.diagnostics) if colour else None
 
     if interactive:
-        notes = ''.join(f'{note}\n' for note in cfg.notes)
+        notes = ''.join(f'{note}\n' for note in cfg.notes + cfg.profile_notes)
         hint = ''
         if sys.stdout.isatty() and not importlib.util.find_spec('prompt_toolkit'):
             hint = 'For highlighting as you type: pip install prompt_toolkit\n'
@@ -249,9 +249,14 @@ def _run(argv):
     except SessionError as e:
         return _fail(e)
     atexit.register(session.close)
-    if not interactive:   # the prompt's first line says these
+    if not interactive:
+        # The prompt's first line says these. A batch run's stdout is the
+        # program's own, so they go to stderr there, or into --json's notes.
         for note in cfg.notes:
-            out.note(f'[{note}]')
+            if args.json:
+                out.note(f'[{note}]')
+            else:
+                sys.stderr.write(f'[{note}]\n')
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))
     signal.signal(signal.SIGHUP, lambda *_: sys.exit(1))
     if args.serve:

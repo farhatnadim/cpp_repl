@@ -62,13 +62,14 @@ def test_the_newest_clang_repl_wins(tmp_path, monkeypatch):
     one outright."""
     bin_dir = tmp_path / 'bin'
     bin_dir.mkdir()
-    for name, version in (('clang-repl', '18.1.3'), ('clang-repl-23', '23.1.4'), ('clang-repl-21', '21.1.0')):
+    # Versions above any installed in /usr/lib/llvm-N, which is searched too.
+    for name, version in (('clang-repl', '98.1.3'), ('clang-repl-99', '99.1.4'), ('clang-repl-97', '97.1.0')):
         script = bin_dir / name
         script.write_text(f'#!/bin/sh\necho "Ubuntu LLVM version {version}"\n')
         script.chmod(0o755)
     monkeypatch.setenv('PATH', str(bin_dir))
     monkeypatch.delenv('CPP_REPL_CLANG_REPL', raising=False)
-    assert find_clang_repl() == str(bin_dir / 'clang-repl-23')
+    assert find_clang_repl() == str(bin_dir / 'clang-repl-99')
     monkeypatch.setenv('CPP_REPL_CLANG_REPL', str(bin_dir / 'clang-repl'))
     assert find_clang_repl() == str(bin_dir / 'clang-repl')
 

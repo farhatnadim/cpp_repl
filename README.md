@@ -156,8 +156,10 @@ cpp-repl a.repl              # a session saved with %save
 A C++ source becomes inputs like this:
 - Each `#include`, `#define` and file-scope declaration or function is one input.
 - An `#if ... #endif` region is one input.
-- `main()`'s body runs one statement at a time. Its `argc` and `argv` get
-  stand-in values.
+- `main()`'s body runs one statement at a time, after everything else in the
+  file: a function declared above `main()` and defined below it exists when
+  `main()`'s statements run, as in the compiled program, whose globals are
+  initialised before `main()` too. Its `argc` and `argv` get stand-in values.
 - A `return` in `main()` runs as it is and ends the program with its value,
   as it does compiled: nothing after it runs, and `--batch` exits with it.
 - Quoted includes next to the source are found. A `#pragma` stays with the

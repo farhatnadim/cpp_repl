@@ -333,6 +333,24 @@ int main(int argc, char **argv)
     assert 'finish 21 repl\n' in result.stdout
 
 
+def test_a_function_defined_below_main_exists_when_main_runs(tmp_path):
+    """The usual layout, a prototype above main() and the definition below
+    it, links: main's statements run after everything else in the file."""
+    (tmp_path / 'prog.cpp').write_text('''\
+#include <iostream>
+int helper(int);
+int main()
+{
+  std::cout << helper(1) << '\\n';
+  return 0;
+}
+int helper(int x) { return x * 2; }
+''')
+    result = run_cpp_repl(['--no-config', '--batch', '-q', 'prog.cpp'], tmp_path)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout == '2\n'
+
+
 def test_a_return_inside_main_s_control_flow(tmp_path):
     """`if (...) { ...; return 2; }` in main() ends the program as it does
     compiled: nothing after it runs, and cpp-repl exits with 2. No warning

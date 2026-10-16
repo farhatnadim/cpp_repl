@@ -212,11 +212,12 @@ def _main_inputs(params, program):
 
 def _cpp_items(text, program='main', origin=None):
     """The inputs of a stretch of a C++ source with no directive at file
-    scope; origin is where text starts, or None. main()'s statements come one
-    by one, its `return` included: run, it ends the program with its value,
-    as it does compiled."""
+    scope, as (the file-scope items, main()'s inputs); origin is where text
+    starts, or None. main()'s inputs are stand-ins for its parameters, then
+    its statements one by one, its `return` included: run, it ends the
+    program with its value, as it does compiled."""
     tokens, _ = lex(text)
-    items, i = [], 0
+    items, main_items, i = [], [], 0
     while i < len(tokens):
         if token_is(tokens, i, ';'):
             i += 1
@@ -231,10 +232,10 @@ def _cpp_items(text, program='main', origin=None):
             # A #pragma just before main() applies at file scope.
             name = next(t.start for t in item if t.kind == 'ident' and t.text == 'main')
             items.extend(Input(t.text.strip()) for t in item if t.kind == 'directive' and t.start < name)
-            items.extend(Input(line) for line in _main_inputs(params, program))
-            items.extend(_input(text, toks, origin) for toks, _ in split_statements(body))
+            main_items.extend(Input(line) for line in _main_inputs(params, program))
+            main_items.extend(_input(text, toks, origin) for toks, _ in split_statements(body))
         i = end + 1
-    return items
+    return items, main_items
 
 
 def split_directives(text):
@@ -321,15 +322,21 @@ def _include(line, base, skip):
 
 def inputs_from_cpp(text, base=None, program='main', skip=PRELUDE_NAMES, path=None):
     """A C++ source as REPL inputs: preprocessor lines, #if regions and
-    file-scope declarations and definitions as they are, then main()'s body
-    one statement at a time. base is the source's directory, for its quoted
-    includes; path, when given, is the source as the inputs' origins name it."""
+    file-scope declarations and definitions as they are, in order, then
+    main()'s body one statement at a time. main()'s comes last wherever
+    main() stands in the file, so that a function declared above it and
+    defined below it exists when main's statements run, as it does in the
+    compiled program, whose globals are initialised before main() runs too.
+    base is the source's directory, for its quoted includes; path, when
+    given, is the source as the inputs' origins name it."""
     whole = Origin(path, 1, 0, 0) if path else None
-    inputs = []
+    inputs, main_inputs = [], []
     for kind, chunk, at in split_directives(text):
         origin = located(whole, text, at) if whole else None
         if kind == 'code':
-            inputs.extend(_cpp_items(chunk, program, origin))
+            items, main_items = _cpp_items(chunk, program, origin)
+            inputs.extend(items)
+            main_inputs.extend(main_items)
         elif kind == 'directive':
             if re.match(r'#\s*pragma\s+once\b', chunk):
                 continue
@@ -341,7 +348,7 @@ def inputs_from_cpp(text, base=None, program='main', skip=PRELUDE_NAMES, path=No
             # A line left out would move the lines after it.
             inputs.append(Input('\n'.join(line for line in lines if line is not None),
                                 origin if None not in lines else None))
-    return inputs
+    return inputs + main_inputs
 
 
 def is_cpp(path):

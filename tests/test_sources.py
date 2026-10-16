@@ -38,6 +38,32 @@ def test_main_body_one_statement_at_a_time():
     ]
 
 
+def test_main_runs_after_everything_else():
+    """The usual layout: a function declared above main() and defined below
+    it. It exists when main's statements run, and so does anything else
+    below main(), as in the compiled program, whose globals are initialised
+    before main() runs."""
+    src = cpp('''
+        #include <iostream>
+        int helper(int);
+        int main()
+        {
+          std::cout << helper(1) << '\\n';
+          return 0;
+        }
+        int helper(int x) { return x * 2; }
+        #define LATE 1
+        ''')
+    assert inputs_from_cpp(src) == [
+        '#include <iostream>',
+        'int helper(int);',
+        'int helper(int x) { return x * 2; }',
+        '#define LATE 1',
+        "std::cout << helper(1) << '\\n';",
+        'return 0;',
+    ]
+
+
 def test_main_s_return_is_an_input():
     """A `return` in main() is run as it is: it ends the program with its
     value, which cpp-repl --batch exits with."""

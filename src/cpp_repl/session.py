@@ -662,7 +662,10 @@ class Session:
                 return None
             self.journal.append(entry)
         replayed = len(was) - 1
-        self._note(f'[{name} redefined: {replayed} input{"s" if replayed != 1 else ""} replayed]')
+        # The old entry went whole: `int a = 1, b = 2;` redefined as `a` loses b too.
+        gone = [n for n in declared_names(lex(unsplice(was[at].text))[0]) if n != name]
+        with_it = f'; {", ".join(gone)}, declared with it, {"is" if len(gone) == 1 else "are"} gone' if gone else ''
+        self._note(f'[{name} redefined: {replayed} input{"s" if replayed != 1 else ""} replayed{with_it}]')
         return ran
 
     def _replay(self, line):

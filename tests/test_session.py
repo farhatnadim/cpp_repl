@@ -217,6 +217,9 @@ def test_a_name_declared_again_replaces_the_old(tmp_path, monkeypatch, made):
     assert s.run_input('int b = 3;')
     assert "error: redefinition of 'b'" in stream.getvalue()
     assert [e.text for e in s.journal] == ['double a = 1.5;', 'say("alive");']
+    # The old entry goes whole: a name declared beside the redefined one goes with it, and the note says so.
+    assert s.run_input('int c1 = 1, d1 = 2;') and s.run_input('double c1 = 3.5;')
+    assert stream.getvalue().endswith('[c1 redefined: 2 inputs replayed; d1, declared with it, is gone]\n')
 
 
 def test_a_run_says_what_it_left_unrun(tmp_path, monkeypatch, made):

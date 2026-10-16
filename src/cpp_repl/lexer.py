@@ -581,6 +581,8 @@ def transform(text, wrap=True, fresh=fresh_name, origin=None, statement=False):
         return Send(_place(s, 0, len(s), origin) if origin else s, 'pp', True)   # an #if region
     tokens, _ = lex(s)
     if tokens and all(t.kind == 'directive' for t in tokens):
+        if origin:   # placed, so that an #include that fails names its line
+            return Send(_place(s, 0, len(s), origin), 'pp', True)
         return Send(s, 'pp', len(tokens) > 1)
     if not tokens:
         return Send('', 'empty', False)

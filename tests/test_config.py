@@ -106,7 +106,8 @@ def test_config_without_a_backend(tmp_path, monkeypatch):
     assert cfg.std == '-std=c++20' and any('raised' in n for n in cfg.notes)
     assert cfg.opt == '-O2' and cfg.opt_level == 2
     assert cfg.compiler_flags == ['-std=c++20', '-O2', '-I', str(tmp_path / 'inc'), '-DFROM_TOML=1',
-                                  '-DFROM_CLI', '-iquote', str(PRELUDE_DIR), '-DCPP_REPL=1']
+                                  '-DFROM_CLI', '-iquote', str(PRELUDE_DIR), '-iquote', str(sub), '-DCPP_REPL=1']
+    assert '-iquote' in cfg.cflags() and str(sub) in cfg.cflags()
     assert cfg.preludes == [CORE_PRELUDE, STD_PRELUDE]
     assert cfg.prompt == 'c++> ' and cfg.more == '...> '
     assert cfg.prologue[-1] == 'setvbuf(stdout, nullptr, _IONBF, 0);'

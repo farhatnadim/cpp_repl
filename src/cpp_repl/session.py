@@ -193,6 +193,11 @@ def format_seconds(seconds):
 
 
 _INCLUDE_NAME = re.compile(r'\s*#\s*include\s*["<]([^">]*)[">]')
+# C++23 headers that a standard library may lack yet, and which have them.
+_NEWER_HEADERS = {'print': 'libstdc++ 14 and libc++ 17', 'generator': 'libstdc++ 14',
+                  'mdspan': 'libstdc++ 14 and libc++ 18', 'flat_map': 'libstdc++ 15 and libc++ 20',
+                  'flat_set': 'libstdc++ 15 and libc++ 20', 'spanstream': 'libstdc++ 12 and libc++ 20',
+                  'stdfloat': 'libstdc++ 13', 'text_encoding': 'libstdc++ 15'}
 
 
 class Session:
@@ -502,6 +507,11 @@ class Session:
             send, kind = transform(text, fresh=self._fresh, origin=origin, statement=True), 'stmt'
         line = self._file(send.text) if send.file else send.text
         output, result = self._send(line)
+        if kind == 'pp' and result == 'error' and 'file not found' in output:
+            m = _INCLUDE_NAME.match(stripped)
+            if m and m.group(1) in _NEWER_HEADERS:
+                self._note(f'[<{m.group(1)}> is C++23, in {_NEWER_HEADERS[m.group(1)]}: this clang-repl\'s '
+                           'standard library lacks it]')
         return self._after(text, [line], output, result, kind, again=again) or not self.batch
 
     def run_inputs(self, inputs, echo):

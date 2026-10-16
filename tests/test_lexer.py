@@ -258,7 +258,8 @@ def test_a_placed_expression_and_its_statement():
 def test_what_keeps_no_place():
     region = '#ifdef X\nint x;\n#endif'
     assert transform(region, origin=ORIGIN).text == '#line 7 "prog.cpp"\n  ' + region.replace('\n', '\n  ')
-    assert transform('#include <vector>', origin=ORIGIN) == ('#include <vector>', 'pp', False)
+    assert transform('#include <vector>') == ('#include <vector>', 'pp', False)
+    assert transform('#include <vector>', origin=ORIGIN) == ('#line 7 "prog.cpp"\n  #include <vector>', 'pp', True)
     send = transform('int a = \\\n  1;', origin=ORIGIN)   # a line splice: one line, as without an origin
     assert send == ('int a = 1;', 'stmt', False)
     assert transform('x', statement=True, fresh=fresh()).text == in_function('f1', 'x;')

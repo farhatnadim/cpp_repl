@@ -581,8 +581,11 @@ class Config:
         self.opt_level = {None: 0, '-O': 1, '-O0': 0, '-O1': 1, '-O2': 2, '-O3': 3,
                           '-Ofast': 3, '-Os': 2, '-Oz': 2, '-Og': 1}.get(opt, -1)
         self.flags = flags
+        # Inputs reach clang through files in the state directory, so the
+        # session's own directory is named for the quoted includes typed in.
+        self.cwd = cwd
         self.compiler_flags = ([self.std] + ([opt] if opt else []) + flags
-                               + ['-iquote', str(PRELUDE_DIR), '-DCPP_REPL=1'])
+                               + ['-iquote', str(PRELUDE_DIR), '-iquote', str(cwd), '-DCPP_REPL=1'])
 
         self.preludes = [CORE_PRELUDE] + ([] if options.no_std else [STD_PRELUDE])
         for p in self.profiles + tomls:
@@ -690,7 +693,8 @@ class Config:
 
     def cflags(self):
         """Flags to build a %save-cpp file with clang++ or g++."""
-        flags = [self.std] + ([self.opt] if self.opt else []) + self.flags + ['-I', str(PRELUDE_DIR)]
+        flags = ([self.std] + ([self.opt] if self.opt else []) + self.flags
+                 + ['-I', str(PRELUDE_DIR), '-iquote', str(self.cwd)])
         for h in self.preludes:
             flags += ['-I', str(h.parent)]
         return _dedupe(flags)

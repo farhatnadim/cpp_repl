@@ -6,6 +6,7 @@ It reads one input per line and answers:
   %lib PATH            an error naming PATH, as clang-repl does for a missing file
   %quit                exits
   #error TEXT          a parse error
+  #include <print>     the "file not found" of a header the standard library lacks
   printf("TEXT\\n");   TEXT
   say("TEXT")          TEXT and a newline       say_raw("TEXT")   TEXT alone
   crash()              dies of SIGSEGV          hang()            never answers
@@ -85,7 +86,10 @@ def main():
         m = re.fullmatch(r'#include "(.*)"', line)
         if m and os.path.isfile(m.group(1)):
             with open(m.group(1)) as f:
-                line = ' '.join(text for text in f.read().split('\n') if not text.startswith('#line '))
+                line = ' '.join(text.strip() for text in f.read().split('\n') if not text.startswith('#line '))
+        if line.startswith('#include <print>'):
+            out(f"input_line_{n}:1:10: fatal error: 'print' file not found\nerror: Parsing failed.\n")
+            continue
         m = re.match(r'printf\("(.*)\\n"\);', line)
         if m:
             out(m.group(1) + '\n')

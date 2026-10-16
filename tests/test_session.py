@@ -100,6 +100,22 @@ def test_a_declaration_without_its_semicolon_is_a_statement(tmp_path, monkeypatc
     assert Path(sent[len('#include "'):-1]).read_text() == '#line 1 "<input>"\nint nosemi = 5;\n'
 
 
+def test_a_header_the_library_lacks_is_explained(tmp_path, monkeypatch, made):
+    """#include <print> on a standard library without it: the error names
+    the input's line, through a placed file, and a note says which library
+    has the header. A directive that works is journaled through its file."""
+    s, stream = make(tmp_path, monkeypatch)
+    made.append(s)
+    assert s.run_input('#include <print>')
+    out = stream.getvalue()
+    assert "fatal error: 'print' file not found" in out
+    assert "[<print> is C++23, in libstdc++ 14 and libc++ 17: this clang-repl's standard library lacks it]" in out
+    assert s.run_input('#define ANSWER 42')
+    text, (sent,), kind = s.journal[-1]
+    assert (text, kind) == ('#define ANSWER 42', 'pp')
+    assert Path(sent[len('#include "'):-1]).read_text() == '#line 1 "<input>"\n#define ANSWER 42\n'
+
+
 def test_void_expressions(tmp_path, monkeypatch, made):
     s, stream = make(tmp_path, monkeypatch)
     made.append(s)

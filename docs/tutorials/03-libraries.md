@@ -1,6 +1,7 @@
 # Libraries and your project
 
 <!-- clang-repl: 23 -->
+<!-- requires: profile=eigen, profile=glm, command=cmake, header=zlib.h -->
 
 This walk points cpp-repl at libraries and at a project of your own: the
 built-in profiles, compiler flags, shared libraries, a build's

@@ -56,3 +56,10 @@ def test_tutorial_transcripts(path):
     if result.status == 'skipped':
         pytest.skip(result.report)
     assert result.status == 'ok', result.report
+
+
+def test_requirements_that_are_not_met_say_why():
+    assert check_tutorial.unmet(['command=no-such-command-here'], CLANG_REPL) == 'no no-such-command-here on PATH'
+    assert check_tutorial.unmet(['header=no/such/header.h'], CLANG_REPL).startswith('no no/such/header.h in ')
+    assert check_tutorial.unmet(['flavour=mint'], CLANG_REPL).startswith('a requirement is profile=')
+    assert check_tutorial.unmet([], CLANG_REPL) is None

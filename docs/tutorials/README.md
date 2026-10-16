@@ -29,7 +29,9 @@ comments in the Markdown, which GitHub does not show, say how:
 `<!-- check: session ARGS -->` for inputs typed at the prompt,
 `<!-- check: sh -->` for shell commands, `<!-- check: off -->` for what only
 a terminal shows (a crash's replay, Tab), and `<!-- file: NAME -->` for a
-file a tutorial uses. They were recorded with clang-repl 23.1.4 on Ubuntu
+file a tutorial uses. `<!-- requires: ... -->` names what a tutorial needs
+besides cpp-repl (a profile, a command, a header); without it, the tutorial
+is skipped. They were recorded with clang-repl 23.1.4 on Ubuntu
 24.04, and a run with another clang-repl major skips them.
 `make tutorials-update` rewrites the transcripts that differ from a run:
 read the diff before committing it.

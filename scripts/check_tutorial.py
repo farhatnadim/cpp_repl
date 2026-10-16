@@ -25,6 +25,10 @@ which GitHub does not show, say how each is checked:
   <!-- file: NAME -->          the fenced block after it is written to NAME.
   <!-- clang-repl: 23 -->      the clang-repl major the transcripts come from;
         run with another, the tutorial is skipped.
+  <!-- requires: profile=glm, command=cmake, header=zlib.h -->  what the
+        tutorial needs besides cpp-repl: a profile that configures, a command
+        on PATH, a header in /usr/include or /usr/local/include. Without it,
+        the tutorial is skipped.
 
 Everything runs in one temporary directory per tutorial, which links to the
 top-level entries of --root (the repository the tutorial is in). That
@@ -55,7 +59,7 @@ CHECKOUT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(CHECKOUT / 'src'))
 
 SKIPPED = 77
-MARKER = re.compile(r'^<!--\s*(check|file|clang-repl):\s*(.*?)\s*-->\s*$')
+MARKER = re.compile(r'^<!--\s*(check|file|clang-repl|requires):\s*(.*?)\s*-->\s*$')
 FENCE = re.compile(r'^(`{3,}|~{3,})')
 PROMPT = re.compile(r'^([\w+]+)> ')
 HEREDOC = re.compile(r"<<-?\s*(['\"]?)(\w+)\1")
@@ -144,6 +148,7 @@ class Tutorial:
     path: Path
     lines: list
     major: int = None
+    requires: list = field(default_factory=list)
     steps: list = field(default_factory=list)   # ('file', name, text), ('session', Session), ('sh', Block)
     errors: list = field(default_factory=list)
 
@@ -197,6 +202,8 @@ def read_tutorial(path):
                     t.major = int(value)
             elif kind == 'file':
                 pending_file = value
+            elif kind == 'requires':
+                t.requires += [r.strip() for r in value.split(',') if r.strip()]
             else:
                 words = shlex.split(value)
                 if words[:1] == ['session']:
@@ -414,6 +421,25 @@ class Result:
     report: str = ''
 
 
+def unmet(requires, clang_repl):
+    """Why a tutorial's requirements are not met here, or None."""
+    from cpp_repl.config import Config, ConfigError, Options
+    for item in requires:
+        kind, _, name = item.partition('=')
+        if kind == 'profile':
+            try:
+                Config(Options(profiles=[name], no_config=True, clang_repl=clang_repl), backend=False)
+            except ConfigError as e:
+                return str(e)
+        elif kind == 'command' and not shutil.which(name):
+            return f'no {name} on PATH'
+        elif kind == 'header' and not any(Path(d, name).is_file() for d in ('/usr/include', '/usr/local/include')):
+            return f'no {name} in /usr/include or /usr/local/include'
+        elif kind not in ('profile', 'command', 'header'):
+            return f'a requirement is profile=, command= or header=, not {item!r}'
+    return None
+
+
 def clang_repl_major(clang_repl):
     from cpp_repl.config import ConfigError, clang_repl_version, find_clang_repl
     try:
@@ -433,6 +459,9 @@ def check(path, root=None, cpp_repl=None, clang_repl=None, update=False):
         return Result(t.path, 'error', 'no clang-repl: set CPP_REPL_CLANG_REPL, or pass --clang-repl')
     if t.major is not None and major != t.major:
         return Result(t.path, 'skipped', f'recorded with clang-repl {t.major}, and this one is {major}')
+    reason = unmet(t.requires, clang_repl or os.environ.get('CPP_REPL_CLANG_REPL'))
+    if reason:
+        return Result(t.path, 'skipped', reason)
     root = Path(root or CHECKOUT).resolve()
     command = list(cpp_repl or [sys.executable, str(CHECKOUT / 'bin' / 'cpp-repl')])
     # A relative command names a path from here, not from the run's directory.

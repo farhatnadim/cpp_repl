@@ -175,6 +175,8 @@ A C++ source becomes inputs like this:
   initialised before `main()` too. Its `argc` and `argv` get stand-in values.
 - A `return` in `main()` runs as it is and ends the program with its value,
   as it does compiled: nothing after it runs, and `--batch` exits with it.
+  The files named after it do not run either, and the run names them:
+  `[main returned 0: more.repl not run]`.
 - Quoted includes next to the source are found. A `#pragma` stays with the
   statement after it. `CPP_REPL` is defined, so a source can tell where it
   runs.
@@ -232,7 +234,8 @@ cpp-repl --batch --json prog.cpp              # a JSON object per input
   inputs, `{"output": TEXT}` or `{"note": TEXT}` carry what else is written:
   the configuration's notes, the `cpp-repl.toml` read. The last line is
   `{"exit": N, "inputs": N, "failures": N, "skipped": N}`, `skipped` being
-  the inputs left unrun once the program ended or `--stop-on-error` stopped.
+  the inputs left unrun, those of later files included, once the program
+  ended or `--stop-on-error` stopped.
 - **The exit status is the program's:** what `main()` returned, the `N` of
   its `exit(N)`, or 128 + the signal that killed it (139 for a segfault, 134
   for `abort()` and for an exception nothing caught, which cpp-repl names:

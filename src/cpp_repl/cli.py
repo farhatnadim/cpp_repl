@@ -283,8 +283,9 @@ def _run(argv):
 
     status = None
     try:
-        for f in args.files:
+        for i, f in enumerate(args.files):
             if not session.run_inputs(inputs_from_file(f, skip=session.prelude_names), echo=True):
+                session.files_left_unrun(args.files[i + 1:])
                 break
         if interactive:
             from .ui import interact

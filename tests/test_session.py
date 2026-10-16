@@ -612,6 +612,30 @@ def test_batch_without_files_and_serve_with_them_say_so(tmp_path):
                           '--connect\n')
 
 
+def test_the_files_after_the_end_of_the_program_are_named(tmp_path):
+    """A return from main() ends the program, as it does compiled, so the
+    files after it never run: the run names them, and --json counts their
+    inputs as skipped. A final `return 0;` says nothing of its own."""
+    (tmp_path / 'prog.cpp').write_text('int main()\n{\n    say("ran");\n    return 0;\n}\n')
+    (tmp_path / 'more.repl').write_text('say("after");\nsay("again");\n')
+    env = dict(os.environ, CPP_REPL_CLANG_REPL=str(FAKE), NO_COLOR='1')
+
+    def run(*args):
+        return subprocess.run([sys.executable, str(CPP_REPL), '--no-config', '--batch', *args], cwd=tmp_path,
+                              env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=60)
+
+    done = run('prog.cpp', 'more.repl')
+    assert (done.returncode, done.stdout) == (0, 'c++> say("ran");\nran\nc++> return 0;\n'
+                                                 '[main returned 0: more.repl not run]\n')
+    records = [json.loads(line) for line in run('--json', 'prog.cpp', 'more.repl').stdout.splitlines()]
+    assert records[-2:] == [{'note': 'main returned 0: more.repl not run'},
+                            {'exit': 0, 'inputs': 2, 'failures': 0, 'skipped': 2}]
+    (tmp_path / 'prog.cpp').write_text('int main()\n{\n    say("ran");\n    return 3;\n}\n')
+    done = run('prog.cpp', 'more.repl')
+    assert done.returncode == 3
+    assert done.stdout.endswith('[main returned 3]\n[the program ended: more.repl not run]\n')
+
+
 def test_a_session_that_stays(tmp_path):
     """cpp-repl --serve SOCKET runs what cpp-repl --connect SOCKET sends, and
     the client exits with the run's status; %quit stops the server."""

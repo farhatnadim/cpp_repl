@@ -387,6 +387,8 @@ class Session:
         self.interrupted = 0     # inputs Ctrl-C stopped
         self.program_ends = 0    # inputs that ended the program: a return from main, exit(), a crash
         self.end_status = None   # the exit status the first of those stands for (see _status)
+        self.end_returned = False   # whether that first end was a return from main
+        self.stop_reason = None  # why run_inputs stopped a run, for the files left after it
 
     def restore(self, journal, reason, then='', note=True):
         """Replace the backend with a fresh one that has replayed journal.
@@ -507,7 +509,7 @@ class Session:
                 # The statement ended the program: it returned from main(),
                 # or an exception left it. A file's final `return 0;` goes
                 # without saying; anything else is said.
-                self._program_ended(self.returned)
+                self._program_ended(self.returned, returned=self.thrown is None)
                 if self.thrown is not None:
                     self.out.failed('exception')
                     self.failures += 1
@@ -550,11 +552,12 @@ class Session:
             self.restore(self.journal, f'that input ran past {self.cfg.options.timeout:g} s')
         return not self.batch or result not in ('dead', 'interrupted')
 
-    def _program_ended(self, status):
+    def _program_ended(self, status, returned=False):
         """The program is over, as the compiled one would be: main returned,
         exit() was called, or it crashed. The first end's status counts."""
         if self.end_status is None:
             self.end_status = status
+            self.end_returned = returned
         self.program_ends += 1
 
     def _status(self):
@@ -738,18 +741,20 @@ class Session:
                     self._echo_input(text)
                 failures, ends = self.failures, self.program_ends
                 if not self.run_input(text) or self.program_ends > ends:
-                    self._left_unrun(len(inputs) - i - 1, 'the program ended' if self.program_ends > ends
-                                     else 'the run stopped')
+                    self.stop_reason = 'the program ended' if self.program_ends > ends else 'the run stopped'
+                    self._left_unrun(len(inputs) - i - 1, self.stop_reason)
                     return False
                 if self.failures > failures and self.cfg.options.stop_on_error:
-                    self._left_unrun(len(inputs) - i - 1, 'stopped at the first failure')
+                    self.stop_reason = 'stopped at the first failure'
+                    self._left_unrun(len(inputs) - i - 1, self.stop_reason)
                     return False
             finally:
                 self.out.end()
             if self.out.gone:
                 # The input was read to its end, so the journal and clang-repl
                 # agree; nobody is left to run the rest for.
-                self._left_unrun(len(inputs) - i - 1, 'the client went away')
+                self.stop_reason = 'the client went away'
+                self._left_unrun(len(inputs) - i - 1, self.stop_reason)
                 return False
         return True
 
@@ -758,6 +763,17 @@ class Session:
         self.skipped += left
         if left:
             self._note(f'[{why}: {left} input{"s" if left != 1 else ""} not run]')
+
+    def files_left_unrun(self, files):
+        """Say, and count for --json, the files after the one whose run
+        stopped: a return from main ends the program, as it does compiled,
+        and a file run after it would run in a program that is over."""
+        if not files:
+            return
+        self.skipped += sum(len(inputs_from_file(f, skip=self.prelude_names)) for f in files)
+        # A file's final `return 0;` goes without saying (_after), so it is said here.
+        why = 'main returned 0' if self.end_returned and self.end_status == 0 else self.stop_reason
+        self._note(f'[{why}: {", ".join(map(str, files))} not run]')
 
     def _echo_input(self, text):
         prompt, more = self.cfg.prompt, self.cfg.more

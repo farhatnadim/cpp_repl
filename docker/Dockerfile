@@ -5,7 +5,7 @@
 # toolchain does.
 #
 #   base      ubuntu:24.04 with Python, the UI packages, libstdc++ 13, Eigen 3.4,
-#             glm, spdlog and CMake
+#             glm, spdlog, CMake and make
 #   apt      + clang, clang-repl and libc++ from apt.llvm.org (LLVM_MAJOR, default 23)
 #   bench     + libomp, g++-13, a venv with NumPy (OpenBLAS wheel), threadpoolctl,
 #             matplotlib, and Eigen 5.0.1 in /opt for the tagged benchmark run
@@ -41,12 +41,14 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # libstdc++-13-dev and libgcc-13-dev are the C++ library clang compiles
 # against; libpython3.12t64 is what host-built libraries linking Python need.
 # Eigen, glm and spdlog are the libraries the tests load (the eigen and glm
-# profiles, the add-library probe, tutorial 03), and cmake resolves the
-# probe's CMake packages and builds tutorial 03's project.
+# profiles, the add-library probe, tutorial 03), and cmake, with make as its
+# generator's build program, resolves the probe's CMake packages and builds
+# tutorial 03's project.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       ca-certificates \
       cmake \
+      make \
       pkg-config \
       python3 \
       python3-prompt-toolkit \

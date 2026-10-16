@@ -89,8 +89,10 @@ class Names:
         if self.words is None:
             self._thread.join()
             self.words = set(self._found or ())
+            # The commands, %help included, and the prelude's own names; a
+            # profile's (tree, with -p usd) come from its prelude's header.
             self.words.update(re.findall(r'%[\w-]+', HELP))
-            self.words.update(('show', 'keep', 'tree'))
+            self.words.update(('%help', 'show', 'keep'))
         names = set(self.words)
         for entry in self.session.journal:
             names.update(re.findall(r'[A-Za-z_]\w*', entry.text))

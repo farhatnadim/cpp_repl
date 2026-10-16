@@ -221,9 +221,10 @@ class Backend:
                 emit(self.buffer)
                 self.buffer = b''
                 return ''.join(pieces), False
-            if _STUCK in chunk and stuck_by is None:
-                stuck_by = time.monotonic() + STUCK_GRACE
             self.buffer += chunk
+            # The line may arrive in pieces: look where the chunk joined the buffer.
+            if stuck_by is None and _STUCK in self.buffer[-(len(chunk) + len(_STUCK)):]:
+                stuck_by = time.monotonic() + STUCK_GRACE
 
     def kill(self):
         if self.proc.poll() is None:

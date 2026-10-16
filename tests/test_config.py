@@ -310,7 +310,11 @@ def test_docker_command(tmp_path, monkeypatch):
     (libdir / 'libdemo.so').write_bytes(b'')
     extra = tmp_path / 'data'
     extra.mkdir()
+    linked = tmp_path / 'linked'   # a -l library's directory, through LIBRARY_PATH
+    linked.mkdir()
     monkeypatch.delenv('CPP_REPL_IMAGE', raising=False)
+    monkeypatch.setenv('LIBRARY_PATH', str(linked))
+    monkeypatch.setenv('PXR_ROOT', '/opt/usd')
     options = Options(cwd=tmp_path / 'work', no_config=True, libs=[str(libdir / 'libdemo.so')],
                       flags=['-I', '/usr/include/eigen3', '-O2'])
     (tmp_path / 'work').mkdir()
@@ -322,6 +326,9 @@ def test_docker_command(tmp_path, monkeypatch):
     assert f'{tmp_path / "work"}:{tmp_path / "work"}' in volumes
     assert f'{CHECKOUT}:{CHECKOUT}:ro' in volumes
     assert f'{libdir}:{libdir}:ro' in volumes and f'{extra}:{extra}:ro' in volumes
+    assert f'{linked}:{linked}:ro' in volumes
+    forwarded = [cmd[i + 1] for i, a in enumerate(cmd) if a == '-e']
+    assert 'PXR_ROOT' in forwarded and 'LIBRARY_PATH' in forwarded and 'USD_ROOT' not in forwarded
     assert not any(v.startswith('/usr/include') for v in volumes)   # the image has its own
     assert cmd[cmd.index(image) + 1:] == ['python3', str(CHECKOUT / 'bin' / 'cpp-repl'), '-O2', '--batch', 'x.cpp']
     assert ['--user', f'{os.getuid()}:{os.getgid()}'] == cmd[cmd.index('--user'):cmd.index('--user') + 2]
@@ -363,7 +370,7 @@ def test_docker_runs_where_cpp_repl_runs(tmp_path, monkeypatch):
 @pytest.mark.parametrize('image, expected', [
     ('proj-opencv:llvm23', 'docker build -t proj-opencv:llvm23 DIR'),
     ('cpp-repl:llvm-snapshot', 'docker-snapshot'),
-    ('cpp-repl:llvm19', '--target apt --build-arg LLVM_MAJOR=19 -t cpp-repl:llvm19'),
+    ('cpp-repl:llvm19', '--target apt --build-arg LLVM_MAJOR=19 --build-arg DOCKERFILE_SHA='),
 ])
 def test_docker_builds_only_its_own_images(image, expected, tmp_path, monkeypatch, capsys):
     """A missing image: cpp-repl offers to build its own clang-repl images,

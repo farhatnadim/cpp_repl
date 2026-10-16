@@ -218,6 +218,28 @@ def test_an_uncaught_exception_ends_the_program(tmp_path, monkeypatch, made):
     assert stream.getvalue().endswith('still here\n')
 
 
+def test_a_stuck_line_arriving_in_pieces_is_seen(tmp_path, monkeypatch, made):
+    """clang's "too many errors emitted" may reach the backend split across
+    reads (the fake writes a byte at a time): it is still the sign that
+    clang-repl 18 is stuck, and the session is rebuilt."""
+    s, stream = make(tmp_path, monkeypatch, batch=False, FAKE_SPLIT='1')
+    made.append(s)
+    assert s.run_input('int a = 1;')
+    assert s.run_input('too_many();') is True
+    assert '[clang-repl got stuck on that input: restored 1 input]' in stream.getvalue()
+    assert s.run_input('say("alive");')
+    assert stream.getvalue().endswith('alive\n')
+
+
+def test_tab_offers_the_commands_and_the_prelude_s_names(tmp_path, monkeypatch, made):
+    from cpp_repl.ui import Names
+    s, stream = make(tmp_path, monkeypatch, batch=False)
+    made.append(s)
+    names = Names(s)
+    assert '%help' in names.matching('%he') and 'show' in names.matching('sho')
+    assert 'tree' not in names.matching('tre')   # the usd profile's, offered with -p usd only
+
+
 def test_an_error_limit_asked_for_is_no_hang(tmp_path, monkeypatch, made):
     """With -ferror-limit=N, clang prints "too many errors emitted" and
     clang-repl goes on to the next input. Only a clang-repl that then

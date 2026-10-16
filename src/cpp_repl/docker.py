@@ -44,6 +44,7 @@ def mounts(cfg, extra, files):
             candidates.append(Path(flags[i + 1]))
     candidates += [lib.parent for lib in cfg.libs] + [h.parent for h in cfg.preludes] + cfg.mounts
     candidates += cfg.link_dirs
+    candidates += [Path(d) for d in os.environ.get('LIBRARY_PATH', '').split(os.pathsep) if d]   # for -l inside
     if cfg.compile_commands:
         candidates.append(cfg.compile_commands.parent)
     candidates += [Path(f).resolve().parent for f in files]
@@ -85,7 +86,9 @@ def docker_command(argv, args, options):
     cmd = ['docker', 'run', '--rm', '--init', '-i'] + (['-t'] if tty else [])
     cmd += ['--user', f'{os.getuid()}:{os.getgid()}', '--detach-keys', 'ctrl-^,ctrl-^',
             '-e', f'HOME={home}', '-e', f'XDG_STATE_HOME={state.parent}', '-e', 'PYTHONDONTWRITEBYTECODE=1']
-    for name in ('TERM', 'NO_COLOR', 'COLUMNS', 'LINES', 'USD_ROOT', 'EIGEN_ROOT', 'GLM_ROOT'):
+    # The terminal's, and what the profiles and -l read.
+    for name in ('TERM', 'NO_COLOR', 'COLUMNS', 'LINES', 'USD_ROOT', 'PXR_ROOT', 'EIGEN_ROOT', 'EIGEN3_INCLUDE_DIR',
+                 'GLM_ROOT', 'LIBRARY_PATH'):
         if name in os.environ:
             cmd += ['-e', name]
     # Each directory is mounted once (Docker refuses a second mount at the
@@ -129,9 +132,9 @@ def run_in_docker(argv, args, options):
     probe = subprocess.run(['docker', 'image', 'inspect', '--format',
                             '{{ index .Config.Labels "io.cpp-repl.dockerfile-sha256" }}', image],
                            capture_output=True, text=True)
+    current = hashlib.sha256((CHECKOUT / 'docker' / 'Dockerfile').read_bytes()).hexdigest()
     if probe.returncode == 0:
         built_from = probe.stdout.strip()
-        current = hashlib.sha256((CHECKOUT / 'docker' / 'Dockerfile').read_bytes()).hexdigest()
         if built_from not in ('', 'unknown', '<no value>', current):
             sys.stderr.write(f'cpp-repl: {image} was built from an older docker/Dockerfile; '
                              'rebuild it with: make docker\n')
@@ -143,8 +146,10 @@ def run_in_docker(argv, args, options):
             # that build would put in it.
             sys.stderr.write(f'cpp-repl: there is no image {image}; build it first:\n  {_how_to_build(image)}\n')
             return 2
+        # Labelled with the Dockerfile's hash, as make docker labels it, so
+        # that a later Dockerfile is noticed.
         build = ['docker', 'build', '--target', 'apt', '--build-arg', f'LLVM_MAJOR={m.group(1)}',
-                 '-t', image, str(CHECKOUT / 'docker')]
+                 '--build-arg', f'DOCKERFILE_SHA={current}', '-t', image, str(CHECKOUT / 'docker')]
         if sys.stdin.isatty() and sys.stdout.isatty():
             answer = input(f'cpp-repl: there is no image {image}. Build it now (a few minutes)? [y/N] ')
             if answer.strip().lower() not in ('y', 'yes'):

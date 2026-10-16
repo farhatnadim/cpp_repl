@@ -206,7 +206,7 @@ def test_config_without_a_backend(tmp_path, monkeypatch):
     assert '-iquote' in cfg.cflags() and str(sub) in cfg.cflags()
     assert cfg.preludes == [CORE_PRELUDE, STD_PRELUDE]
     assert cfg.prompt == 'c++> ' and cfg.more == '...> '
-    assert cfg.prologue[-1] == 'setvbuf(stdout, nullptr, _IONBF, 0);'
+    assert cfg.prologue[-2:] == ['setvbuf(stdout, nullptr, _IONBF, 0);', 'std::set_terminate(repl::terminated);']
     assert Config(Options(cwd=sub, no_config=True, no_std=True), backend=False).preludes == [CORE_PRELUDE]
 
 

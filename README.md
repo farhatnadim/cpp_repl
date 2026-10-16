@@ -649,8 +649,8 @@ module file in any of them, and cpp-repl says so.
 - **An input with a backslash line splice outside a directive goes as one
   line,** and so does `%timeit`'s, and its errors name `input_line_N`.
 - **An exception thrown by a file-scope declaration's initialiser** (`auto
-  x = parse("bad");`) still ends the session, which is rebuilt; one thrown
-  by a statement is caught and named, unless the statement starts with a
+  x = parse("bad");`) is named, on one line, and still ends the session,
+  which is rebuilt; one thrown by a statement is caught and named, unless the statement starts with a
   macro's name (`TF_DEFINE_PRIVATE_TOKENS(...)`), which runs at file scope
   since it may declare something. Likewise a line that reads like a
   diagnostic (`fatal error: …`) printed by such an initialiser, or by a

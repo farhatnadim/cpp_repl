@@ -118,6 +118,24 @@ def test_a_header_the_library_lacks_is_explained(tmp_path, monkeypatch, made):
     assert Path(sent[len('#include "'):-1]).read_text() == '#line 1 "<input>"\n#define ANSWER 42\n'
 
 
+def test_what_the_program_prints_is_never_a_diagnostic(tmp_path, monkeypatch, made):
+    """A line of the program's own output that reads like clang's ("fatal
+    error: ...", "JIT session error: ...") comes after the start mark, so it
+    is output: the input is journaled, nothing is restored or run again."""
+    s, stream = make(tmp_path, monkeypatch)
+    made.append(s)
+    assert s.run_input('say("fatal error: not really");')
+    assert s.run_input('say("JIT session error: not really");')
+    assert stream.getvalue() == 'fatal error: not really\nJIT session error: not really\n'
+    assert [e.text for e in s.journal] == ['say("fatal error: not really");', 'say("JIT session error: not really");']
+    assert s.failures == 0
+    # The compiler's own lines come before any statement runs, and still count.
+    outcome = backend_module.outcome
+    assert outcome('fatal error: x\nerror: Parsing failed.\n') == 'error'
+    assert outcome('JIT session error: Symbols not found: [ f ]\n' + backend_module.START_MARK + 'fine\n') == 'link'
+    assert outcome(backend_module.START_MARK + 'fatal error: x\nerror: Parsing failed.\n') == 'ok'
+
+
 def test_void_expressions(tmp_path, monkeypatch, made):
     s, stream = make(tmp_path, monkeypatch)
     made.append(s)

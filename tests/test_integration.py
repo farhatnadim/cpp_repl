@@ -413,6 +413,19 @@ def test_the_exit_status_is_the_program_s(tmp_path, end, status):
     assert 'before' in result.stdout and 'after' not in result.stdout
 
 
+def test_what_the_program_prints_is_never_a_diagnostic(tmp_path):
+    """Output that reads like clang's is the program's: the input is ok and
+    journaled, and a "JIT session error" line restores nothing."""
+    script = tmp_path / 'f.repl'
+    script.write_text('std::cout << "fatal error: not really\\n";\nstd::cout << "JIT session error: not really\\n";\n'
+                      'int kept = 5;\nkept\n')
+    result = run_cpp_repl(['--no-config', '--batch', '--json', str(script)], tmp_path)
+    records = [json.loads(line) for line in result.stdout.splitlines()]
+    assert [r['status'] for r in records if 'input' in r] == ['ok'] * 4, result.stdout
+    assert records[1]['output'] == 'JIT session error: not really\n' and 'notes' not in records[1]
+    assert records[-1] == {'exit': 0, 'inputs': 4, 'failures': 0, 'skipped': 0}
+
+
 @pytest.mark.parametrize('flag, any_text', [('-fno-exceptions', 'any(int)'), ('-fno-rtti', 'any(a value)')])
 def test_a_project_without_exceptions_or_rtti(tmp_path, flag, any_text):
     """Both flags are common in projects, and compile_commands.json keeps

@@ -66,6 +66,8 @@ _END_MARK = re.compile('\x1d(!?)(-?\\d+)([^\x1d]*)\x1d\n?')
 # What repl::finish writes for every statement that ran in a function: how
 # long the run took, in nanoseconds after a '~', between two marks.
 _RUN_MARK = re.compile('\x1d~(\\d+)\x1d\n?')
+# What repl::started writes as a statement begins to run (backend.START_MARK).
+_START_MARK = re.compile('\x1d>\x1d\n?')
 # A line of clang's diagnostics: a header, clang-repl's verdict, an include
 # chain, or a source line or carets under a header. The echo holds these
 # back until the program's own output starts, so that an error cpp-repl
@@ -349,7 +351,7 @@ class Session:
         """Write backend output, its diagnostics filtered and the prelude's
         marks taken out, painted when colour is on."""
         text = _UNPRINTABLE.sub(self._unprintable, self.diagnostics.feed(text))
-        text = _END_MARK.sub(self._returned, _RUN_MARK.sub(self._ran, text))
+        text = _END_MARK.sub(self._returned, _RUN_MARK.sub(self._ran, _START_MARK.sub('', text)))
         self.out.write(self.painter.feed(text) if self.painter else text)
 
     def _ran(self, m):

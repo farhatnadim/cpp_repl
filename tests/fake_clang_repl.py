@@ -21,7 +21,8 @@ It reads one input per line and answers:
   ...repl::print_expr(((N), ...))...   prints N; with void_call() for N, the void mark
   ...return N; ... repl::finish(...)   the end mark around N, as a statement that returned from main
   ...throw_it(); ... repl::finish(...) the end mark of an uncaught std::runtime_error, "boom"
-  ...repl::finish(...)   after the output and before an end mark, the run mark: the statement ran 1.5 µs
+  ...repl::finish(...)   the start mark before the output, then after it and before an end mark the run
+                       mark: the statement ran 1.5 µs
   import NAME;         "module 'NAME' not found"
   #include "FILE"      FILE's lines but #line directives, joined into one, and answered as above
 anything else is silently accepted.
@@ -93,6 +94,7 @@ def main():
                 line = ' '.join(text.strip() for text in f.read().split('\n') if not text.startswith('#line '))
         # What repl::finish writes after a statement that ran in a function.
         mark = '\x1d~1500\x1d\n' if 'repl::finish(' in line else ''
+        start = '\x1d>\x1d\n' if mark else ''   # the statement is about to run: what follows is its own
         if line.startswith('#include <print>'):
             out(f"input_line_{n}:1:10: fatal error: 'print' file not found\nerror: Parsing failed.\n")
             continue
@@ -102,23 +104,25 @@ def main():
             continue
         m = re.match(r'printf\("(.*)\\n"\);', line)
         if m:
-            out(m.group(1) + '\n' + mark)
+            out(start + m.group(1) + '\n' + mark)
             continue
         m = re.search(r'say_raw\("(.*?)"\)', line)
         if m:
-            out(m.group(1) + mark)
+            out(start + m.group(1) + mark)
             continue
         m = re.search(r'say\("(.*?)"\)', line)
         if m:
-            out(m.group(1) + '\n' + mark)
+            out(start + m.group(1) + '\n' + mark)
             continue
         if 'crash()' in line:
+            out(start)
             os.kill(os.getpid(), signal.SIGSEGV)
         m = re.search(r'\bexit\((\d+)\)', line)
         if m:
-            sys.stdout.flush()
+            out(start)
             os._exit(int(m.group(1)))
         if 'hang()' in line:
+            out(start)
             while True:
                 time.sleep(1)
         if 'link_fail()' in line:
@@ -153,18 +157,18 @@ def main():
         if m:
             expr = m.group(1).strip()
             if expr == 'void_call()':
-                out('\x1e' + mark)
+                out(start + '\x1e' + mark)
             elif re.fullmatch(r'-?\d+', expr):
-                out(expr + '\n' + mark)
+                out(start + expr + '\n' + mark)
             else:
-                out(mark)
+                out(start + mark)
             continue
         m = re.search(r'\breturn (-?\d+);', line) if mark else None
         if m:
-            out(f'{mark}\x1d{m.group(1)}\x1d\n')
+            out(f'{start}{mark}\x1d{m.group(1)}\x1d\n')
             continue
         if 'throw_it()' in line and mark:
-            out(mark + '\x1d!134std::runtime_error: boom\x1d\n')
+            out(start + mark + '\x1d!134std::runtime_error: boom\x1d\n')
             continue
         m = re.match(r'(?:int|double|struct) (\w+)\b', line)
         if m:
@@ -173,7 +177,7 @@ def main():
             else:
                 declared.add(m.group(1))
             continue
-        out(mark)
+        out(start + mark)
 
 
 if __name__ == '__main__':

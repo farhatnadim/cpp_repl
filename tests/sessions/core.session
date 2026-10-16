@@ -215,3 +215,5 @@ c++> struct Foo { int x = 2; };
 c++> Foo *fp
 c++> fp == nullptr
 true
+c++> std::cout << "fatal error: not really\n";
+fatal error: not really

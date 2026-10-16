@@ -621,19 +621,20 @@ void print_expr(printer<Tag>)
 // A statement that does not run at top level (control flow, a lambda, a bare
 // expression, an expression statement) runs as the body of a function of its
 // own:
-//   repl::ended cpp_repl_N() { try { STATEMENT } catch (...) { return repl::uncaught(); } return {}; }
+//   repl::ended cpp_repl_N() { repl::started(); try { STATEMENT } catch (...) { return repl::uncaught(); } return {}; }
 //   repl::finish(repl::timed(cpp_repl_N));
-// A `return EXPR;` inside it, as in main()'s `if (bad) return 1;`, converts
-// EXPR to the status main() would have returned. An exception that leaves the
-// statement would otherwise end the program through std::terminate(), and the
-// session with it: uncaught() names it and ends the program as abort() would,
-// with status 134, what a shell reports for the compiled program. timed()
-// times the call. finish() writes how long the statement ran between two end
-// marks, and the status between two more when it ended the program; cpp-repl
-// then ends the program as the compiled one would: --batch exits with the
-// status, and the prompt says so. Nothing is rewritten and no diagnostic is
-// turned off, so a lambda inside the statement that falls off its end still
-// warns.
+// started() marks where the statement's own output begins: what clang-repl
+// printed before it is the compiler's. A `return EXPR;` inside the statement,
+// as in main()'s `if (bad) return 1;`, converts EXPR to the status main()
+// would have returned. An exception that leaves the statement would otherwise
+// end the program through std::terminate(), and the session with it:
+// uncaught() names it and ends the program as abort() would, with status 134,
+// what a shell reports for the compiled program. timed() times the call.
+// finish() writes how long the statement ran between two end marks, and the
+// status between two more when it ended the program; cpp-repl then ends the
+// program as the compiled one would: --batch exits with the status, and the
+// prompt says so. Nothing is rewritten and no diagnostic is turned off, so a
+// lambda inside the statement that falls off its end still warns.
 struct ended {
   std::optional<int> status;        // main's return value, if the statement returned
   std::string thrown;               // what an uncaught exception was, if one ended it
@@ -657,6 +658,16 @@ inline ended timed(ended (*statement)())
 
 inline constexpr char end_mark = '\x1d';
 inline constexpr int abort_status = 134;   // 128 + SIGABRT
+
+// Written just before the statement runs, through stdout itself. What
+// clang-repl printed before it is the compiler's: a diagnostic, a link error.
+// What follows is the program's own, so a line of output that reads like a
+// diagnostic ("fatal error: ...") is never taken for one.
+inline void started()
+{
+  std::fputs("\x1d>\x1d\n", stdout);
+  std::fflush(stdout);
+}
 
 // Inside a handler: what the exception being handled is, on one line. With
 // -fno-exceptions the wrapper has no handler and nothing calls this; it is

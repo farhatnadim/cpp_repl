@@ -48,10 +48,17 @@ def plain(text):
     return _ANSI.sub('', text)
 
 
+# What repl::started() writes just before a statement runs: the compiler's
+# text ends there and the program's begins.
+START_MARK = '\x1d>\x1d\n'
+
+
 def outcome(output):
     """'ok', 'error' (it did not compile) or 'link' (it compiled but did not
-    link, which leaves clang-repl unreliable)."""
-    text = plain(output)
+    link, which leaves clang-repl unreliable). Only what came before the
+    statement ran counts: a line the program prints that reads like a
+    diagnostic is the program's."""
+    text = plain(output).partition(START_MARK)[0]
     if _LINK_FAILED.search(text):
         return 'link'
     if _PARSE_FAILED.search(text):

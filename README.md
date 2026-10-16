@@ -506,7 +506,10 @@ and cpp-repl says so.
   line,** and so does `%timeit`'s, and its errors name `input_line_N`.
 - **An exception thrown by a file-scope declaration's initialiser** (`auto
   x = parse("bad");`) still ends the session, which is rebuilt; one thrown
-  by a statement is caught and named.
+  by a statement is caught and named. Likewise a line that reads like a
+  diagnostic (`fatal error: …`) printed by such an initialiser, or by a
+  header as it loads, is taken for clang's; printed by a statement, it is
+  output.
 - **Startup takes about 2 s,** or 1.3 s with `--no-std`, which leaves out
   the standard library prelude. A profile adds its headers: Eigen about
   1 s, OpenUSD about 3 s. Docker adds about 0.2 s.

@@ -89,10 +89,16 @@ agents, and the Claude Code plugin, each in a few minutes.
 Linux, Python 3.11 or newer, and either clang-repl 23 or newer, or Docker.
 
 ```sh
-uv tool install cpp-repl     # or pipx install cpp-repl, or pip install cpp-repl
+WHEEL=https://github.com/farhatnadim/cpp_repl/releases/download/v0.2.0/cpp_repl-0.2.0-py3-none-any.whl
+pip install $WHEEL           # the newest release's wheel; pipx install $WHEEL and uv tool install $WHEEL do the same
 cpp-repl                     # the newest clang-repl on PATH or in /usr/lib/llvm-N/bin: 23 or newer (apt.llvm.org: clang-23, clang-tools-23)
 cpp-repl --docker            # or, without a clang-repl: in an image with clang-repl 23 from apt.llvm.org, which it offers to build (about a minute)
 ```
+
+Each [release](https://github.com/farhatnadim/cpp_repl/releases) carries the
+wheel and the sdist. [docs/platforms.md](docs/platforms.md) says where
+cpp-repl runs, and `scripts/smoke.sh` is the first test of a release on a
+machine.
 
 From a clone, `bin/cpp-repl` runs the checkout as it is, `make docker` builds
 the image and `bin/cpp-repl-docker` runs in it; `pip install -e .` puts that

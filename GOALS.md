@@ -34,5 +34,6 @@ from `openusd-tutorial/repl/usd-repl`.
 - [x] The way changes land (2026-10-16): every bug, feature and task is an issue on the project board (github.com/users/farhatnadim/projects/18); main takes pull requests only; `make check` before one, and `.github/workflows/check.yml` runs the suite again on the pull request, inside cpp-repl:llvm23 (`make check-docker`)
 - [x] v0.1.0: the initial release, a tag on main with a GitHub release (2026-10-16)
 - [ ] A Jupyter kernel
-- [ ] PyPI: a tag publishes the sdist and the wheel through trusted publishing (`release.yml`, 2026-10-17); the first tag, v0.2.0, makes `uv tool install cpp-repl` live
+- [ ] PyPI: `release.yml` publishes through trusted publishing once the repository variable `PYPI_PUBLISH` is true and pypi.org has the pending publisher; until then a release is the GitHub release's wheel
+- [x] v0.2.0: a GitHub release with the wheel, for a first test on Ubuntu, Windows and macOS (`scripts/smoke.sh`, `docs/platforms.md`; 2026-10-17)
 - [x] CI tracks clang-repl: `track.yml` builds the snapshot and release images weekly, runs the suite and the probes, diffs the verdicts against the checked-in results and files an issue on a change; `LLVM_RELEASE` in `config.py` is the one source; the README's compat table is generated and checked (2026-10-17)

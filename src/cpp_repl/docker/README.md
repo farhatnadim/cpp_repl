@@ -1,9 +1,9 @@
 # Docker images
 
 `Dockerfile` holds the toolchain images cpp-repl runs in. The images contain no
-cpp-repl code: `cpp-repl --docker` mounts the checkout at its own path,
-read-only unless it is the working directory, so an image only changes when
-the toolchain does.
+cpp-repl code: `cpp-repl --docker` mounts the installed package, or the
+checkout it runs from, at its own path, read-only unless it is the working
+directory, so an image only changes when the toolchain does.
 
 | Target | Tag | What it adds |
 | --- | --- | --- |
@@ -20,14 +20,16 @@ ref) and `clang-repl --version`.
 ## Building
 
 The directory is the whole build context; nothing is copied into the images.
+It ships inside the package, so `cpp-repl --docker` from an install builds
+`cpp-repl:llvmN` itself and prints the command for the other images.
 
 ```sh
-SHA=$(sha256sum docker/Dockerfile | cut -d' ' -f1)
-docker build --target apt      --build-arg DOCKERFILE_SHA=$SHA -t cpp-repl:llvm23        docker/
-docker build --target bench    --build-arg DOCKERFILE_SHA=$SHA -t cpp-repl:bench-llvm23  docker/
-docker build --target snapshot --build-arg DOCKERFILE_SHA=$SHA -t cpp-repl:llvm-snapshot docker/
+SHA=$(sha256sum src/cpp_repl/docker/Dockerfile | cut -d' ' -f1)
+docker build --target apt      --build-arg DOCKERFILE_SHA=$SHA -t cpp-repl:llvm23        src/cpp_repl/docker/
+docker build --target bench    --build-arg DOCKERFILE_SHA=$SHA -t cpp-repl:bench-llvm23  src/cpp_repl/docker/
+docker build --target snapshot --build-arg DOCKERFILE_SHA=$SHA -t cpp-repl:llvm-snapshot src/cpp_repl/docker/
 docker build --target src      --build-arg DOCKERFILE_SHA=$SHA --build-arg LLVM_REF=llvmorg-23.1.3 \
-             -t cpp-repl:llvm-src-llvmorg-23.1.3 docker/
+             -t cpp-repl:llvm-src-llvmorg-23.1.3 src/cpp_repl/docker/
 ```
 
 `make docker`, `make docker-bench`, `make docker-snapshot` and `make docker-src`

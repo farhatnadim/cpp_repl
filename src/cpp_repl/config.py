@@ -36,6 +36,8 @@ PROMPT = 'c++> '
 # The oldest clang-repl cpp-repl runs: the precompiled preludes need 23
 # (pch.py), and so do OpenUSD's headers with TBB 2020 (profiles/usd).
 MIN_VERSION = (23, 0, 0)
+# The image cpp-repl --docker runs in when none is named.
+DEFAULT_IMAGE = 'cpp-repl:llvm23'
 
 
 def default_std(version):

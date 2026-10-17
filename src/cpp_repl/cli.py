@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 from . import __version__
-from .config import Config, ConfigError, Options, builtin_profiles
+from .config import DEFAULT_IMAGE, Config, ConfigError, Options, builtin_profiles
 from .lexer import Origin
 from .painter import Painter
 from .session import OUT, JsonOutput, Session, SessionError
@@ -139,7 +139,7 @@ def make_parser():
     docker = parser.add_argument_group('Docker')
     docker.add_argument('--docker', action='store_true',
                         help='run in a Docker image with the newest clang-repl')
-    docker.add_argument('--image', help='the image (default: $CPP_REPL_IMAGE, then cpp-repl:llvm23)')
+    docker.add_argument('--image', help=f'the image (default: $CPP_REPL_IMAGE, then {DEFAULT_IMAGE})')
     docker.add_argument('--mount', action='append', default=[], metavar='DIR',
                         help='mount another directory, read-only; repeatable')
     docker.add_argument('--dry-run', action='store_true',

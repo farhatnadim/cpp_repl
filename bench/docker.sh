@@ -18,7 +18,7 @@ repo=$(dirname "$here")
 image=${BENCH_IMAGE:-cpp-repl:bench-llvm23}
 
 if ! docker image inspect "$image" >/dev/null 2>&1; then
-  echo "bench/docker.sh: no image $image; build the bench target of docker/Dockerfile first" >&2
+  echo "bench/docker.sh: no image $image; run make docker-bench first" >&2
   exit 2
 fi
 image_id=$(docker image inspect --format '{{.Id}}' "$image")

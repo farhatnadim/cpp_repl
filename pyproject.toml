@@ -1,21 +1,25 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "cpp-repl"
-version = "0.1.0"
+dynamic = ["version"]
 description = "A C++ REPL on top of clang-repl: whole blocks, printed values, crash recovery, profiles for your libraries"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{name = "Nadim Farhat"}]
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["prompt_toolkit>=3.0", "pygments>=2.10"]
 classifiers = [
     "Programming Language :: C++",
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Operating System :: POSIX :: Linux",
+    "Environment :: Console",
     "Topic :: Software Development :: Interpreters",
 ]
 
@@ -25,18 +29,25 @@ Repository = "https://github.com/farhatnadim/cpp_repl"
 Issues = "https://github.com/farhatnadim/cpp_repl/issues"
 
 [project.optional-dependencies]
-ui = ["prompt_toolkit>=3.0", "pygments>=2.10"]
 bench = ["numpy", "threadpoolctl", "matplotlib"]
 test = ["pytest>=7"]
+
+[dependency-groups]
+dev = ["pytest>=7"]
 
 [project.scripts]
 cpp-repl = "cpp_repl.cli:main"
 
+# The version lives in src/cpp_repl/__init__.py, which bin/cpp-repl reads uninstalled.
+[tool.setuptools.dynamic]
+version = {attr = "cpp_repl.__version__"}
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# Every non-Python file the package reads; tests/test_package.py checks the list.
 [tool.setuptools.package-data]
-cpp_repl = ["prelude/*.h", "profiles/*/*.h"]
+cpp_repl = ["prelude/*.h", "profiles/*/*.h", "docker/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

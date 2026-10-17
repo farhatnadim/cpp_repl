@@ -327,7 +327,8 @@ def test_split_compiler_flags():
 def test_docker_command(tmp_path, monkeypatch):
     from types import SimpleNamespace
 
-    from cpp_repl.docker import CHECKOUT, docker_command
+    from cpp_repl.config import DEFAULT_IMAGE, PACKAGE
+    from cpp_repl.docker import CODE, docker_command
     libdir = tmp_path / 'libs'
     libdir.mkdir()
     (libdir / 'libdemo.so').write_bytes(b'')
@@ -345,16 +346,17 @@ def test_docker_command(tmp_path, monkeypatch):
     args = SimpleNamespace(image=None, mount=[str(extra)])
     argv = ['--docker', '--mount', str(extra), '--clang-repl', '/host/clang-repl', '-O2', '--batch', 'x.cpp']
     image, cmd = docker_command(argv, args, options)
-    assert image == 'cpp-repl:llvm23'
+    assert image == DEFAULT_IMAGE
     volumes = [cmd[i + 1] for i, a in enumerate(cmd) if a == '-v']
     assert f'{tmp_path / "work"}:{tmp_path / "work"}' in volumes
-    assert f'{CHECKOUT}:{CHECKOUT}:ro' in volumes
+    assert f'{CODE}:{CODE}:ro' in volumes
     assert f'{libdir}:{libdir}:ro' in volumes and f'{extra}:{extra}:ro' in volumes
     assert f'{linked}:{linked}:ro' in volumes
     forwarded = [cmd[i + 1] for i, a in enumerate(cmd) if a == '-e']
     assert 'PXR_ROOT' in forwarded and 'LIBRARY_PATH' in forwarded and 'USD_ROOT' not in forwarded
     assert not any(v.startswith('/usr/include') for v in volumes)   # the image has its own
-    assert cmd[cmd.index(image) + 1:] == ['python3', str(CHECKOUT / 'bin' / 'cpp-repl'), '-O2', '--batch', 'x.cpp']
+    assert f'PYTHONPATH={PACKAGE.parent}' in forwarded
+    assert cmd[cmd.index(image) + 1:] == ['python3', '-P', '-m', 'cpp_repl', '-O2', '--batch', 'x.cpp']
     assert ['--user', f'{os.getuid()}:{os.getgid()}'] == cmd[cmd.index('--user'):cmd.index('--user') + 2]
 
 
@@ -370,6 +372,30 @@ def test_docker_command_from_the_checkout(monkeypatch):
     targets = [v.split(':')[1] for v in volumes]
     assert len(targets) == len(set(targets))
     assert f'{CHECKOUT}:{CHECKOUT}' in volumes
+
+
+def test_docker_command_from_an_installed_package(tmp_path, monkeypatch):
+    """Installed from a wheel there is no checkout: the package directory is
+    mounted, python -m cpp_repl runs it, and a missing image's build command
+    names the packaged Dockerfile."""
+    from types import SimpleNamespace
+
+    from cpp_repl import docker
+    from cpp_repl.config import PACKAGE
+    monkeypatch.setattr(docker, 'CHECKOUT', None)
+    monkeypatch.setattr(docker, 'CODE', PACKAGE)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv('CPP_REPL_IMAGE', raising=False)
+    options = Options(cwd=tmp_path, no_config=True)
+    image, cmd = docker.docker_command(['--docker'], SimpleNamespace(image=None, mount=[]), options)
+    volumes = [cmd[i + 1] for i, a in enumerate(cmd) if a == '-v']
+    assert f'{PACKAGE}:{PACKAGE}:ro' in volumes
+    assert not any(v.startswith(f'{PACKAGE.parent.parent}:') for v in volumes)
+    assert cmd[cmd.index(image) + 1:] == ['python3', '-P', '-m', 'cpp_repl']
+    hint = docker._how_to_build('cpp-repl:llvm-snapshot')
+    assert hint.startswith('docker build --target snapshot ') and hint.endswith(str(docker.DOCKER_DIR))
+    assert '--target apt --build-arg LLVM_MAJOR=19 ' in docker._how_to_build('cpp-repl:llvm19')
+    assert docker._how_to_build('proj:llvm23') == 'docker build -t proj:llvm23 DIR   (DIR holding its Dockerfile)'
 
 
 def test_docker_runs_where_cpp_repl_runs(tmp_path, monkeypatch):

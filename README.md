@@ -89,17 +89,18 @@ agents, and the Claude Code plugin, each in a few minutes.
 Linux, Python 3.11 or newer, and either clang-repl 23 or newer, or Docker.
 
 ```sh
-git clone https://github.com/farhatnadim/cpp_repl.git && cd cpp_repl
-
-bin/cpp-repl                 # the newest clang-repl on PATH or in /usr/lib/llvm-N/bin: 23 or newer (apt.llvm.org: clang-23, clang-tools-23)
-make docker                  # or: an image with clang-repl 23 from apt.llvm.org, about a minute
-bin/cpp-repl-docker          # cpp-repl in that image; the same as cpp-repl --docker
-
-pip install -e '.[ui]'       # optional: cpp-repl on PATH, with prompt_toolkit for highlighting as you type
+uv tool install cpp-repl     # or pipx install cpp-repl, or pip install cpp-repl
+cpp-repl                     # the newest clang-repl on PATH or in /usr/lib/llvm-N/bin: 23 or newer (apt.llvm.org: clang-23, clang-tools-23)
+cpp-repl --docker            # or, without a clang-repl: in an image with clang-repl 23 from apt.llvm.org, which it offers to build (about a minute)
 ```
 
-Without prompt_toolkit, input goes through readline, a line at a time. With
-Pygments, output is coloured (`--no-color` or `NO_COLOR=1` turns it off).
+From a clone, `bin/cpp-repl` runs the checkout as it is, `make docker` builds
+the image and `bin/cpp-repl-docker` runs in it; `pip install -e .` puts that
+checkout's `cpp-repl` on PATH.
+
+Input goes through prompt_toolkit, with highlighting as you type; a clone
+without it reads through readline, a line at a time. Output is coloured
+(`--no-color` or `NO_COLOR=1` turns it off).
 `cpp-repl --docker` mounts the directory it runs in, the session's working
 directory, the checkout and whatever your configuration reads, each at its
 own path, so paths mean the same inside the container and out; `--image TAG`
@@ -423,7 +424,7 @@ go, so `getenv("HOME")` shows them; `LD_PRELOAD` is not passed on.
 | --- | --- |
 | `-p eigen` | `<Eigen/Dense>`, found through `EIGEN_ROOT`, pkg-config or the usual places. A matrix prints with its shape; past 10 rows or columns, only the first and last three. A comma initialiser (`m << 1, 2, 3`) prints the matrix it filled; quaternions, angle-axis rotations and transforms print too. |
 | `-p glm` | `<glm/glm.hpp>` with the matrix-transform and quaternion extensions, found through `GLM_ROOT`, pkg-config or the usual prefixes. A vector prints as `vec3(1, 2, 3)`, a quaternion as `quat(w, x, y, z)`, a matrix as its rows. |
-| `-p torch` | libtorch, PyTorch's C++ API: `<torch/torch.h>`, its libraries, and the GPU when the install has CUDA (`torch::cuda::is_available()`). A tensor prints as libtorch prints it, values then `[ CUDAFloatType{2,3} ]`; past a thousand elements, its first and last values. An error prints the first line of `c10::Error`'s message, and `repl::thrown()` holds the backtrace. The install is found through `TORCH_ROOT` (the libtorch zip, or a pip install's `site-packages/torch`), then the active virtual environment, then the Python running cpp-repl. |
+| `-p torch` | libtorch, PyTorch's C++ API: `<torch/torch.h>`, its libraries, and the GPU when the install has CUDA (`torch::cuda::is_available()`). A tensor prints as libtorch prints it, values then `[ CUDAFloatType{2,3} ]`; past a thousand elements, its first and last values. An error prints the first line of `c10::Error`'s message, and `repl::thrown()` holds the backtrace. The install is found through `TORCH_ROOT` (the libtorch zip, or a pip install's `site-packages/torch`), then the active virtual environment, then the Python running cpp-repl (a `uv tool install`'s own Python has no torch: set `TORCH_ROOT`, or activate the venv). |
 | `-p usd` | OpenUSD's libraries and `using namespace pxr`. A stage prints its usda; a prim its type, properties and children; an attribute its value and time samples. `tree(stage)` prints the hierarchy. The install is found through the `CMakeCache.txt` next to `compile_commands.json`, then `USD_ROOT` or `PXR_ROOT`, then the usual places. The profile asks for C++20, since OpenUSD's headers do not build as C++23 or later; a `-std` of yours still wins. |
 
 A profile of your own is a `cpp-repl.toml`-style file, loaded with `-c`. To
@@ -726,6 +727,8 @@ their compiled programs do: the same output, the same files written.
 ```sh
 make check         # before a pull request: every test against the host's clang-repl (23 or newer), then claude plugin validate
 make check-docker  # the same inside cpp-repl:llvm23, built first: what CI runs
+make wheel-check   # build the wheel with uv and run cpp-repl from it: what make check adds on the host
+uv run cpp-repl    # a clone through uv: its .venv from uv.lock, nothing installed
 make test          # unit and fake-backend tests: no clang-repl needed
 make test-host     # every test against the host's clang-repl
 make test-docker   # every test inside cpp-repl:llvm23 (make docker first)

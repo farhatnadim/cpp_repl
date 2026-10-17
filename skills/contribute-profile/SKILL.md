@@ -108,7 +108,7 @@ Copy `<lib>_repl.h` to `src/cpp_repl/profiles/<name>/cpp_repl_<name>.h`.
 - **Add `<NAME>_ROOT` to the environment** that `src/cpp_repl/docker.py`
   passes into the container. It sits next to `USD_ROOT` and `EIGEN_ROOT`.
 - **Installing the library in the image is the maintainer's call.** That means
-  adding its apt package to the `base` stage of `docker/Dockerfile`, which
+  adding its apt package to the `base` stage of `src/cpp_repl/docker/Dockerfile`, which
   changes the Dockerfile's hash and marks every user's image as out of date.
   Ask the user.
 - **Without it, the profile works under Docker when:**

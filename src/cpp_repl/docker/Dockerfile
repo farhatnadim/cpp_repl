@@ -12,12 +12,13 @@
 #   snapshot  + clang and clang-repl from apt.llvm.org's development snapshot
 #   src       clang and clang-repl built from llvm-project at LLVM_REF
 #
-# Build from this directory (it is the whole context; nothing is copied):
+# Build from this directory (it is the whole context; nothing is copied). It
+# lives inside the package, so that an installed cpp-repl builds its images too:
 #
-#   docker build --target apt      -t cpp-repl:llvm23        docker/
-#   docker build --target bench    -t cpp-repl:bench-llvm23  docker/
-#   docker build --target snapshot -t cpp-repl:llvm-snapshot docker/
-#   docker build --target src      -t cpp-repl:llvm-src-llvmorg-23.1.3 docker/
+#   docker build --target apt      -t cpp-repl:llvm23        src/cpp_repl/docker/
+#   docker build --target bench    -t cpp-repl:bench-llvm23  src/cpp_repl/docker/
+#   docker build --target snapshot -t cpp-repl:llvm-snapshot src/cpp_repl/docker/
+#   docker build --target src      -t cpp-repl:llvm-src-llvmorg-23.1.3 src/cpp_repl/docker/
 #
 # Every instruction works with the legacy builder as well as with BuildKit.
 # The legacy builder (what `docker build` uses when buildx is not installed)

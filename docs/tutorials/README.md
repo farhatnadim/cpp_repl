@@ -17,8 +17,8 @@ explores a lesson at the prompt with `-p usd`.
 
 ## What they need
 
-cpp-repl (a clone's `bin/cpp-repl`, `pip install -e .`, or the Claude Code
-plugin's copy) and a clang-repl 23 or newer: `clang-23` and `clang-tools-23`
+cpp-repl (`uv tool install cpp-repl`, a clone's `bin/cpp-repl`, or the Claude
+Code plugin's copy) and a clang-repl 23 or newer: `clang-23` and `clang-tools-23`
 from apt.llvm.org, or `make docker` and `cpp-repl --docker`. Tutorial 03 also
 uses Eigen, glm, zlib and CMake; tutorial 06 uses libtorch (`pip install torch`, or
 the libtorch zip with `TORCH_ROOT` set), and shows the GPU where there is one.

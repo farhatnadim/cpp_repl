@@ -11,7 +11,8 @@ whole blocks, rewrites the shapes clang-repl gets wrong, prints values, keeps a
 journal so that a crash or Ctrl-C at the prompt costs a replay, and converts between `.cpp`
 files and sessions. Profiles (`usd`, `eigen`, `glm`, `torch`) and project configuration
 (`cpp-repl.toml`, `compile_commands.json`) point it at a library. It runs
-clang-repl 23 and newer, and Docker images carry the newest.
+clang-repl 23 and newer, and Docker images carry the newest. It installs
+with `uv tool install cpp-repl`.
 
 The repository is also a Claude Code plugin (`.claude-plugin/`). Its skills
 run C++ for an agent (`run-cpp`) and add a library to cpp-repl
@@ -60,7 +61,7 @@ the rule above.
 | `src/cpp_repl/ui.py`, `painter.py` | prompt_toolkit or readline input; colour |
 | `src/cpp_repl/prelude/` | `cpp_repl.h`, the C++ every session starts from |
 | `src/cpp_repl/profiles/` | one Python module and one header per library |
-| `docker/Dockerfile` | images with clang-repl from apt.llvm.org, or built from source |
+| `src/cpp_repl/docker/` | the Dockerfile for the images with clang-repl from apt.llvm.org, or built from source; in the package, so that `cpp-repl --docker` builds them from an install |
 | `tests/` | unit tests, a fake clang-repl, golden sessions, compat probes |
 | `bin/` | `cpp-repl` and `cpp-repl-docker`, run from the checkout |
 | `scripts/` | `parity.py` (the tutorial's lessons against their compiled programs), `compat_table.py`, `check_tutorial.py` (the tutorials' transcripts against runs) |
@@ -73,7 +74,9 @@ the rule above.
 ## Commands
 
 ```
-make check          # before a pull request: every test against the host's clang-repl (23 or newer), then claude plugin validate
+make check          # before a pull request: every test against the host's clang-repl (23 or newer), the wheel, then claude plugin validate
+make wheel-check    # build the wheel with uv and run cpp-repl from it
+uv run cpp-repl     # a clone through uv: its .venv from uv.lock, nothing installed
 make check-docker   # the same inside cpp-repl:llvm23, built first: what CI runs
 make pr             # make check, push the branch N-slug and open its pull request, which closes issue N
 make issue KIND=bug|feature|task TITLE="..." [BODY="..."]   # file an issue on the board

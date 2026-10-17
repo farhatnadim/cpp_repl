@@ -4,11 +4,14 @@
 PYTHON     ?= python3
 # The clang-repl cpp-repl itself would run: the newest one, as config.find_clang_repl picks it.
 CLANG_REPL ?= $(shell $(PYTHON) -c 'import sys; sys.path.insert(0, "src"); from cpp_repl.config import find_clang_repl; print(find_clang_repl())' 2>/dev/null)
-LLVM       ?= 23
+# The release the images carry: config.LLVM_RELEASE, the one place it is set.
+LLVM       ?= $(shell $(PYTHON) -c 'import sys; sys.path.insert(0, "src"); from cpp_repl.config import LLVM_RELEASE; print(LLVM_RELEASE)')
 LLVM_REF   ?= llvmorg-23.1.3
 IMAGE      ?= cpp-repl:llvm$(LLVM)
 TUTORIAL   ?= ../openusd-tutorial
 BENCH_PYTHON ?= python3
+# The probe results make compat-diff compares to what is checked in.
+FILE       ?= tests/compat/results/compat-llvm-snapshot.json
 
 # The Dockerfile lives in the package, so that an installed cpp-repl builds the images too.
 DOCKER_DIR := src/cpp_repl/docker
@@ -21,7 +24,8 @@ DOCKER_RUN = docker run --rm --init -i --user $$(id -u):$$(id -g) -e HOME=/tmp \
 	$(if $(USD_ROOT),-e USD_ROOT=$(USD_ROOT) -v $(USD_ROOT):$(USD_ROOT):ro)
 
 .PHONY: help check check-docker wheel-check validate need-clang-repl pr need-issue-branch issue version tag test test-host test-docker test-snapshot parity tutorials tutorials-update \
-        compat compat-docker compat-table compare compare-docker compare-doc docker docker-bench docker-snapshot \
+        llvm compat compat-llvm compat-snapshot compat-docker compat-diff compat-table track compare compare-docker compare-doc \
+        docker docker-bench docker-snapshot \
         docker-src bench bench-quick bench-host
 
 help:  ## this list
@@ -111,13 +115,25 @@ compat:  ## probe the host's clang-repl
 	$(PYTHON) tests/compat/harness.py --clang-repl $(CLANG_REPL) \
 	  > tests/compat/results/compat-$$($(CLANG_REPL) --version | sed -n 's/.*LLVM version \([0-9]*\).*/\1/p').json
 
-compat-docker:  ## probe the clang-repl of the llvm23 and snapshot images
+compat-llvm:  ## probe the clang-repl of the release image: tests/compat/results/compat-llvmN.json
 	$(DOCKER_RUN) $(IMAGE) python3 tests/compat/harness.py > tests/compat/results/compat-llvm$(LLVM).json
+
+compat-snapshot:  ## probe the clang-repl of the snapshot image: tests/compat/results/compat-llvm-snapshot.json
 	$(DOCKER_RUN) cpp-repl:llvm-snapshot python3 tests/compat/harness.py \
 	  > tests/compat/results/compat-llvm-snapshot.json
 
-compat-table:  ## the README's "Why a front end" table, from the probes
-	$(PYTHON) scripts/compat_table.py tests/compat/results/*.json
+compat-docker: compat-llvm compat-snapshot  ## probe the clang-repl of the release and snapshot images
+
+compat-diff:  ## a probe run against the checked-in results: make compat-diff [FILE=tests/compat/results/compat-llvm-snapshot.json]
+	git show HEAD:$(FILE) | $(PYTHON) scripts/compat_diff.py - $(FILE)
+
+track: docker-snapshot test-snapshot compat-snapshot compat-diff  ## what track.yml runs weekly: the snapshot image, the suite and the probes in it, the probes diffed
+
+compat-table:  ## the README's "Why a front end" table, written between its markers from the probes
+	$(PYTHON) scripts/compat_table.py --write README.md tests/compat/results/*.json
+
+llvm:  ## print the release major, config.LLVM_RELEASE
+	@echo $(LLVM)
 
 compare:  ## raw clang-repl against cpp-repl, the host's clang-repl: compare/results/compare-N.json
 	$(PYTHON) compare/compare.py run \

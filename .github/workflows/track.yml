@@ -1,0 +1,117 @@
+# What clang-repl's next release will do to cpp-repl, found before it ships.
+# Every Monday, and on demand, the snapshot image (LLVM main) and the release
+# image are built, the suite and the compat probes run in each, and the
+# probes' verdicts are compared to the checked-in tests/compat/results. A
+# changed verdict, a failing test, or apt.llvm.org carrying the next LLVM
+# major files a task issue (or adds to the open one) with the diff and the
+# run, whose artifacts hold the new JSON and the test log. AGENTS.md,
+# "Tracking clang-repl", says what to do with the issue.
+#
+# The snapshot does not run on pull requests: it changes under the branch, so
+# a red result says nothing about the change. Run this workflow by hand from
+# a branch to see what the snapshot makes of it.
+#
+# GitHub pauses a schedule after 60 days without a commit; workflow_dispatch
+# is the way back.
+
+name: track
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: track
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: snapshot
+            build: docker-snapshot
+            test: test-snapshot
+            probe: compat-snapshot
+            file: tests/compat/results/compat-llvm-snapshot.json
+            title: The LLVM snapshot changed what cpp-repl's probes and tests see
+          - name: release
+            build: docker
+            test: test-docker
+            probe: compat-llvm
+            file: ""
+            title: clang-repl's point release changed what cpp-repl's probes and tests see
+    steps:
+      - uses: actions/checkout@v4
+
+      # apt.llvm.org is the part that fails some days.
+      - name: make ${{ matrix.build }}, with two more tries
+        run: make ${{ matrix.build }} || { sleep 60; make ${{ matrix.build }}; } || { sleep 120; make ${{ matrix.build }}; }
+
+      - name: make ${{ matrix.test }}
+        id: tests
+        continue-on-error: true
+        run: make ${{ matrix.test }} 2>&1 | tee test.log
+
+      - name: make ${{ matrix.probe }}, diffed against the checked-in results
+        id: diff
+        run: |
+          file="${{ matrix.file }}"
+          test -n "$file" || file=tests/compat/results/compat-llvm$(make -s llvm).json
+          git show "HEAD:$file" > "$RUNNER_TEMP/recorded.json"
+          make ${{ matrix.probe }}
+          if python3 scripts/compat_diff.py "$RUNNER_TEMP/recorded.json" "$file" > diff.md; then
+            echo "changed=0" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=1" >> "$GITHUB_OUTPUT"
+          fi
+          cat diff.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compat-${{ matrix.name }}
+          path: |
+            tests/compat/results/compat-llvm*.json
+            test.log
+            diff.md
+
+      - name: The issue
+        if: steps.diff.outputs.changed == '1' || steps.tests.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID, artifact compat-${{ matrix.name }}: the new JSON, the test log, this diff."
+            echo
+            cat diff.md
+            echo
+            echo "make ${{ matrix.test }}: ${{ steps.tests.outcome }}"
+            echo
+            grep -E "^(FAILED|ERROR) |[0-9]+ (passed|failed)" test.log | tail -20 | sed 's/^/    /' || true
+          } > body.md
+          scripts/track_issue.sh "${{ matrix.title }}" body.md
+
+  moved:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: apt.llvm.org carries the next major
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          next=$(( $(make -s llvm) + 1 ))
+          if curl -fsSI "https://apt.llvm.org/noble/dists/llvm-toolchain-noble-$next/Release" > /dev/null; then
+            echo "apt.llvm.org has the suite llvm-toolchain-noble-$next. AGENTS.md, \"Tracking clang-repl\", has the steps that move the release." > body.md
+            scripts/track_issue.sh "apt.llvm.org carries LLVM $next" body.md
+          else
+            echo "No llvm-toolchain-noble-$next on apt.llvm.org yet." >> "$GITHUB_STEP_SUMMARY"
+          fi

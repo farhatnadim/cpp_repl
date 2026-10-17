@@ -510,7 +510,7 @@ misprints on everyday input. In what follows:
   [`tests/compat/harness.py`](tests/compat/harness.py);
 - *cpp-repl* means the same input typed into cpp-repl.
 
-python3 scripts/compat_table.py tests/compat/results/*.json
+<!-- compat-table -->
 | Raw clang-repl | 23.1.4 | 24.0.0 | cpp-repl |
 | --- | --- | --- | --- |
 | A line ending in an open `{` | hangs (killed after 20 s) | hangs (killed after 20 s) | waits for the block to close |
@@ -538,6 +538,7 @@ python3 scripts/compat_table.py tests/compat/results/*.json
 | `%undo` | works | works | replays the journal without the last input |
 
 Probed with tests/compat/harness.py: 23.1.4 on 2026-10-16, 24.0.0 on 2026-10-16.
+<!-- /compat-table -->
 
 The way around each problem:
 - **The unclosed `{`:** cpp-repl never sends an incomplete input.
@@ -736,13 +737,20 @@ make test-host     # every test against the host's clang-repl
 make test-docker   # every test inside cpp-repl:llvm23 (make docker first)
 make parity        # openusd-tutorial's lessons through cpp-repl -p usd and compiled, diffed
 make compat        # probe the host's clang-repl; make compat-docker for the images
-make compat-table  # the "Why a front end" table from the probes
+make compat-table  # the "Why a front end" table, written between the README's markers from the probes
+make compat-diff   # a probe run against the checked-in results (FILE=...)
+make track         # what track.yml runs weekly: the snapshot image, the suite and the probes in it, the probes diffed
 make bench-quick   # a 3-minute benchmark run (make docker-bench first)
 make tutorials     # docs/tutorials' transcripts against runs (make tutorials-update rewrites them)
 claude plugin validate .                                 # the Claude Code plugin and its skills
 evals/headless.py --case yaml-cpp                        # one skill eval, headless (real model calls)
 claude plugin eval . --case yaml-cpp --runs 1 --ablation none   # the same where its sandbox runs
 ```
+
+[`track.yml`](.github/workflows/track.yml) runs every Monday: the snapshot
+and the release images are built, the suite and the compat probes run in
+them, and a changed verdict, a failing test or a new LLVM major on
+apt.llvm.org files an issue with the diff.
 
 The test suite passes on clang-repl 23.1.4 (`make test-docker`) and the 24
 snapshot (`make test-snapshot`); `make test-host` runs it against the host's

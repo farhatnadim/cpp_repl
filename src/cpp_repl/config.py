@@ -36,8 +36,12 @@ PROMPT = 'c++> '
 # The oldest clang-repl cpp-repl runs: the precompiled preludes need 23
 # (pch.py), and so do OpenUSD's headers with TBB 2020 (profiles/usd).
 MIN_VERSION = (23, 0, 0)
+# The clang-repl release the Docker images carry and CI runs. The Makefile's
+# LLVM, the default image, the Dockerfile's default and the checked-in compat
+# results follow it; tests/test_package.py checks that they agree.
+LLVM_RELEASE = 23
 # The image cpp-repl --docker runs in when none is named.
-DEFAULT_IMAGE = 'cpp-repl:llvm23'
+DEFAULT_IMAGE = f'cpp-repl:llvm{LLVM_RELEASE}'
 
 
 def default_std(version):

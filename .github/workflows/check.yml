@@ -18,6 +18,9 @@ name: check
 
 on:
   pull_request:
+    # edited: the base moved, as when the branch a pull request was stacked
+    # on merged and GitHub retargeted it to main.
+    types: [opened, synchronize, reopened, edited]
   push:
     branches: [main]
 
@@ -40,6 +43,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # GitHub links the issue only once the pull request targets main; one
+          # stacked on another branch is checked again when it does.
+          if [ "${{ github.base_ref }}" != "${{ github.event.repository.default_branch }}" ]; then
+            echo "::notice::stacked on ${{ github.base_ref }}: the issue it closes is checked once it targets main"; exit 0
+          fi
           n=$(gh pr view ${{ github.event.pull_request.number }} --repo ${{ github.repository }} \
                 --json closingIssuesReferences --jq '.closingIssuesReferences | length')
           test "$n" -gt 0 || { echo "::error::the pull request closes no issue: write 'Closes #N' in its description"; exit 1; }

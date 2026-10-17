@@ -34,4 +34,4 @@ from `openusd-tutorial/repl/usd-repl`.
 - [x] The way changes land (2026-10-16): every bug, feature and task is an issue on the project board (github.com/users/farhatnadim/projects/18); main takes pull requests only; `make check` before one, and `.github/workflows/check.yml` runs the suite again on the pull request, inside cpp-repl:llvm23 (`make check-docker`)
 - [x] v0.1.0: the initial release, a tag on main with a GitHub release (2026-10-16)
 - [ ] A Jupyter kernel
-- [ ] PyPI
+- [ ] PyPI: a tag publishes the sdist and the wheel through trusted publishing (`release.yml`, 2026-10-17); the first tag, v0.2.0, makes `uv tool install cpp-repl` live

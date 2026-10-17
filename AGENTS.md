@@ -118,10 +118,14 @@ for the user and for agents alike.
   Merges are rebases, the branch is deleted on merge, the issue closes with
   it. The user merges (`gh pr merge --rebase`, or `--auto` to queue it),
   unless they tell the agent to. An agent never closes an issue.
-- **A release** is a tag `vX.Y.Z` on main with a GitHub release
-  (`gh release create`); `pyproject.toml` carries the same version. The
-  plugin keeps tracking main: `plugin.json` names no version, so an install
-  follows the commits.
+- **A release** is a tag `vX.Y.Z` on main. `make version VERSION=x.y.z` on
+  an issue branch sets `src/cpp_repl/__init__.py`, the one place the version
+  lives, and `make pr` lands it; `make tag` on main then tags and pushes, and
+  `.github/workflows/release.yml` builds the wheel, runs it against
+  clang-repl 23, publishes to PyPI through trusted publishing and makes the
+  GitHub release. A tag never moves: a botched release is the next patch
+  number. The plugin keeps tracking main: `plugin.json` names no version, so
+  an install follows the commits.
 - **GOALS.md** stays the roadmap summary the workspace status tool reads; the
   board holds the work.
 

@@ -729,6 +729,8 @@ make check         # before a pull request: every test against the host's clang-
 make check-docker  # the same inside cpp-repl:llvm23, built first: what CI runs
 make wheel-check   # build the wheel with uv and run cpp-repl from it: what make check adds on the host
 uv run cpp-repl    # a clone through uv: its .venv from uv.lock, nothing installed
+make version VERSION=x.y.z   # on an issue branch: set the version in src/cpp_repl/__init__.py, then make pr
+make tag           # on main after the merge: tag vX.Y.Z and push it; release.yml publishes to PyPI and GitHub
 make test          # unit and fake-backend tests: no clang-repl needed
 make test-host     # every test against the host's clang-repl
 make test-docker   # every test inside cpp-repl:llvm23 (make docker first)

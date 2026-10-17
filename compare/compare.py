@@ -43,7 +43,7 @@ CHECKOUT = HERE.parent
 sys.path.insert(0, str(CHECKOUT / 'src'))
 sys.path.insert(0, str(CHECKOUT / 'tests' / 'compat'))
 
-from cpp_repl.config import Config, Options, default_std, find_clang_repl, clang_repl_version  # noqa: E402
+from cpp_repl.config import DEFAULT_IMAGE, Config, Options, default_std, find_clang_repl, clang_repl_version  # noqa: E402
 from cpp_repl.lexer import transform  # noqa: E402
 from cpp_repl.session import JsonOutput, Session  # noqa: E402
 from cpp_repl.sources import inputs_from_repl  # noqa: E402
@@ -336,7 +336,7 @@ def startup(clang_repl, std, inputs, scratch):
             server.kill()
             server.wait()
     if shutil.which('docker') and not Path('/.dockerenv').exists():
-        image = os.environ.get('CPP_REPL_IMAGE', 'cpp-repl:llvm23')
+        image = os.environ.get('CPP_REPL_IMAGE', DEFAULT_IMAGE)
         if subprocess.run(['docker', 'image', 'inspect', image], capture_output=True).returncode == 0:
             out['docker_container'] = timed(['docker', 'run', '--rm', image, 'true'], env, scratch)
     return out

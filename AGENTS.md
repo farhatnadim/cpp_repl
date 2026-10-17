@@ -85,6 +85,9 @@ make test-host      # everything, against the host's clang-repl (23 or newer: wi
 make tutorials      # docs/tutorials' transcripts against runs
 make parity         # the OpenUSD lessons through cpp-repl -p usd against their compiled programs
 make compat         # what raw clang-repl does with the inputs cpp-repl rewrites
+make compat-table   # the README's "Why a front end" table, written between its markers from tests/compat/results
+make compat-diff    # a probe run against the checked-in results (FILE=tests/compat/results/compat-llvm-snapshot.json)
+make track          # what track.yml runs weekly: the snapshot image, the suite and the probes in it, the probes diffed
 make docker         # build cpp-repl:llvm23 (make docker-snapshot: LLVM main)
 make test-docker    # the test suite inside the image (make test-snapshot: in the snapshot's)
 make bench-quick    # a 3-minute benchmark run in the bench image
@@ -128,6 +131,47 @@ for the user and for agents alike.
   an install follows the commits.
 - **GOALS.md** stays the roadmap summary the workspace status tool reads; the
   board holds the work.
+
+## Tracking clang-repl
+
+`config.LLVM_RELEASE` is the release the Docker images carry and CI runs
+(23); `MIN_VERSION` is the oldest cpp-repl accepts. The Makefile's `LLVM`,
+the default image, the Dockerfile's `ARG LLVM_MAJOR` and the checked-in
+`tests/compat/results/compat-llvm23.json` follow it, and
+`tests/test_package.py` checks that they agree. `make compat-table` writes
+the README's "Why a front end" table between its markers, and a test fails
+when the table differs from the results.
+
+`.github/workflows/track.yml` runs every Monday and on demand: the snapshot
+image (LLVM main) and the release image are built, the suite and the compat
+probes run in each, and the verdicts are diffed against the checked-in
+results. A changed verdict, a failing test, or apt.llvm.org carrying the next
+major files a task issue, or adds to the open one, with the diff and the run,
+whose artifacts hold the new JSON and the test log. The snapshot never runs
+on a pull request: it changes under the branch. The tutorials' transcripts
+are recordings of one clang-repl (`<!-- clang-repl: 23 -->`), so
+`make test-snapshot` skips them; the probes and the rest of the suite are
+the snapshot's signal.
+
+When the issue comes:
+1. `gh issue develop N --checkout`; `gh run download RUN -n compat-snapshot
+   -D tests/compat/results/`, or `make docker-snapshot compat-snapshot`;
+   read the diff.
+2. A failing test is a cpp-repl bug to fix. A verdict that moved from a
+   workaround to `works` changes no code.
+3. `make compat-table`, adjust the prose under the table, `make pr`.
+
+When apt.llvm.org carries the next major, say 24:
+1. `LLVM_RELEASE = 24` in `config.py`, `ARG LLVM_MAJOR=24` in the Dockerfile
+   (both stages); `MIN_VERSION` stays until something needs the newer one.
+2. `make docker test-docker`; fix what fails.
+3. `make compat-docker compat-table`: `compat-llvm24.json` joins the table,
+   the snapshot moves on, `compat-llvm23.json` stays.
+4. clang-24 and clang-tools-24 on the host, `make tutorials-update`, read
+   the diff, and the tutorials' `<!-- clang-repl: 24 -->` pins.
+5. The prose that names 23: README, this file, `src/cpp_repl/docker/README.md`,
+   the skills, the workflows' comments.
+6. `make pr`, then a release: `DEFAULT_IMAGE` ships in the wheel.
 
 ## Using cpp-repl from an agent
 

@@ -35,3 +35,4 @@ from `openusd-tutorial/repl/usd-repl`.
 - [x] v0.1.0: the initial release, a tag on main with a GitHub release (2026-10-16)
 - [ ] A Jupyter kernel
 - [ ] PyPI: a tag publishes the sdist and the wheel through trusted publishing (`release.yml`, 2026-10-17); the first tag, v0.2.0, makes `uv tool install cpp-repl` live
+- [x] CI tracks clang-repl: `track.yml` builds the snapshot and release images weekly, runs the suite and the probes, diffs the verdicts against the checked-in results and files an issue on a change; `LLVM_RELEASE` in `config.py` is the one source; the README's compat table is generated and checked (2026-10-17)

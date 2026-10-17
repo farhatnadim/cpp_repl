@@ -224,7 +224,7 @@ Tell the user, briefly:
   `--docker --image TAG` if needed. Inside Claude Code, `cpp-repl` is the
   plugin's copy. In the user's own terminal it exists only once installed.
   When `env` showed `on_path_is_this_checkout` (or no `on_path`), say how to
-  install it: `pipx install git+https://github.com/farhatnadim/cpp_repl`, or a
+  install it: `uv tool install cpp-repl` (or `pipx install cpp-repl`), or a
   clone's `bin/cpp-repl`.
 - **The files written.**
 - **The startup cost:** `startup.delta`.

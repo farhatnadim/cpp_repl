@@ -14,7 +14,7 @@ profile name, a Python identifier; `<NAME>` is the same in upper case.
 | `examples/<name>.repl` | new: the example, with the command as its first comment line | The README points at it, and users try it first. |
 | `README.md` | a row in the "Profiles" table, and "Limits" when needed | What `-p <name>` adds, and how the library is found. |
 | `src/cpp_repl/docker.py` | add `'<NAME>_ROOT'` to the names `docker_command` passes with `-e` | Under `--docker`, the profile's `configure()` runs again inside the container and reads the variable there. |
-| `docker/Dockerfile` | only with the maintainer's agreement: the apt package in the `base` stage | It changes `DOCKERFILE_SHA`, so every user's image reads as stale until they rebuild it. |
+| `src/cpp_repl/docker/Dockerfile` | only with the maintainer's agreement: the apt package in the `base` stage | It changes `DOCKERFILE_SHA`, so every user's image reads as stale until they rebuild it. |
 
 Nothing else needs to change:
 - `pyproject.toml` already packages `profiles/*/*.h`;

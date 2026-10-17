@@ -75,7 +75,7 @@ def cmd_env(args):
     cwd = Path.cwd()
     on_path = shutil.which('cpp-repl')
     # Inside Claude Code the plugin's bin/ is on PATH; a terminal has it only
-    # when cpp-repl was installed (pipx, pip, a clone's bin/ on PATH).
+    # when cpp-repl was installed (uv tool install, pipx, pip, a clone's bin/ on PATH).
     plugin_copy = bool(on_path) and Path(on_path).resolve() == CPP_REPL_BIN.resolve()
     out = {'cpp_repl': {'checkout': str(CHECKOUT), 'bin': str(CPP_REPL_BIN), 'version': __version__,
                         'on_path': on_path, 'on_path_is_this_checkout': plugin_copy,

@@ -1,0 +1,91 @@
+# A release: a tag vX.Y.Z pushed to main. The tag is on main and names the
+# version in src/cpp_repl/__init__.py; the wheel is built with uv and run as a
+# user installs it, against clang-repl 23 from apt.llvm.org (make wheel-check);
+# PyPI gets the sdist and the wheel through trusted publishing, in the pypi
+# environment, with no token anywhere; and the GitHub release carries them.
+# make version and make tag are the two steps before this. A tag never moves
+# and a PyPI version never changes, so a botched release is the next patch
+# number.
+#
+# A pull request that edits this file runs the build job, which proves the
+# workflow; publishing waits for a tag.
+
+name: release
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  pull_request:
+    paths: ['.github/workflows/release.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: The tag is on main and names the package's version
+        if: github.event_name == 'push'
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main \
+            || { echo "::error::$GITHUB_REF_NAME is not on main"; exit 1; }
+          version=$(sed -n "s/^__version__ = '\(.*\)'$/\1/p" src/cpp_repl/__init__.py)
+          test "v$version" = "$GITHUB_REF_NAME" \
+            || { echo "::error::the tag is $GITHUB_REF_NAME and src/cpp_repl/__init__.py says $version"; exit 1; }
+
+      - uses: astral-sh/setup-uv@v10.3.0
+
+      - name: clang-repl 23 from apt.llvm.org
+        run: |
+          sudo install -d -m 0755 /etc/apt/keyrings
+          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/keyrings/apt.llvm.org.asc > /dev/null
+          echo "deb [signed-by=/etc/apt/keyrings/apt.llvm.org.asc] https://apt.llvm.org/noble/ llvm-toolchain-noble-23 main" \
+            | sudo tee /etc/apt/sources.list.d/apt.llvm.org.list
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang-23 clang-tools-23
+
+      - name: make wheel-check
+        run: make wheel-check
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-24.04
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: astral-sh/setup-uv@v10.3.0
+      - run: uv publish --trusted-publishing always dist/*
+
+  github-release:
+    if: github.event_name == 'push'
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* --verify-tag \
+            --title "cpp-repl ${GITHUB_REF_NAME#v}" --generate-notes

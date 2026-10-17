@@ -20,7 +20,7 @@ DOCKER_RUN = docker run --rm --init -i --user $$(id -u):$$(id -g) -e HOME=/tmp \
 	-v $(CURDIR):$(CURDIR):ro -w $(CURDIR) \
 	$(if $(USD_ROOT),-e USD_ROOT=$(USD_ROOT) -v $(USD_ROOT):$(USD_ROOT):ro)
 
-.PHONY: help check check-docker wheel-check validate need-clang-repl pr need-issue-branch issue test test-host test-docker test-snapshot parity tutorials tutorials-update \
+.PHONY: help check check-docker wheel-check validate need-clang-repl pr need-issue-branch issue version tag test test-host test-docker test-snapshot parity tutorials tutorials-update \
         compat compat-docker compat-table compare compare-docker compare-doc docker docker-bench docker-snapshot \
         docker-src bench bench-quick bench-host
 
@@ -70,6 +70,21 @@ issue:  ## file an issue on the board: make issue KIND=bug|feature|task TITLE="o
 	test -n "$$label" -a -n "$(TITLE)" || { echo 'make issue KIND=bug|feature|task TITLE="one sentence that states the fact" [BODY="..."]' >&2; exit 2; }; \
 	url=$$(gh issue create --label "$$label" --title "$(TITLE)" --body "$(BODY)") && echo "$$url" && \
 	gh project item-add 18 --owner farhatnadim --url "$$url" > /dev/null
+
+# A release: make version on an issue branch and a pull request, then make tag
+# on main once it is merged; .github/workflows/release.yml does the rest.
+version: need-issue-branch  ## set the version in src/cpp_repl/__init__.py and commit it: make version VERSION=x.y.z, then make pr
+	@echo "$(VERSION)" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$$' || { echo 'make version VERSION=x.y.z' >&2; exit 2; }
+	sed -i "s/^__version__ = '.*'$$/__version__ = '$(VERSION)'/" src/cpp_repl/__init__.py
+	git commit -m "release: $(VERSION)" src/cpp_repl/__init__.py
+
+tag:  ## on main after the merge: tag it at the version in __init__.py and push the tag, which publishes the release
+	@test "$$(git rev-parse --abbrev-ref HEAD)" = main || { echo "make tag: run it on main" >&2; exit 2; }
+	@git diff --quiet HEAD || { echo "make tag: the working tree has changes" >&2; exit 2; }
+	git fetch -q origin && git merge -q --ff-only origin/main
+	@v=$$(sed -n "s/^__version__ = '\(.*\)'$$/\1/p" src/cpp_repl/__init__.py); \
+	  ! git rev-parse -q --verify "refs/tags/v$$v" > /dev/null || { echo "make tag: v$$v exists; make version first" >&2; exit 2; }; \
+	  git tag -a "v$$v" -m "cpp-repl $$v" && git push origin "v$$v" && echo "v$$v pushed: release.yml publishes it"
 
 test:  ## unit and fake-backend tests: no clang-repl needed
 	$(PYTHON) -m pytest -q -m 'not backend'

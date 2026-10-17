@@ -1,8 +1,10 @@
 # A release: a tag vX.Y.Z pushed to main. The tag is on main and names the
 # version in src/cpp_repl/__init__.py; the wheel is built with uv and run as a
-# user installs it, against clang-repl 23 from apt.llvm.org (make wheel-check);
-# PyPI gets the sdist and the wheel through trusted publishing, in the pypi
-# environment, with no token anywhere; and the GitHub release carries them.
+# user installs it, against clang-repl from apt.llvm.org (make wheel-check);
+# and the GitHub release carries the sdist and the wheel, which the README
+# installs from. PyPI waits: the publish job runs only when the repository
+# variable PYPI_PUBLISH is true, through trusted publishing in the pypi
+# environment, with no token anywhere.
 # make version and make tag are the two steps before this. A tag never moves
 # and a PyPI version never changes, so a botched release is the next patch
 # number.
@@ -59,7 +61,7 @@ jobs:
           path: dist/
 
   publish:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && vars.PYPI_PUBLISH == 'true'
     needs: build
     runs-on: ubuntu-24.04
     environment: pypi
@@ -75,7 +77,7 @@ jobs:
 
   github-release:
     if: github.event_name == 'push'
-    needs: publish
+    needs: build
     runs-on: ubuntu-24.04
     permissions:
       contents: write

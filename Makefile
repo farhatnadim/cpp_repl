@@ -77,10 +77,11 @@ issue:  ## file an issue on the board: make issue KIND=bug|feature|task TITLE="o
 
 # A release: make version on an issue branch and a pull request, then make tag
 # on main once it is merged; .github/workflows/release.yml does the rest.
-version: need-issue-branch  ## set the version in src/cpp_repl/__init__.py and commit it: make version VERSION=x.y.z, then make pr
+version: need-issue-branch  ## set the version in src/cpp_repl/__init__.py and the README's wheel, and commit: make version VERSION=x.y.z, then make pr
 	@echo "$(VERSION)" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$$' || { echo 'make version VERSION=x.y.z' >&2; exit 2; }
 	sed -i "s/^__version__ = '.*'$$/__version__ = '$(VERSION)'/" src/cpp_repl/__init__.py
-	git commit -m "release: $(VERSION)" src/cpp_repl/__init__.py
+	sed -i -E "s#releases/download/v[0-9.]+/cpp_repl-[0-9.]+-py3-none-any.whl#releases/download/v$(VERSION)/cpp_repl-$(VERSION)-py3-none-any.whl#" README.md
+	git commit -m "release: $(VERSION)" src/cpp_repl/__init__.py README.md
 
 tag:  ## on main after the merge: tag it at the version in __init__.py and push the tag, which publishes the release
 	@test "$$(git rev-parse --abbrev-ref HEAD)" = main || { echo "make tag: run it on main" >&2; exit 2; }

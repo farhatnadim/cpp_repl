@@ -12,7 +12,7 @@ journal so that a crash or Ctrl-C at the prompt costs a replay, and converts bet
 files and sessions. Profiles (`usd`, `eigen`, `glm`, `torch`) and project configuration
 (`cpp-repl.toml`, `compile_commands.json`) point it at a library. It runs
 clang-repl 23 and newer, and Docker images carry the newest. It installs
-with `uv tool install cpp-repl`.
+from the wheel of a GitHub release (`pip install URL`); PyPI waits.
 
 The repository is also a Claude Code plugin (`.claude-plugin/`). Its skills
 run C++ for an agent (`run-cpp`) and add a library to cpp-repl
@@ -64,8 +64,9 @@ the rule above.
 | `src/cpp_repl/docker/` | the Dockerfile for the images with clang-repl from apt.llvm.org, or built from source; in the package, so that `cpp-repl --docker` builds them from an install |
 | `tests/` | unit tests, a fake clang-repl, golden sessions, compat probes |
 | `bin/` | `cpp-repl` and `cpp-repl-docker`, run from the checkout |
-| `scripts/` | `parity.py` (the tutorial's lessons against their compiled programs), `compat_table.py`, `check_tutorial.py` (the tutorials' transcripts against runs) |
+| `scripts/` | `parity.py` (the tutorial's lessons against their compiled programs), `compat_table.py` and `compat_diff.py`, `check_tutorial.py` (the tutorials' transcripts against runs), `smoke.sh` (the first test of a release on a machine), `track_issue.sh` |
 | `docs/tutorials/` | five walks through cpp-repl, every transcript checked against a run |
+| `docs/platforms.md` | where cpp-repl runs (Linux; WSL2 and Docker Desktop elsewhere), and how a release is smoke-tested on each machine |
 | `bench/` | NumPy vs Eigen in the REPL vs native Eigen |
 | `.claude-plugin/` | the Claude Code plugin and marketplace manifests; the plugin root is the repo root |
 | `skills/` | the plugin's skills; `skills/add-library/scripts/` probes libraries and checks profiles |
@@ -77,6 +78,7 @@ the rule above.
 make check          # before a pull request: every test against the host's clang-repl (23 or newer), the wheel, then claude plugin validate
 make wheel-check    # build the wheel with uv and run cpp-repl from it
 uv run cpp-repl     # a clone through uv: its .venv from uv.lock, nothing installed
+scripts/smoke.sh [WHEEL]   # the first test of a release on this machine: the wheel in a fresh venv, then a developer's first steps
 make check-docker   # the same inside cpp-repl:llvm23, built first: what CI runs
 make pr             # make check, push the branch N-slug and open its pull request, which closes issue N
 make issue KIND=bug|feature|task TITLE="..." [BODY="..."]   # file an issue on the board
@@ -125,10 +127,13 @@ for the user and for agents alike.
   an issue branch sets `src/cpp_repl/__init__.py`, the one place the version
   lives, and `make pr` lands it; `make tag` on main then tags and pushes, and
   `.github/workflows/release.yml` builds the wheel, runs it against
-  clang-repl 23, publishes to PyPI through trusted publishing and makes the
-  GitHub release. A tag never moves: a botched release is the next patch
-  number. The plugin keeps tracking main: `plugin.json` names no version, so
-  an install follows the commits.
+  clang-repl 23 and makes the GitHub release with the sdist and the wheel;
+  the README's install line names that wheel, and `make version` moves it.
+  PyPI waits: the workflow's publish job runs once the repository variable
+  `PYPI_PUBLISH` is `true` and pypi.org has the pending publisher, through
+  trusted publishing. A tag never moves: a botched release is the next
+  patch number. The plugin keeps tracking main: `plugin.json` names no
+  version, so an install follows the commits.
 - **GOALS.md** stays the roadmap summary the workspace status tool reads; the
   board holds the work.
 

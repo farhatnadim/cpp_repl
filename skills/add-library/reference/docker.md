@@ -1,8 +1,9 @@
 # A profile under Docker
 
 `cpp-repl --docker` runs the same command inside an image that holds
-clang-repl 23: `cpp-repl:llvm23`, which `make docker` builds in a cpp_repl
-checkout. Use it in two cases:
+clang-repl 23: `cpp-repl:llvm23`, which `cpp-repl --docker` offers to build
+(from an install or a checkout; `make docker` in a checkout does the same).
+Use it in two cases:
 - the host has no clang-repl 23 or newer, which cpp-repl needs;
 - the user asks for it.
 
@@ -10,7 +11,7 @@ checkout. Use it in two cases:
 
 cpp-repl mounts these directories at their own paths:
 - the working directory and its state directory, read-write;
-- the cpp-repl checkout, read-only;
+- the cpp-repl package, or the checkout it runs from, read-only;
 - every directory the profile reads outside the image's own tree, read-only:
   include directories, libraries, preludes and `compile_commands.json`.
 

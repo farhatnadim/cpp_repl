@@ -35,5 +35,5 @@ from `openusd-tutorial/repl/usd-repl`.
 - [x] v0.1.0: the initial release, a tag on main with a GitHub release (2026-10-16)
 - [ ] A Jupyter kernel
 - [ ] PyPI: `release.yml` publishes through trusted publishing once the repository variable `PYPI_PUBLISH` is true and pypi.org has the pending publisher; until then a release is the GitHub release's wheel
-- [x] v0.2.0: a GitHub release with the wheel, for a first test on Ubuntu, Windows and macOS (`scripts/smoke.sh`, `docs/platforms.md`; 2026-10-17)
-- [x] CI tracks clang-repl: `track.yml` builds the snapshot and release images weekly, runs the suite and the probes, diffs the verdicts against the checked-in results and files an issue on a change; `LLVM_RELEASE` in `config.py` is the one source; the README's compat table is generated and checked (2026-10-17)
+- [x] v0.2.0: a GitHub release with the wheel, for a first test on Ubuntu, Windows and macOS (`scripts/smoke.sh`, `docs/platforms.md`; 2026-10-18)
+- [x] CI tracks clang-repl: `track.yml` builds the snapshot and release images weekly, runs the suite and the probes, diffs the verdicts against the checked-in results and files an issue on a change; `LLVM_RELEASE` in `config.py` is the one source; the README's compat table is generated and checked (2026-10-18)

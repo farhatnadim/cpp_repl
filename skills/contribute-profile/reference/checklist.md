@@ -29,9 +29,9 @@ Nothing else needs to change:
       or fails with a message that names it.
 - [ ] Without the library, `cpp-repl -p <name>` fails with a `ConfigError`
       naming the apt package, and no traceback.
-- [ ] `make test`, `make test-host` (the session runs), and
-      `make test-docker` when the image exists.
-- [ ] `claude plugin validate .` passes. It warns about the root `CLAUDE.md`,
-      which is expected.
+- [ ] `make check` passes: every test (the golden session runs, rather than
+      skips), the wheel, and `claude plugin validate`, whose warning about
+      the root `CLAUDE.md` is expected. `make test-docker` too, when the
+      image exists.
 - [ ] The README row reads like the other rows: what it adds, how
       values print, how the library is found.

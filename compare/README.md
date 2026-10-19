@@ -152,14 +152,14 @@ failed.
 | a batch run | pipe lines in; parse stderr yourself | `--batch`, `-q`, `--json` (a record per input: status, output, notes, seconds), `--stop-on-error`, `--timeout` |
 | a session that stays | — | `--serve SOCKET` and `--connect`, a run in 0.07 s; `--fresh` for a clean one in the spare |
 | **Configuration** | | |
-| compiler flags | `--Xcc=FLAG`, any flag | the flags clang takes (`-I -D -O -std -stdlib -include -f -W -m` and more), `compile_commands.json` (response files read), `cpp-repl.toml`, profiles for Eigen, glm and OpenUSD, `-l NAME`/`-L DIR`/`--lib` |
+| compiler flags | `--Xcc=FLAG`, any flag | the flags clang takes (`-I -D -O -std -stdlib -include -f -W -m` and more), `compile_commands.json` (response files read), `cpp-repl.toml`, profiles for Eigen, glm, libtorch and OpenUSD, `-l NAME`/`-L DIR`/`--lib` |
 | the standard | C++ 17 unless told | the newest the clang knows (gnu++26 from clang 17); C++20 is the floor |
 | the newest clang-repl | install it | Docker images with 23 and the snapshot; `--docker` mounts your directories at their own paths |
 | **Timing and speed** | | |
 | timing an input | — | `%time` (wall, and how long the code ran apart from compiling), `%timeit` as IPython's |
 | optimisation | `--Xcc=-O3 --Xcc=-march=native` | `-O3 --native`; the same JIT, so the same speed (the [bench](../bench/README.md): 64 GFLOP/s either way) |
 | **Meta commands** | `%help` (23 and 24), `%undo`, `%lib`, `%quit` | those, and `%restart`, `%reset`, `%journal`, `%save`, `%save-cpp`, `%load`, `%time`, `%timeit`, `%flags` |
-| **Platform** | wherever LLVM builds; no dependencies; out-of-process execution (`--oop-executor`, 23 and 24); CUDA (`--cuda`, hidden) | Linux, Python 3.11 or newer, a clang-repl or Docker; prompt_toolkit and Pygments optional |
+| **Platform** | wherever LLVM builds; no dependencies; out-of-process execution (`--oop-executor`, 23 and 24); CUDA (`--cuda`, hidden) | Linux, Python 3.11 or newer, a clang-repl or Docker; a wheel from a GitHub release |
 
 ## What raw clang-repl has that cpp-repl lacks or costs
 

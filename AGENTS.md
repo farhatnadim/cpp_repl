@@ -6,41 +6,40 @@ the directory above holds a workspace-level `AGENTS.md`, which still applies
 
 ## What this project is
 
-`cpp-repl` is a C++ REPL: a Python front end over LLVM's `clang-repl`. It reads
-whole blocks, rewrites the shapes clang-repl gets wrong, prints values, keeps a
-journal so that a crash or Ctrl-C at the prompt costs a replay, and converts between `.cpp`
-files and sessions. Profiles (`usd`, `eigen`, `glm`, `torch`) and project configuration
-(`cpp-repl.toml`, `compile_commands.json`) point it at a library. It runs
-clang-repl 23 and newer, and Docker images carry the newest. It installs
-from the wheel of a GitHub release (`pip install URL`); PyPI waits.
+`cpp-repl` is a C++ REPL: a Python front end over LLVM's `clang-repl`. It
+reads whole blocks, rewrites the shapes clang-repl gets wrong, prints values,
+keeps a journal so that a crash or Ctrl-C costs a replay, and converts between
+`.cpp` files and sessions. Profiles (`eigen`, `glm`, `torch`, `usd`) and
+project configuration (`cpp-repl.toml`, `compile_commands.json`) point it at
+a library. It runs clang-repl 23 and newer; Docker images carry the release
+and LLVM's snapshot. It installs from the wheel of a GitHub release
+(`pip install URL`); PyPI waits.
 
-The repository is also a Claude Code plugin (`.claude-plugin/`). Its skills
-run C++ for an agent (`run-cpp`) and add a library to cpp-repl
-(`add-library`, `add-printer` and `contribute-profile`), in `skills/`.
+The repository is also a Claude Code plugin (`.claude-plugin/`). Its skills,
+in `skills/`, run C++ for an agent (`run-cpp`) and add a library to cpp-repl
+(`add-library`, `add-printer`, `contribute-profile`).
 
-It began as a fork of `openusd-tutorial/repl/usd-repl` on 2026-10-13: commit
-2c41aad plus that tree's uncommitted `_source()` change. Since 2026-10-16 the
-tutorial's `repl/usd-repl` is a launcher over cpp-repl's usd profile, which its
-CMake build fetches at a pinned commit. Fixes land here, and the tutorial moves
-its pin.
+It began as a fork of `openusd-tutorial/repl/usd-repl` on 2026-10-13. Since
+2026-10-16 the tutorial's `repl/usd-repl` is a launcher over cpp-repl's usd
+profile, which its CMake build fetches at a pinned commit: fixes land here,
+and the tutorial moves its pin.
 
 ## Who writes the code
 
 The workspace rule applies: the user writes the code, agents assist. On
-2026-10-13 the user granted Claude the v0.1 implementation: scaffold, front end,
-profiles, Docker images, tests and benchmark. The grant covered v0.1. Later
-features follow the workspace rule unless the user extends it. Fixing a bug
-found in review stays in scope.
+2026-10-13 the user granted Claude the v0.1 implementation: scaffold, front
+end, profiles, Docker images, tests and benchmark. The grant covered v0.1.
+Later features follow the workspace rule unless the user extends it. Fixing
+a bug found in review stays in scope.
 
-The plugin's skills are a standing grant, given on 2026-10-14, for whoever runs
-them:
+The plugin's skills are a standing grant, given on 2026-10-14, for whoever
+runs them:
 - An agent running `add-library` or `add-printer` writes the profile, prelude,
   printers, example and check report those skills describe.
 - An agent running `contribute-profile` in this repository writes a built-in
-  profile:
-  - its module and header under `src/cpp_repl/profiles/<name>/`;
-  - its test, golden session, example and README row;
-  - its line in `PRELUDE_NAMES` and in `docker.py`'s environment list.
+  profile: its module and header under `src/cpp_repl/profiles/<name>/`, its
+  test, golden session, example and README row, and its line in
+  `PRELUDE_NAMES` and in `docker.py`'s environment list.
 
 The rest of the front end (lexer, sources, session, backend, config) follows
 the rule above.
@@ -51,48 +50,55 @@ the rule above.
 | --- | --- |
 | `src/cpp_repl/lexer.py` | C++ tokens, statement boundaries, when an input is complete, what to send |
 | `src/cpp_repl/sources.py` | `.cpp` and `.repl` files as inputs |
-| `src/cpp_repl/config.py` | flags, profiles, `cpp-repl.toml`, `compile_commands.json`, the clang-repl binary |
+| `src/cpp_repl/config.py` | flags, profiles, `cpp-repl.toml`, `compile_commands.json`, the clang-repl binary; `LLVM_RELEASE` and `MIN_VERSION` |
 | `src/cpp_repl/pch.py` | the preludes as a precompiled header, built once per configuration |
 | `src/cpp_repl/preload.py` | the session's libraries loaded into clang-repl as it starts, core dumps off first |
 | `src/cpp_repl/backend.py` | one clang-repl process and the end-of-output marker protocol |
 | `src/cpp_repl/session.py` | the journal, recovery, redefinition, commands, `%save-cpp` |
 | `src/cpp_repl/server.py` | `--serve` and `--connect`: one session on a Unix socket |
 | `src/cpp_repl/diagnostics.py` | what is shown of clang's diagnostics: brief or full |
+| `src/cpp_repl/docker.py` | `--docker`: the mounts, the environment, the image's build |
 | `src/cpp_repl/ui.py`, `painter.py` | prompt_toolkit or readline input; colour |
 | `src/cpp_repl/prelude/` | `cpp_repl.h`, the C++ every session starts from |
 | `src/cpp_repl/profiles/` | one Python module and one header per library |
-| `src/cpp_repl/docker/` | the Dockerfile for the images with clang-repl from apt.llvm.org, or built from source; in the package, so that `cpp-repl --docker` builds them from an install |
-| `tests/` | unit tests, a fake clang-repl, golden sessions, compat probes |
+| `src/cpp_repl/docker/` | the Dockerfile for the images (clang-repl from apt.llvm.org, the snapshot, a build from source) and its README; in the package, so that `cpp-repl --docker` builds the image from an install |
+| `src/cpp_repl/__init__.py` | `__version__`, the one place the version lives |
 | `bin/` | `cpp-repl` and `cpp-repl-docker`, run from the checkout |
-| `scripts/` | `parity.py` (the tutorial's lessons against their compiled programs), `compat_table.py` and `compat_diff.py`, `check_tutorial.py` (the tutorials' transcripts against runs), `smoke.sh` (the first test of a release on a machine), `track_issue.sh` |
-| `docs/tutorials/` | five walks through cpp-repl, every transcript checked against a run |
+| `examples/` | one `.repl` session per profile, with its command on the first line |
+| `tests/` | unit tests, a fake clang-repl, golden sessions, compat probes and their results |
+| `scripts/` | `compat_table.py` and `compat_diff.py` (the README's table, a probe diff), `check_tutorial.py` (the tutorials' transcripts against runs), `parity.py` (the OpenUSD tutorial's lessons against their compiled programs), `smoke.sh` (the first test of a release on a machine), `track_issue.sh` |
+| `docs/tutorials/` | six walks through cpp-repl, every transcript checked against a run |
 | `docs/platforms.md` | where cpp-repl runs (Linux; WSL2 and Docker Desktop elsewhere), and how a release is smoke-tested on each machine |
+| `compare/` | one session typed into raw clang-repl and into cpp-repl, side by side |
 | `bench/` | NumPy vs Eigen in the REPL vs native Eigen |
-| `.claude-plugin/` | the Claude Code plugin and marketplace manifests; the plugin root is the repo root |
-| `skills/` | the plugin's skills; `skills/add-library/scripts/` probes libraries and checks profiles |
+| `.claude-plugin/` | the plugin and marketplace manifests; the plugin root is the repo root |
+| `skills/` | the plugin's skills: a `SKILL.md` each, with `reference/`, `scripts/` and `templates/` where the skill has them |
 | `evals/` | `claude plugin eval` cases for the skills, and `headless.py`, which runs them with `claude -p`; results go to `evals/results/` (ignored) |
+| `.github/workflows/` | `check.yml` (the suite and the wheel on a pull request), `release.yml` (a tag's wheel and GitHub release), `track.yml` (clang-repl's snapshot and release, weekly) |
 
 ## Commands
 
 ```
 make check          # before a pull request: every test against the host's clang-repl (23 or newer), the wheel, then claude plugin validate
-make wheel-check    # build the wheel with uv and run cpp-repl from it
-uv run cpp-repl     # a clone through uv: its .venv from uv.lock, nothing installed
-scripts/smoke.sh [WHEEL]   # the first test of a release on this machine: the wheel in a fresh venv, then a developer's first steps
 make check-docker   # the same inside cpp-repl:llvm23, built first: what CI runs
 make pr             # make check, push the branch N-slug and open its pull request, which closes issue N
 make issue KIND=bug|feature|task TITLE="..." [BODY="..."]   # file an issue on the board
 make test           # unit and fake-backend tests; no clang-repl needed
-make test-host      # everything, against the host's clang-repl (23 or newer: with an older one the backend tests skip)
-make tutorials      # docs/tutorials' transcripts against runs
+make test-host      # everything, against the host's clang-repl (with one older than 23 the backend tests skip)
+make test-docker    # the suite inside cpp-repl:llvm23 (make test-snapshot: in the snapshot's image)
+make wheel-check    # build the wheel with uv and run cpp-repl from it
+uv run cpp-repl     # a clone through uv: its .venv from uv.lock, nothing installed
+scripts/smoke.sh [WHEEL]   # the first test of a release on this machine: the wheel in a fresh venv, then a developer's first steps
+make tutorials      # docs/tutorials' transcripts against runs (make tutorials-update rewrites them)
 make parity         # the OpenUSD lessons through cpp-repl -p usd against their compiled programs
-make compat         # what raw clang-repl does with the inputs cpp-repl rewrites
+make compat         # what raw clang-repl does with the inputs cpp-repl rewrites (make compat-docker: in the images)
 make compat-table   # the README's "Why a front end" table, written between its markers from tests/compat/results
 make compat-diff    # a probe run against the checked-in results (FILE=tests/compat/results/compat-llvm-snapshot.json)
 make track          # what track.yml runs weekly: the snapshot image, the suite and the probes in it, the probes diffed
-make docker         # build cpp-repl:llvm23 (make docker-snapshot: LLVM main)
-make test-docker    # the test suite inside the image (make test-snapshot: in the snapshot's)
+make docker         # build cpp-repl:llvm23 (make docker-snapshot: LLVM main; make docker-bench: the benchmark's)
 make bench-quick    # a 3-minute benchmark run in the bench image
+make version VERSION=x.y.z   # on an issue branch: set the version and the README's wheel, commit; then make pr
+make tag            # on main, after the merge: tag vX.Y.Z and push it
 claude plugin validate .   # the plugin's manifests and skills
 evals/headless.py --case <case>   # one skill eval with claude -p; real model calls
 claude plugin eval . --case <case> --runs 1 --ablation none   # the same, where its sandbox runs
@@ -114,21 +120,21 @@ for the user and for agents alike.
   linked to the issue. Nothing goes to main directly: a ruleset requires a
   pull request with a passing `check`, for the owner too.
 - **`make check` before the pull request.** Every test against clang-repl 23
-  or newer, then `claude plugin validate`. CI (`.github/workflows/check.yml`)
-  runs the same suite inside the `cpp-repl:llvm23` image, `make check-docker`,
-  where clang compiles against GCC 13 as on the author's machine. `make pr`
-  runs `make check`, pushes, and opens the pull request titled as the issue,
-  with `Closes #N`. A pull request that closes no issue fails CI.
+  or newer, the wheel, then `claude plugin validate`. CI
+  (`.github/workflows/check.yml`) runs the suite again inside the
+  `cpp-repl:llvm23` image, `make check-docker`, and the wheel on a runner
+  with clang-repl 23 from apt.llvm.org. `make pr` runs `make check`, pushes,
+  and opens the pull request titled as the issue, with `Closes #N`. A pull
+  request that closes no issue fails CI.
 - **CI on the pull request is the evidence;** a passing local run is not.
   Merges are rebases, the branch is deleted on merge, the issue closes with
   it. The user merges (`gh pr merge --rebase`, or `--auto` to queue it),
   unless they tell the agent to. An agent never closes an issue.
 - **A release** is a tag `vX.Y.Z` on main. `make version VERSION=x.y.z` on
-  an issue branch sets `src/cpp_repl/__init__.py`, the one place the version
-  lives, and `make pr` lands it; `make tag` on main then tags and pushes, and
+  an issue branch sets `src/cpp_repl/__init__.py` and the README's wheel,
+  and `make pr` lands it; `make tag` on main then tags and pushes, and
   `.github/workflows/release.yml` builds the wheel, runs it against
-  clang-repl 23 and makes the GitHub release with the sdist and the wheel;
-  the README's install line names that wheel, and `make version` moves it.
+  clang-repl 23 and makes the GitHub release with the sdist and the wheel.
   PyPI waits: the workflow's publish job runs once the repository variable
   `PYPI_PUBLISH` is `true` and pypi.org has the pending publisher, through
   trusted publishing. A tag never moves: a botched release is the next
@@ -205,8 +211,13 @@ cpp-repl --serve repl.sock > serve.log 2>&1 &   # a session that stays: --connec
   `.claude/settings.local.json`:
   `{"enabledPlugins": {"cpp-repl@cpp-repl": false}}`.
 
-`skills/run-cpp/SKILL.md` has the details, and
-`docs/tutorials/04-scripts-and-agents.md` shows each with its output.
+The skills are the full procedures, for any agent that can read Markdown:
+`skills/run-cpp/SKILL.md` for running C++ and reading the result,
+`skills/add-library/SKILL.md` for a library that cpp-repl cannot load yet,
+`skills/add-printer/SKILL.md` for a type that prints badly, and
+`skills/contribute-profile/SKILL.md` for a built-in profile in this
+repository. `docs/tutorials/04-scripts-and-agents.md` shows each command
+with its output.
 
 ## Probing clang-repl directly
 

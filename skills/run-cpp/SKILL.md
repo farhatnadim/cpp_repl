@@ -116,8 +116,8 @@ before its `return`.
 
   Exit 2 means cpp-repl could not start: no clang-repl 23 or newer, a flag it
   does not pass on, a missing file. Its message on stderr says which.
-  `--docker` runs it in an image when the host's clang-repl is too old and an
-  image exists (`docker images 'cpp-repl*'`).
+  `--docker` runs it in the `cpp-repl:llvm23` image instead; building that
+  image is the user's call, and `cpp-repl --docker` offers to.
 - **Errors are brief off a terminal:** each input's first error, with its
   notes, at `<stdin>:LINE:COL` or `prog.cpp:LINE:COL`. `--diagnostics full`
   shows everything clang prints.

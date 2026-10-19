@@ -32,7 +32,7 @@ Printers go in the profile's prelude header (`.cpp-repl/<lib>_repl.h`), inside
 user's own types without a profile go in a prelude listed in their project's
 `cpp-repl.toml` (`prelude = ["tools/repl_prelude.h"]`).
 
-**A built-in profile's types** (`-p usd`, `-p eigen`, `-p glm`): the profile's
+**A built-in profile's types** (`-p eigen`, `-p glm`, `-p torch`, `-p usd`): the profile's
 header belongs to cpp-repl, in `src/cpp_repl/profiles/NAME/` of the plugin's
 checkout, so leave it as it is. Write the printers in a header of the user's,
 such as `.cpp-repl/usd_more_repl.h`, and layer it over the profile with a TOML:

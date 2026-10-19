@@ -17,7 +17,9 @@ and LLVM's snapshot. It installs from the wheel of a GitHub release
 
 The repository is also a Claude Code plugin (`.claude-plugin/`). Its skills,
 in `skills/`, run C++ for an agent (`run-cpp`) and add a library to cpp-repl
-(`add-library`, `add-printer`, `contribute-profile`).
+(`add-library`, `add-printer`, `contribute-profile`). It declares an MCP
+server too, `cpp-repl --mcp`, so that Claude Code and any MCP client call
+cpp-repl as a tool.
 
 It began as a fork of `openusd-tutorial/repl/usd-repl` on 2026-10-13. Since
 2026-10-16 the tutorial's `repl/usd-repl` is a launcher over cpp-repl's usd
@@ -41,6 +43,10 @@ runs them:
   test, golden session, example and README row, and its line in
   `PRELUDE_NAMES` and in `docker.py`'s environment list.
 
+On 2026-10-19 the user granted Claude the MCP server (issue #20): `cpp-repl
+--mcp` in `src/cpp_repl/mcp.py` and `cli.py`, its manifest entry, tests, eval
+case and documentation. The grant covered that feature.
+
 The rest of the front end (lexer, sources, session, backend, config) follows
 the rule above.
 
@@ -56,6 +62,7 @@ the rule above.
 | `src/cpp_repl/backend.py` | one clang-repl process and the end-of-output marker protocol |
 | `src/cpp_repl/session.py` | the journal, recovery, redefinition, commands, `%save-cpp` |
 | `src/cpp_repl/server.py` | `--serve` and `--connect`: one session on a Unix socket |
+| `src/cpp_repl/mcp.py` | `--mcp`: the session served to an MCP client on stdin and stdout, the plugin's server |
 | `src/cpp_repl/diagnostics.py` | what is shown of clang's diagnostics: brief or full |
 | `src/cpp_repl/docker.py` | `--docker`: the mounts, the environment, the image's build |
 | `src/cpp_repl/ui.py`, `painter.py` | prompt_toolkit or readline input; colour |
@@ -197,6 +204,7 @@ v
 EOF
 cpp-repl --batch -q --timeout 60 prog.cpp # files: the program's output, exit status the program's
 cpp-repl --serve repl.sock > serve.log 2>&1 &   # a session that stays: --connect runs in it
+cpp-repl --mcp                            # an MCP server on stdin and stdout: the plugin's; any MCP client runs it
 ```
 
 - **`--batch` runs files only.** With none it exits 2.

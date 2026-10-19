@@ -13,7 +13,7 @@ from . import __version__
 from .config import DEFAULT_IMAGE, Config, ConfigError, Options, builtin_profiles
 from .lexer import Origin
 from .painter import Painter
-from .session import OUT, JsonOutput, Session, SessionError
+from .session import OUT, JsonOutput, Output, Session, SessionError
 from .sources import BlockReader, Input, inputs_from_file
 
 DESCRIPTION = """\
@@ -26,6 +26,7 @@ C++ sources into sessions and sessions back into C++ programs.
   cpp-repl prog.cpp                 run prog.cpp's main() and keep the prompt
   cpp-repl --batch prog.cpp         run it and exit (exit status: see below)
   cpp-repl --docker                 the same, in an image with the newest clang-repl
+  cpp-repl --mcp                    serve the session to an MCP client, as the Claude Code plugin does
 """
 
 EPILOG = """\
@@ -136,6 +137,10 @@ def make_parser():
                       help='run the files, or stdin, in the session of cpp-repl --serve SOCKET')
     stay.add_argument('--fresh', action='store_true',
                       help='with --connect: run in an empty session, which the server keeps warm')
+    stay.add_argument('--mcp', action='store_true',
+                      help='serve this session to a Model Context Protocol client on stdin and stdout, with the '
+                           'tools run_cpp, run_cpp_file, save_cpp and reset_session: what the Claude Code plugin '
+                           'runs, and any MCP client can')
     docker = parser.add_argument_group('Docker')
     docker.add_argument('--docker', action='store_true',
                         help='run in a Docker image with the newest clang-repl')
@@ -176,6 +181,19 @@ def _stdin_line(more):
     return line.rstrip('\n')
 
 
+def _mcp_session(options):
+    """The session cpp-repl --mcp serves, made at the client's first call.
+    stdout is the protocol's, so what cpp-repl says of the configuration
+    goes to stderr, and the code reads end-of-file, not the client's
+    messages. Raises ConfigError or SessionError."""
+    cfg = Config(options)
+    for note in cfg.notes:
+        sys.stderr.write(f'[{note}]\n')
+    session = Session(cfg, options.cwd, batch=False, out=Output(sys.stderr))
+    atexit.register(session.close)
+    return session
+
+
 def main(argv=None):
     try:
         return _run(sys.argv[1:] if argv is None else list(argv))
@@ -191,6 +209,12 @@ def _run(argv):
     flags, rest = split_compiler_flags(argv)
     args = make_parser().parse_args(rest)
 
+    if args.mcp:
+        if args.files:
+            return _fail('--mcp runs no files: the client sends them, through its run_cpp_file tool')
+        if args.serve or args.connect or args.batch or args.json or args.emit or args.cflags or args.libs:
+            return _fail('--mcp serves the session on stdin and stdout: --serve, --connect, --batch, --json, '
+                         '--emit, --cflags and --libs do not combine with it')
     if args.connect:
         from .server import connect
         if (flags or args.profile or args.config or args.compile_commands or args.build_dir or args.lib
@@ -224,11 +248,18 @@ def _run(argv):
                 print(text)
         return 0
 
-    interactive = not args.batch and not args.serve and sys.stdin.isatty()
+    interactive = not args.batch and not args.serve and not args.mcp and sys.stdin.isatty()
     # A server's output goes to its clients as text, unpainted.
-    colour = (sys.stdout.isatty() and not args.no_color and not args.json and not args.serve
+    colour = (sys.stdout.isatty() and not args.no_color and not args.json and not args.serve and not args.mcp
               and not os.environ.get('NO_COLOR'))
     options = options_from(args, flags, colour, interactive)
+    if args.mcp:
+        if not options.cwd.is_dir():
+            return _fail(f'no such directory: {options.cwd}')
+        from .mcp import serve as serve_mcp
+        signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))
+        signal.signal(signal.SIGHUP, lambda *_: sys.exit(1))
+        return serve_mcp(lambda: _mcp_session(options))
     try:
         cfg = Config(options, backend=not (args.cflags or args.libs))
     except ConfigError as e:

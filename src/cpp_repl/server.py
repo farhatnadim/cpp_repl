@@ -69,15 +69,13 @@ def _inputs(request, session):
     return inputs
 
 
-def _run(session, f):
-    """Answer one request. Returns None to go on, or the status to stop
-    with: 0 after %quit, 1 after SIGTERM or SIGHUP (cli.py's handlers)."""
-    try:
-        request = json.loads(f.readline() or b'{}')
-    except ValueError:
-        return None
-    frames = _Frames(f)
-    session.out = JsonOutput(frames) if request.get('json') else Output(frames)
+def run_request(session, request, inputs, out):
+    """Run inputs in the session as one request asks, writing to out: a new
+    run, with the request's timeout, stop_on_error and diagnostics for its
+    duration, from an empty session when it says fresh. Returns None to go
+    on, or the status to stop with: 0 after %quit, 1 after SIGTERM or SIGHUP
+    (cli.py's handlers). cpp-repl --mcp runs its tool calls through this too."""
+    session.out = out
     session.echo = not (request.get('quiet') or request.get('json'))
     session.new_run()
     options, diagnostics = session.cfg.options, session.diagnostics
@@ -92,11 +90,23 @@ def _run(session, f):
     try:
         if request.get('fresh'):
             session.restore([], 'fresh', note=False)
-        session.run_inputs(_inputs(request, session), echo=True)
+        session.run_inputs(inputs, echo=True)
     except SystemExit as e:   # %quit, or a signal
         stop = e.code if isinstance(e.code, int) else int(e.code is not None)
     finally:
         options.timeout, options.stop_on_error, diagnostics.brief = before
+    return stop
+
+
+def _run(session, f):
+    """Answer one request. Returns None to go on, or the status to stop with."""
+    try:
+        request = json.loads(f.readline() or b'{}')
+    except ValueError:
+        return None
+    frames = _Frames(f)
+    out = JsonOutput(frames) if request.get('json') else Output(frames)
+    stop = run_request(session, request, _inputs(request, session), out)
     if frames.gone:   # nobody to answer
         return stop
     status = session.exit_status()

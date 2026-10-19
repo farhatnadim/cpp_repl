@@ -38,6 +38,7 @@ from pathlib import Path
 import yaml
 
 CHECKOUT = Path(__file__).resolve().parent.parent
+MCP_SERVER = 'mcp__plugin_cpp-repl_cpp-repl'   # the plugin's MCP server, as permission rules name it
 
 
 def front_matter(path):
@@ -64,9 +65,17 @@ def run_case(case, plugin_dir, args):
     cmd = ['claude', '-p', '--model', args.model, '--output-format', 'stream-json', '--verbose',
            '--max-budget-usd', str(args.budget), '--no-session-persistence', '--permission-prompts', 'none',
            '--settings', json.dumps({'enabledPlugins': {'cpp-repl@cpp-repl': False}})]
+    allowed = meta.get('allowed_tools', ['Read', 'Glob', 'Grep', 'Skill', 'Bash'])
     if plugin_dir:
         cmd += ['--plugin-dir', str(plugin_dir)]
-    cmd += ['--allowedTools', *meta.get('allowed_tools', ['Read', 'Glob', 'Grep', 'Skill', 'Bash'])]
+        if not any(tool.startswith(MCP_SERVER) for tool in allowed):
+            # claude plugin eval starts no plugin MCP server that has neither a
+            # mock nor --allow-real-servers. A case that grants none of the
+            # plugin's tools starts no MCP server at all, and measures the
+            # skills: a server left connected, its tools denied, still tells
+            # the model of cpp-repl, and the skill goes unread.
+            cmd += ['--strict-mcp-config', '--mcp-config', '{"mcpServers": {}}']
+    cmd += ['--allowedTools', *allowed]
     start = time.monotonic()
     try:
         p = subprocess.run(cmd, cwd=workspace, input=prompt, capture_output=True, text=True,

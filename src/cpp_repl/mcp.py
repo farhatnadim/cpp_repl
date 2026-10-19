@@ -66,9 +66,12 @@ TOOLS = [
         # The one tool loaded up front: the others wait behind Claude Code's tool search, by name.
         'description': (
             'Run C++ in cpp-repl, the REPL on clang-repl, without a build, and read what it prints. The code is '
-            'what you would type inside main(): statements, declarations, #include lines, and bare expressions, '
-            'which print their value (containers, maps, tuples, optionals and any type with an operator<< print '
-            'readably). Lines group into inputs as at the prompt, so one call may carry several. Variables are '
+            'what you would type inside main(): statements, declarations and #include lines. A bare expression, '
+            'with no semicolon, prints its value, so there is no need to write output code: '
+            'std::views::iota(1, 13) | std::views::stride(4) prints [1, 5, 9], a std::map prints '
+            '{"apples": 3, "pears": 5}, a vector of pairs [(1, 0.5), (2, 1.5)], an empty optional nullopt, and '
+            'any type with an operator<< prints through it. Lines group into inputs as at the prompt, so one call '
+            'may carry several. Variables are '
             "the session's globals: they keep their values for the next call, and a name declared again replaces "
             'the old declaration, with a note. The result is the transcript: each input after the prompt '
             '("c++> "), its output under it, cpp-repl\'s notes in brackets, and "[exit N]" when the run\'s status '

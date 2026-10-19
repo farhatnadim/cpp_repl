@@ -6,7 +6,7 @@ Each case is a prompt a user might type, run in a fresh workspace. The case's
 - a small CMake project that uses one library;
 - `tools/cpp-repl`, a launcher for a copy of this checkout's cpp-repl.
 
-The copy holds only `bin/`, `src/` and the Dockerfile. A launcher into the
+The copy holds only `bin/` and `src/`, the Dockerfile in it. A launcher into the
 checkout itself leads a run without the plugin to `skills/`, as a first try
 showed. That run then follows the skills by hand, and the baseline measures
 them too.

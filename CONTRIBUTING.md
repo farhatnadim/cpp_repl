@@ -2,8 +2,9 @@
 
 Changes land through GitHub, the same way for everyone, the author included.
 
-1. **An issue first.** Open one from the forms (bug, feature or task); it goes
-   onto the project board. The title is one sentence that states the fact.
+1. **An issue first.** Open one from the forms (bug, feature or task), or
+   with `make issue`; it goes onto the project board. The title is one
+   sentence that states the fact.
 2. **A branch per issue.** With push access, `gh issue develop N --checkout`
    makes it, named `N-slug` and linked to the issue; from a fork, any name.
 3. **`make check` before the pull request.** Every test runs against clang-repl

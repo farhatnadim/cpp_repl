@@ -39,7 +39,10 @@ contribution touches.
 - **AGENTS.md allows it.** Its "Who writes the code" section says what agents
   may write in this repository. The skills' files are covered there. If the
   clone's AGENTS.md says otherwise, follow it and ask the user.
-- **The work is on a branch:** `git switch -c profile-<name>` when on `main`.
+- **The work is an issue and its branch:**
+  `make issue KIND=feature TITLE="cpp-repl -p <name> loads <Library>"`, then
+  `gh issue develop N --checkout`. AGENTS.md's "How changes land" has the
+  rest.
 - **The user profile passes `check_profile.py`.** If there is none, run the
   add-library skill first, in a scratch project.
 
@@ -118,13 +121,11 @@ Copy `<lib>_repl.h` to `src/cpp_repl/profiles/<name>/cpp_repl_<name>.h`.
 ## 7. Run everything
 
 ```
-make test
-make test-host            # the new golden session has to run here, not skip
+make check                # every test against the host's clang-repl, the wheel, claude plugin validate
 make test-docker          # when the cpp-repl:llvm23 image exists
-claude plugin validate .
 ```
 
-`make test-host` prints its skips (`-rs`). If `<name>` is among them, the
+The tests print their skips (`-rs`). If `<name>` is among them, the golden
 session did not run: find out why before going on.
 
 ## 8. Commit
@@ -134,5 +135,6 @@ Commit as `profiles: add <name>`. The body says:
 - how the main types print;
 - which clang-repl versions and library versions it was tested with.
 
-End it with the attribution lines the session asks for. Push and open the
-pull request (`gh pr create`) only when the user says so.
+End it with the attribution lines the session asks for. `make pr` runs
+`make check`, pushes the branch and opens the pull request, which closes the
+issue; run it only when the user says so.

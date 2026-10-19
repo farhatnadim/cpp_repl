@@ -23,6 +23,7 @@ them too.
 | `run-snippet` | run-cpp: two standard-library questions answered from a run |
 | `run-program` | run-cpp: a variable read after `main()` returns, with no build and the source left as it is |
 | `run-snippet-mcp` | run-cpp through the plugin's MCP server: the same two questions, answered with the `run_cpp` tool and not through the shell |
+| `run-program-mcp` | The plugin's MCP server: `run_cpp_file` runs the program, then `run_cpp` reads the variable |
 
 ## Running
 
@@ -71,6 +72,11 @@ evals/headless.py --no-plugin --case opencv            # the baseline arm
 - **The plugin is a `git archive` of HEAD,** loaded with `--plugin-dir`, so
   commit what a run should see. An installed cpp-repl plugin is turned off
   for the run, and a run fails when the plugin loads other than once.
+- **The plugin's MCP tools are there only for a case that grants them** in
+  its `allowed_tools`; any other case runs with them disallowed, as
+  `claude plugin eval` starts no plugin MCP server without a mock or
+  `--allow-real-servers`. The run-cpp cases without `-mcp` measure the
+  skill and the shell; the `-mcp` cases measure the tools.
 - **Each case's `scaffold.sh` comes from that copy** too, and seeds a
   temporary workspace (`--keep` keeps it).
 - **The computed graders score the run:**

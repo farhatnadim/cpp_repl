@@ -41,16 +41,19 @@ validate:  ## the plugin's manifests and skills (claude plugin validate)
 # The wheel as a user installs it: built with uv, installed with uv tool under
 # build/, run from outside the checkout. The version and the docker command
 # need neither Docker nor clang-repl; the session runs when the host has one.
+# The output of each run is captured, echoed and then searched: `tee /dev/stderr`
+# would open /dev/stderr for writing, which truncates a file that captures the
+# run (make check > log 2>&1).
 wheel-check:  ## build the wheel with uv and run cpp-repl from it
 	rm -rf dist build/uv-tool build/uv-bin
 	uv build --no-sources
 	UV_TOOL_DIR=$(CURDIR)/build/uv-tool UV_TOOL_BIN_DIR=$(CURDIR)/build/uv-bin uv tool install --reinstall dist/cpp_repl-*.whl
 	cd build && ./uv-bin/cpp-repl --version
-	cd build && ./uv-bin/cpp-repl --no-config --docker --dry-run | tee /dev/stderr | grep -q -- '-m cpp_repl'
-	cd build && ! ./uv-bin/cpp-repl --no-config --docker --dry-run | grep -q 'bin/cpp-repl'
+	cd build && out=$$(./uv-bin/cpp-repl --no-config --docker --dry-run) && echo "$$out" && \
+	  echo "$$out" | grep -q -- '-m cpp_repl' && ! echo "$$out" | grep -q 'bin/cpp-repl'
 	@if [ -n "$(CLANG_REPL)" ]; then \
-	  cd build && printf 'std::vector<int> v{3, 1, 2};\nstd::ranges::sort(v);\nv\n' \
-	    | CPP_REPL_CLANG_REPL=$(CLANG_REPL) ./uv-bin/cpp-repl -q | tee /dev/stderr | grep -qx '\[1, 2, 3\]'; \
+	  cd build && out=$$(printf 'std::vector<int> v{3, 1, 2};\nstd::ranges::sort(v);\nv\n' \
+	    | CPP_REPL_CLANG_REPL=$(CLANG_REPL) ./uv-bin/cpp-repl -q) && echo "$$out" && echo "$$out" | grep -qx '\[1, 2, 3\]'; \
 	else echo "wheel-check: no clang-repl on the host: the session is not run"; fi
 
 # Without a clang-repl the backend tests skip, and a passing make check would say nothing.
@@ -69,10 +72,16 @@ need-issue-branch:
 	  { echo "make pr: the branch is not named N-slug; start from: gh issue develop N --checkout" >&2; exit 2; }
 
 # gh 2.45's `gh issue create --project` fails (it still asks for classic projects), hence item-add.
+# The title and the body reach gh through the environment, as typed: pasted into
+# the recipe, their backticks and $ would run as shell, and make would expand
+# them before exporting them.
+unexport TITLE BODY
+issue: export ISSUE_TITLE := $(value TITLE)
+issue: export ISSUE_BODY := $(value BODY)
 issue:  ## file an issue on the board: make issue KIND=bug|feature|task TITLE="one sentence" [BODY="..."]
 	@label=$$(case "$(KIND)" in bug) echo bug;; feature) echo enhancement;; task) echo task;; esac); \
-	test -n "$$label" -a -n "$(TITLE)" || { echo 'make issue KIND=bug|feature|task TITLE="one sentence that states the fact" [BODY="..."]' >&2; exit 2; }; \
-	url=$$(gh issue create --label "$$label" --title "$(TITLE)" --body "$(BODY)") && echo "$$url" && \
+	test -n "$$label" -a -n "$$ISSUE_TITLE" || { echo 'make issue KIND=bug|feature|task TITLE="one sentence that states the fact" [BODY="..."]' >&2; exit 2; }; \
+	url=$$(gh issue create --label "$$label" --title "$$ISSUE_TITLE" --body "$$ISSUE_BODY") && echo "$$url" && \
 	gh project item-add 18 --owner farhatnadim --url "$$url" > /dev/null
 
 # A release: make version on an issue branch and a pull request, then make tag

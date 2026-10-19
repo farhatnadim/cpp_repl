@@ -22,6 +22,7 @@ them too.
 | `cmake-question` | A near miss: an OpenCV build question, where add-library and run-cpp must stay quiet |
 | `run-snippet` | run-cpp: two standard-library questions answered from a run |
 | `run-program` | run-cpp: a variable read after `main()` returns, with no build and the source left as it is |
+| `run-snippet-mcp` | run-cpp through the plugin's MCP server: the same two questions, answered with the `run_cpp` tool and not through the shell |
 
 ## Running
 
@@ -33,7 +34,11 @@ claude plugin eval . --scaffold --trust-plugin --allow-tools Bash Write Edit --n
 - **Flags:**
   - `--scaffold` runs the cases' `scaffold.sh`;
   - `--allow-tools Bash Write Edit` lets the agent run the skills' scripts
-    and write the profile.
+    and write the profile;
+  - `--allow-real-servers`, with `--allow-tools "mcp__plugin_cpp-repl_cpp-repl__*"`
+    added, starts the plugin's MCP server for the `run-snippet-mcp` case:
+    by default `claude plugin eval` replaces a plugin's MCP servers with
+    mocks, and starts a server that has none.
 - **Cost:** every run is a real model call. A library case takes about 20 to
   60 turns. Drop `--ablation none` to measure the plugin against a run without
   it, which doubles the runs. Set `--max-cost-usd` for a ceiling.

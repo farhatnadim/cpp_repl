@@ -202,6 +202,7 @@ cpp-repl --batch --json prog.cpp               # a JSON object per input
 cpp-repl --serve repl.sock -p eigen &          # a session that stays: --connect runs files, or stdin, in it
 cpp-repl --connect repl.sock -q --fresh prog.cpp
 echo 'm.rows()' | cpp-repl --connect repl.sock
+cpp-repl --mcp                                 # an MCP server on stdin and stdout, as the plugin runs it
 ```
 
 - **Errors are brief** with `--batch` or input piped in: each input's first
@@ -226,6 +227,12 @@ echo 'm.rows()' | cpp-repl --connect repl.sock
   spare the server keeps warm. The flags, profiles and libraries are the
   server's; `--connect` takes `--timeout`, `--stop-on-error`,
   `--diagnostics`, `-q`, `--json` and `--fresh`. `%quit` stops the server.
+- **An MCP tool.** `--mcp` serves the session to a [Model Context
+  Protocol](https://modelcontextprotocol.io) client on stdin and stdout, with
+  the tools `run_cpp`, `run_cpp_file`, `save_cpp` and `reset_session`. A
+  result is the transcript a piped run prints, and `isError` marks a failed
+  input. The session stays between calls, as with `--serve`. The Claude Code
+  plugin declares this server.
 
 [Tutorial 04](docs/tutorials/04-scripts-and-agents.md) shows each with its
 output, and the [run-cpp skill](skills/run-cpp/SKILL.md) says the same for
@@ -345,7 +352,8 @@ go; `LD_PRELOAD` is not passed on.
 ## With Claude Code
 
 This repository is also a [Claude Code](https://claude.com/claude-code)
-plugin. Its skills run C++ for an agent and add a library to cpp-repl:
+plugin. Its skills and its MCP server run C++ for an agent, and its skills
+add a library to cpp-repl:
 
 ```
 /plugin marketplace add farhatnadim/cpp_repl
@@ -362,6 +370,12 @@ farhatnadim/cpp_repl`. `claude plugin marketplace update cpp-repl`, then
 | `/cpp-repl:add-library NAME` | Writes `.cpp-repl/NAME.toml`, a prelude with printers, and an example. Then checks them: the prelude compiles, the session starts, every input runs, the shared libraries are really used, and a `%save-cpp` of the example builds and prints the same. |
 | `/cpp-repl:add-printer` | Makes a type print well: a readable display on its own, and one line inside a list. |
 | `/cpp-repl:contribute-profile NAME` | In a clone of this repository, turns a working profile into a built-in `-p NAME`, with its tests. The `glm` profile was made this way. |
+
+The plugin also declares an MCP server, `cpp-repl --mcp`, with the tools
+`run_cpp`, `run_cpp_file`, `save_cpp` and `reset_session`: Claude Code calls
+cpp-repl directly, in one session that stays for the conversation, and the
+run-cpp skill says when. Any MCP client runs the same command
+([An MCP tool](#in-a-script-or-a-coding-agents-loop)).
 
 Asking in words works too, as in "let me try OpenCV in cpp-repl". The skill
 hands back one command:
@@ -571,6 +585,8 @@ module file in any of them, and cpp-repl says so.
 - **[`diagnostics.py`](src/cpp_repl/diagnostics.py)** filters what clang
   prints: brief or full.
 - **[`server.py`](src/cpp_repl/server.py)** is `--serve` and `--connect`.
+- **[`mcp.py`](src/cpp_repl/mcp.py)** is `--mcp`: the session served to an
+  MCP client on stdin and stdout. The plugin declares it.
 - **[`pch.py`](src/cpp_repl/pch.py)** precompiles the preludes once per
   configuration, and **[`preload.py`](src/cpp_repl/preload.py)** loads the
   session's libraries into clang-repl as it starts, core dumps off first.

@@ -8,5 +8,8 @@
   "homepage": "https://github.com/farhatnadim/cpp_repl",
   "repository": "https://github.com/farhatnadim/cpp_repl",
   "license": "MIT",
-  "keywords": ["c++", "repl", "clang-repl", "profile", "libraries"]
+  "keywords": ["c++", "repl", "clang-repl", "profile", "libraries"],
+  "mcpServers": {
+    "cpp-repl": {"command": "${CLAUDE_PLUGIN_ROOT}/bin/cpp-repl", "args": ["--mcp"]}
+  }
 }

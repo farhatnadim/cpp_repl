@@ -2,7 +2,7 @@
 
 This repository is also a Claude Code plugin. Its four skills let an agent
 run C++ through cpp-repl and set libraries up for it, and you ask for them in
-words. This walk installs the plugin and shows what each skill does, with
+words; its MCP server lets the agent call cpp-repl as a tool. This walk installs the plugin and shows what each skill does, with
 replies from real runs (Claude Sonnet 5.5, 2026-10-16), shortened. Those runs
 were the plugin's eval cases, whose projects reach cpp-repl through a
 launcher, `tools/cpp-repl`.
@@ -55,6 +55,11 @@ I ran both through `tools/cpp-repl --no-config`. Both calls exited 0.
 `std::format("{:>8.3f}", 3.14159)` prints `   3.142`. That is 3 spaces and then
 `3.142`, 8 characters in all.
 ```
+
+Since 2026-10-19 the plugin also declares an MCP server, `cpp-repl --mcp`
+([An MCP tool](04-scripts-and-agents.md#an-mcp-tool)), and the agent calls
+its `run_cpp` tool in place of the shell command, in one session that stays
+for the conversation. The reply reads the same.
 
 A program's variables, after its `main()` ran, need a session that stays,
 since `main()`'s `return` ends a batch run. Asked for `median` in a

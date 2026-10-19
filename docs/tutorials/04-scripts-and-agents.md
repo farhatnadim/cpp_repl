@@ -205,6 +205,37 @@ c++> %quit
 - **Whoever connects runs code as the server's user,** so the socket is
   readable and writable by that user alone.
 
+## An MCP tool
+
+`--mcp` serves the session to a [Model Context Protocol](https://modelcontextprotocol.io)
+client on stdin and stdout, so that an agent calls cpp-repl as a tool. The
+Claude Code plugin declares it ([With Claude Code](05-claude-code.md)), and any
+MCP client runs the same command. One JSON-RPC message per line goes in, and
+one answer per line comes out:
+
+<!-- check: sh -->
+```
+$ printf '%s\n' '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "tutorial", "version": "0"}}}' '{"jsonrpc": "2.0", "method": "notifications/initialized"}' '{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "run_cpp", "arguments": {"code": "std::vector<int> v{3, 1, 2};\nstd::ranges::sort(v);\nv"}}}' | cpp-repl --mcp 2>/dev/null | tail -n 1
+{"jsonrpc": "2.0", "id": 2, "result": {"content": [{"type": "text", "text": "c++> std::vector<int> v{3, 1, 2};\nc++> std::ranges::sort(v);\nc++> v\n[1, 2, 3]\n"}]}}
+```
+
+- **Four tools.** `run_cpp` runs code as typed inside `main()`, or as a
+  program when its `name` ends in `.cpp`; `run_cpp_file` runs a `.cpp`, `.h`
+  or `.repl` file as `--batch` would; `save_cpp` writes the session as a
+  program (`%save-cpp`); `reset_session` empties it (`%reset`).
+- **The result is the transcript** a piped run prints: each input after
+  `c++> `, its output, cpp-repl's notes in brackets, and `[exit N]` when the
+  run's status is not 0. A failed input sets the result's `isError`.
+- **The session stays** between calls, as with `--serve`: variables keep
+  their values, and a `return` from `main()` ends only that call's run.
+- **The configuration is the command line's,** and the `cpp-repl.toml` of
+  the directory `--mcp` starts in: `cpp-repl --mcp -p eigen`, in a plugin's
+  manifest or an MCP client's configuration, serves Eigen.
+- **Calls run one at a time.** A `timeout` argument (60 s by default) stops
+  an input that runs too long, as `--timeout` does, and the next call runs.
+- **stdout carries the protocol alone.** What cpp-repl says of itself, the
+  line that says it serves and the configuration's notes, goes to stderr.
+
 ## For a coding agent
 
 - **Never the prompt.** It waits for a terminal the agent does not have. Use
@@ -218,8 +249,9 @@ c++> %quit
   says so.
 
 The cpp-repl Claude Code plugin teaches all of this to an agent, in its
-run-cpp skill ([With Claude Code](05-claude-code.md)), and cpp-repl's
-AGENTS.md says the same for agents that read only that.
+run-cpp skill ([With Claude Code](05-claude-code.md)), and declares the MCP
+server, so that the agent calls cpp-repl as a tool. cpp-repl's AGENTS.md says
+the same for agents that read only that.
 
 ## Next
 

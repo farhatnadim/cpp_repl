@@ -4,6 +4,10 @@ description: Run C++ without a build through cpp-repl, the C++ REPL on clang-rep
 argument-hint: "[file.cpp | file.repl | the C++ to try]"
 allowed-tools:
   - Bash(cpp-repl *)
+  - mcp__plugin_cpp-repl_cpp-repl__run_cpp
+  - mcp__plugin_cpp-repl_cpp-repl__run_cpp_file
+  - mcp__plugin_cpp-repl_cpp-repl__save_cpp
+  - mcp__plugin_cpp-repl_cpp-repl__reset_session
 ---
 
 # Run C++ in cpp-repl
@@ -15,6 +19,19 @@ seconds more, since it precompiles the headers.
 
 Run it non-interactively. Its prompt waits for a terminal that you do not
 have.
+
+## The plugin's tool
+
+When a tool named `run_cpp` is available (the plugin declares an MCP server,
+`cpp-repl --mcp`), call it instead of running cpp-repl through Bash: pass the
+C++ as `code`, read the transcript it returns, and go on in the same session,
+whose variables stay from call to call. `run_cpp_file` runs a `.cpp` file as
+`--batch` would, and `run_cpp` reads its variables afterwards; `save_cpp` hands
+the session back as a program; `reset_session` empties it. The server's
+configuration is fixed when Claude Code starts: the `cpp-repl.toml` of the
+working directory, with no profile and no flags. For a profile (`-p usd`), a
+project launcher, or flags the tool lacks, use the commands below, which take
+them on the command line. Sections 4 to 7 apply to both.
 
 ## 1. Which command
 

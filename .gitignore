@@ -6,6 +6,8 @@ __pycache__/
 .venv/
 bench/build/
 bench/results/logs/
+bench/agents/jobs/
+bench/agents/dist/
 tests/compat/results/raw/
 
 # vim swap files

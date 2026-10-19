@@ -512,6 +512,15 @@ hypotheses written down before the first run. Everything is in
   running session, calling the kernel again costs 0.08 s, and a new product
   expression 0.72 s to compile.
 
+## Agents
+
+[bench/agents/](bench/agents/README.md) asks whether a coding agent solves
+C++ tasks more often, faster or cheaper with cpp-repl. Claude Code runs
+Terminal-Bench 4.0's C++ tasks through Harbor in three arms: cpp-repl as an
+MCP tool, cpp-repl as the run-cpp skill, and cpp-repl unmentioned. The
+harness is in place, and its sanity checks pass on this machine; the agent
+trials are still to run.
+
 ## What C++ you can type
 
 The C++20 language and the C++23 language where the clang has it, the

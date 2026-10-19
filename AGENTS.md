@@ -78,6 +78,7 @@ the rule above.
 | `docs/platforms.md` | where cpp-repl runs (Linux; WSL2 and Docker Desktop elsewhere), and how a release is smoke-tested on each machine |
 | `compare/` | one session typed into raw clang-repl and into cpp-repl, side by side |
 | `bench/` | NumPy vs Eigen in the REPL vs native Eigen |
+| `bench/agents/` | Claude Code with and without cpp-repl on Terminal-Bench's C++ tasks, through Harbor: the agent, the runner, the report |
 | `.claude-plugin/` | the plugin and marketplace manifests; the plugin root is the repo root |
 | `skills/` | the plugin's skills: a `SKILL.md` each, with `reference/`, `scripts/` and `templates/` where the skill has them |
 | `evals/` | `claude plugin eval` cases for the skills, and `headless.py`, which runs them with `claude -p`; results go to `evals/results/` (ignored) |
@@ -104,6 +105,7 @@ make compat-diff    # a probe run against the checked-in results (FILE=tests/com
 make track          # what track.yml runs weekly: the snapshot image, the suite and the probes in it, the probes diffed
 make docker         # build cpp-repl:llvm23 (make docker-snapshot: LLVM main; make docker-bench: the benchmark's)
 make bench-quick    # a 3-minute benchmark run in the bench image
+make agents-smoke   # bench/agents tier 0 through Harbor; make agents-bench TIER=1, make agents-report
 make version VERSION=x.y.z   # on an issue branch: set the version and the README's wheel, commit; then make pr
 make tag            # on main, after the merge: tag vX.Y.Z and push it
 claude plugin validate .   # the plugin's manifests and skills

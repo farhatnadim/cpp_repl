@@ -1,0 +1,5 @@
+{
+  "mcpServers": {
+    "cpp-repl": {"type": "stdio", "command": "/opt/cpp-repl/bin/cpp-repl", "args": ["--mcp"]}
+  }
+}

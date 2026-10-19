@@ -178,3 +178,18 @@ bench:  ## the full benchmark protocol in the bench image (about 30 minutes)
 
 bench-host:  ## the benchmark on the host (BENCH_PYTHON: a Python whose NumPy uses OpenBLAS)
 	$(PYTHON) bench/run.py --python $(BENCH_PYTHON)
+
+# bench/agents: Claude Code with and without cpp-repl, through Harbor (bench/agents/README.md).
+AGENTS_MODEL ?= anthropic/claude-sonnet-5-5
+
+need-harbor:
+	@command -v harbor > /dev/null || { echo 'bench/agents needs Harbor: uv tool install harbor==0.24.0' >&2; exit 2; }
+
+agents-smoke: need-harbor  ## bench/agents tier 0: oracle and nop on both tasks, then one trial per arm (needs ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN)
+	$(PYTHON) bench/agents/run.py --tier 0 --model $(AGENTS_MODEL)
+
+agents-bench: need-harbor  ## a tier of bench/agents: make agents-bench TIER=1 [ARM=mcp] [AGENTS_MODEL=...]
+	$(PYTHON) bench/agents/run.py --tier $(TIER) $(if $(ARM),--arm $(ARM)) --model $(AGENTS_MODEL)
+
+agents-report:  ## bench/agents' report from its jobs, into bench/agents/results/
+	$(PYTHON) bench/agents/report.py --out bench/agents/results/report-$$(date -u +%Y%m%dT%H%M%SZ)

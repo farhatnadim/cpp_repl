@@ -341,6 +341,18 @@ def test_a_link_failure_is_undone(session):
     assert stream.getvalue().endswith('2\n')
 
 
+def test_an_input_kept_from_linking_by_an_earlier_error_shows_its_second_run(session):
+    s, stream = session
+    assert s.run_input('std::istringstream in("abc");')
+    s.run_input('std::string a{std::istreambuff_iterator<char>(in), {}};')   # did you mean istreambuf_iterator?
+    # clang-repl 23 kept the iterator's templates that the typo instantiated, without their code: b
+    # fails to link once, and cpp-repl runs it again in a fresh clang-repl.
+    assert s.run_input('std::string b{std::istreambuf_iterator<char>(in), {}};')
+    assert s.run_input('b')
+    out = stream.getvalue()
+    assert 'Symbols not found' not in out and out.endswith('"abc"\n'), out
+
+
 def test_save_cpp_builds_and_prints_the_same(session, tmp_path):
     clangxx = sibling_clangxx()
     if not clangxx:

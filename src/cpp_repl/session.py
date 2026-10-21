@@ -70,11 +70,12 @@ _RUN_MARK = re.compile('\x1d~(\\d+)\x1d\n?')
 # What repl::started writes as a statement begins to run (backend.START_MARK).
 _START_MARK = re.compile('\x1d>\x1d\n?')
 # A line of clang's diagnostics: a header, clang-repl's verdict, an include
-# chain, or a source line or carets under a header. The echo holds these
-# back until the program's own output starts, so that an error cpp-repl
-# handles itself (a redefinition) is never shown.
+# chain, a source line or carets under a header, or the JIT's link error. The
+# echo holds these back until the program's own output starts, so that an
+# error cpp-repl handles itself (a redefinition, a link failure it runs
+# again) is never shown.
 _DIAGNOSTIC_LINE = re.compile(r'(?:\S[^:\n]*:\d+:\d+: )?(?:fatal error|error|warning|note|remark): '
-                              r'|In file included from |' + SNIPPET.pattern)
+                              r'|In file included from |JIT session error: |' + SNIPPET.pattern)
 # What clang says of a name declared again.
 _REDEFINED = re.compile(r"error: redefinition of '([^']+)'")
 # What clang says of a lambda capturing a variable typed at the prompt, which
@@ -598,6 +599,13 @@ class Session:
         path.write_text(text + '\n')
         return f'#include "{path}"'
 
+    def _acted_on(self, redefining, diagnostics):
+        """Whether run_input acts on an input's held diagnostics itself,
+        rather than show them: a redefinition or a capture a global cannot
+        have, when redefining, or a link failure after an earlier error,
+        which _after runs again in a fresh clang-repl."""
+        return (redefining and _handled(diagnostics)) or (self.tainted and outcome(diagnostics) == 'link')
+
     def run_input(self, text, redefine=True, as_typed=None):
         """Run one complete input: an Input, which says where it comes from,
         or a str typed at the prompt. Returns False when the session should
@@ -656,9 +664,9 @@ class Session:
             send, kind = transform(text, fresh=self._fresh, origin=origin, as_statement=True, wrap=False,
                                   exceptions=self.cfg.exceptions), 'stmt'
         line = self._file(send.text) if send.via_file else send.text
-        output, result = self._send(line, hold=_handled if redefine and kind == 'stmt' else None)
-        if self.held:
-            held, self.held = self.held, ''   # the redefinition's own inputs reset it
+        output, result = self._send(line, hold=partial(self._acted_on, redefine and kind == 'stmt'))
+        held, self.held = self.held, ''   # the redefinition's own inputs reset it
+        if held and result != 'link':     # a link failure held runs again (_after), with a note
             redefined = _REDEFINED.search(plain(held))
             if redefined:
                 replaced = self._redefine(redefined.group(1), text)

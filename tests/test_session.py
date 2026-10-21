@@ -325,11 +325,25 @@ def test_an_input_kept_from_linking_by_an_earlier_error_runs_again(tmp_path, mon
     assert s.run_input('int a = 1;')
     assert s.run_input('taint();')
     assert s.run_input('stale();')
-    assert ('[that input failed to link after an earlier error: restored 1 input; running it again]'
-            in stream.getvalue())
-    assert stream.getvalue().endswith('linked\n')
+    # The first run's link error was the earlier error's: the note and the second run show.
+    assert stream.getvalue().endswith('error: Parsing failed.\n[that input failed to link after an earlier error: '
+                                      'restored 1 input; running it again]\nlinked\n')
     assert s.failures == 1                  # the input that failed to compile
     assert [e.text for e in s.journal] == ['int a = 1;', 'stale();']
+
+
+def test_an_input_that_fails_to_link_again_shows_its_error_once(tmp_path, monkeypatch, made):
+    s, stream = make(tmp_path, monkeypatch, batch=False)
+    made.append(s)
+    assert s.run_input('taint();')
+    assert s.run_input('link_fail();')      # fails in the fresh clang-repl too: its own error
+    assert stream.getvalue().endswith(
+        '[that input failed to link after an earlier error: restored 0 inputs; running it again]\n'
+        'JIT session error: Symbols not found: [ _Z9link_failv ]\n'
+        'error: Failed to materialize symbols: { (main, { __stmts__1 }) }\n'
+        '[that input failed to link: restored 0 inputs]\n')
+    assert stream.getvalue().count('Symbols not found') == 1
+    assert s.failures == 2
 
 
 @pytest.mark.parametrize('inputs, status, failures', [
@@ -516,6 +530,20 @@ def test_json_output(tmp_path, monkeypatch, made):
         {'exit': 1, 'inputs': 3, 'failures': 1, 'skipped': 0},
     ]
     assert "undeclared identifier 'error_here'" in records[1]['output']
+
+
+def test_json_output_of_an_input_run_again(tmp_path, monkeypatch, made):
+    for name in ('FAKE_PROMPT', 'FAKE_SPLIT', 'FAKE_MARKER', 'FAKE_ECHO', 'FAKE_HANG_START'):
+        monkeypatch.delenv(name, raising=False)
+    stream = io.StringIO()
+    cfg = Config(Options(cwd=tmp_path, no_config=True, clang_repl=str(FAKE), json=True))
+    s = Session(cfg, tmp_path, batch=True, out=JsonOutput(stream))
+    made.append(s)
+    (tmp_path / 'p.repl').write_text('taint();\nstale();\n')
+    s.run_inputs(inputs_from_file(tmp_path / 'p.repl'), echo=True)
+    record = json.loads(stream.getvalue().splitlines()[1])
+    assert (record['status'], record['output']) == ('ok', 'linked\n')
+    assert record['notes'] == ['that input failed to link after an earlier error: restored 0 inputs; running it again']
 
 
 def test_time_tells_the_run_from_the_compile(tmp_path, monkeypatch, made):

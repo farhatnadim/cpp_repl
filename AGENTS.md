@@ -24,6 +24,16 @@
    requirement only when the system is defined by it: if the system must
    run on Linux, Linux is in the requirements; if it happens to be written
    in Python, Python is in the specification.
+6. **Name every plan after its objective, and list every plan in
+   `plans.csv`.** A plan file is in the `plans/` directory and is named
+   `objective-<N>-<short-name>.md`. `<N>` is the number of the objective
+   in the AGENTS.md of the project. No other plan name is allowed.
+   `plans.csv` is in the project root and has one row for each plan, with
+   these columns: `name`, `location`, `summary`, `date`, `implemented`,
+   `commit`. `implemented` is `yes` or `no`. `commit` holds the commit
+   that implemented the plan, and is empty while `implemented` is `no`.
+   The agent that writes a plan adds its row in the same merge request.
+   The agent that implements the plan updates its row.
 
 ## Communication
 

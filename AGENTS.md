@@ -34,6 +34,10 @@
    that implemented the plan, and is empty while `implemented` is `no`.
    The agent that writes a plan adds its row in the same merge request.
    The agent that implements the plan updates its row.
+7. **Update the workspace status with artifacts.** The workspace status is
+   the report that The_Architect writes every morning. Publish the status
+   of the day as an artifact. Update the artifact of the plan to match it.
+   The artifacts take the place of a direct entry in the report.
 
 ## Communication
 
